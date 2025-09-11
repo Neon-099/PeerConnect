@@ -1,5 +1,4 @@
-import {GraduationCap} from 'lucide-react';
-
+import {GraduationCapIcon} from 'lucide-react';
 
 const Landing = () => {
     
@@ -12,7 +11,13 @@ const Landing = () => {
     return (
         <div>
             <header>
-                
+                <div>
+                    <GraduationCapIcon className="h-6 w-6" />
+                    <h1>PeerConnect</h1>
+                </div>
+                <div>
+                    
+                </div>
             </header>
         </div>
     )
