@@ -25,6 +25,7 @@ const Landing = () => {
             <main className='bg-[#E6F0F2]'>
                 <div>
                     <h1>Test</h1>
+                    <p>Isa pa </p>
                 </div>
             </main>
         </div>
