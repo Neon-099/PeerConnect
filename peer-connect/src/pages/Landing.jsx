@@ -22,10 +22,19 @@ const Landing = () => {
                 </nav>
             </header>
 
-            <main className='bg-[#E6F0F2]'>
-                <div>
-                    <h1>Test</h1>
-                    <p>Isa pa </p>
+            <main className=' '>
+                <div className='bg-[#E6F0F2] max-w-screen-3xl mx-auto h-[500px] flex justify-center items-center space-x-60'>
+                    <div className='space-y-3 '>
+                        <p className='text-5xl font-semibold'>Learn with confidence,</p> 
+                        <span className='text-5xl text-blue-500'>teach with purpose</span>
+                        <p className='text-xl'> Connect with expert tutors for personalized learning experiences. <br />
+                        From math to music, find your perfect match and unlock your potential.</p>
+                        <button className='text-white p-4 rounded-2xl border-blue-500 bg-blue-400 hover:bg-blue-300 '>Find tutor</button>
+                    </div>
+                    <div>
+                        <img className='w-[500px] rounded-[30px]' 
+                        src="https://media.istockphoto.com/id/486325400/photo/teacher-asking-her-students-a-question.jpg?s=612x612&w=0&k=20&c=gA6YxA-uGplqjyZfTKBuOcAXEZz7S_KqgGgEGl8YztQ=" alt="" />
+                    </div> 
                 </div>
             </main>
         </div>
