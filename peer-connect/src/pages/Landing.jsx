@@ -30,6 +30,7 @@ const Landing = () => {
                         <p className='text-xl'> Connect with expert tutors for personalized learning experiences. <br />
                         From math to music, find your perfect match and unlock your potential.</p>
                         <button className='text-white p-4 rounded-2xl border-blue-500 bg-blue-400 hover:bg-blue-300 '>Find tutor</button>
+                        <button>Title</button>
                     </div>
                     <div>
                         <img className='w-[500px] rounded-[30px]' 
