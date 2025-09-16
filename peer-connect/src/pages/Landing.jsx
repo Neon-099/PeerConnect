@@ -7,7 +7,7 @@ const Landing = () => {
     return (
         <div>
             <header>
-                <nav className='flex items-center justify-between'>
+                <nav className='flex items-center justify-between '>
                     <div className='flex items-center  gap-4 p-9'>
                         <GraduationCapIcon className="h-6 w-6" />
                         <h1 className='font-bold text-2xl'>PeerConnect</h1>
@@ -94,26 +94,46 @@ const Landing = () => {
                 
             </main>
             {/*FOOTER*/}
-            <footer className='bg-blue-900 text-white  flex justify-between items-center gap-30'>
-                <div className='max-w-screen-3xl mx-auto py-10'>
-                    <div className='flex items-center gap-5'>
-                        <GraduationCapIcon className='h-12 w-12' />
-                        <div className='flex-col '>
-                            <h4>PeerConnect</h4>
-                            <p className=''>Connecting learners with expert tutors for personalized education experiences.</p>
+            <footer className='bg-[#0f1f2f] text-white'>
+                <div className='max-w-7xl mx-auto px-6 py-14'>
+                    <div className='grid grid-cols-1 md:grid-cols-4 gap-12'>
+                        <div className='space-y-4'>
+                            <div className='flex items-center gap-3'>
+                                <GraduationCapIcon className='h-10 w-10 text-blue-400' />
+                                <span className='text-2xl font-semibold'>PeerConnect</span>
+                            </div>
+                            <p className='text-gray-300'>
+                                Connecting learners with expert tutors for personalized education experiences.
+                            </p>
                         </div>
-                           <div className='flex flex-col'>
-                            <h5 className='font-bold'>For Students</h5>
-                            <a href="#">Find tutors</a>
-                            <a href="#">Book Sessions</a>
-                            <a href="#">Track Progress</a>
+                        <div>
+                            <h5 className='font-bold mb-4'>For Students</h5>
+                            <ul className='space-y-3 text-gray-300'>
+                                <li><a href="#" className='hover:text-white'>Find Tutors</a></li>
+                                <li><a href="#" className='hover:text-white'>Book Sessions</a></li>
+                                <li><a href="#" className='hover:text-white'>Track Progress</a></li>
+                            </ul>
                         </div>
-                        <div className='flex flex-col'>
-                            <h5 className='font-bold'>Support</h5>
-                            <a href="#">Help Center</a>
-                            <a href="#">Contact Us</a>
-                            <a href="#">Privacy Policy</a>
-                        </div>  
+                        <div>
+                            <h5 className='font-bold mb-4'>For Tutors</h5>
+                            <ul className='space-y-3 text-gray-300'>
+                                <li><a href="#" className='hover:text-white'>Apply to Teach</a></li>
+                                <li><a href="#" className='hover:text-white'>Manage Schedule</a></li>
+                                <li><a href="#" className='hover:text-white'>Earnings</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h5 className='font-bold mb-4'>Support</h5>
+                            <ul className='space-y-3 text-gray-300'>
+                                <li><a href="#" className='hover:text-white'>Help Center</a></li>
+                                <li><a href="#" className='hover:text-white'>Contact Us</a></li>
+                                <li><a href="#" className='hover:text-white'>Privacy Policy</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <hr className='border-gray-700 mt-12' />
+                    <div className='flex items-center justify-center md:justify-start text-gray-400 text-sm mt-6'>
+                        <p>© 2025 PeerConnect. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
