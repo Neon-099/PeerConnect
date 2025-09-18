@@ -1,25 +1,41 @@
 import {GraduationCapIcon, Search, Calendar, Shield, Star} from 'lucide-react';
 import {Link } from 'react-router-dom';
+import {useState, useEffect} from 'react';
 
 const Landing = () => {
     
-    
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollTop = window.scrollY;
+            if(scrollTop > 60) {
+                setScrolled(true);
+            }   else {
+                setScrolled(false);
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     return (
         <div>
-            <header>
-                <nav className='flex items-center justify-between '>
-                    <div className='flex items-center  gap-4 p-9'>
+            <header className={`py-3 flex items-center justify-between fixed w-full top-0 z-50 transition-all duration ${
+                scrolled ? 'bg-white backdrop-blur-md border-b border-white/10' : 'bg-white border-b border-transparent' 
+            }`}>
+                    <div className='flex items-center  gap-4 pl-10'>
                         <GraduationCapIcon className="h-6 w-6" />
                         <h1 className='font-bold text-2xl'>PeerConnect</h1>
                         <Link>Find Tutor</Link>
                         <Link>Find Student</Link>
                         <Link>How it works</Link>
                     </div>
-                    <div className='flex items-center  gap-4 p-9'>
-                        <button>Signin</button>
-                        <button className='bg-orange-400 p-3 text-white rounded-full'>Get Started</button>
+                    <div className='flex items-center  gap-4 pr-9'>
+                        <Link to="/signup">Signin</Link>
+                        <Link className='bg-orange-400 p-3 text-white rounded-full'>Get Started</Link>
                     </div>
-                </nav>
             </header>
 
             <main className=' '>
