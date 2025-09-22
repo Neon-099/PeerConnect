@@ -1,4 +1,5 @@
 import { GraduationCapIcon } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useState } from 'react';
 import { User, GraduationCap, CheckCircle, Eye, EyeOff } from 'lucide-react';
@@ -45,7 +46,7 @@ const StudentSignup = () => {
     alert('Login successful!');
   }
 
-  const googleClientId = "1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com";
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const handleGoogleLogin = () => {
     console.log('Google Login submitted', formData);
@@ -278,12 +279,15 @@ const StudentSignup = () => {
                                 <div className="flex-1 border-t border-gray-600"></div>
                             </div>
 
-                            <GoogleLogin 
+                            <div className="flex items-center justify-center">
+                                 <GoogleLogin 
                                 clientId = {googleClientId}
                                 onSuccess={handleGoogleLogin}
                                 onFailure={handleGoogleLogin}
                                 cookiePolicy={'single_host_origin'}
                             />
+                            </div>
+                           
                             <div className="text-center mt-6">
                                 <span className="text-gray-400">Already have an account? </span>
                                 <button
