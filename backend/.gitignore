@@ -1,0 +1,29 @@
+# Dependencies
+/vendor/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+/storage/logs/*.log
+*.log
+
+# Cache
+/storage/cache/*
+!/storage/cache/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.temp

@@ -2,7 +2,7 @@
 
     namespace App\Models;
 
-    use Database; //import db connection class
+    use Config\Database; //import db connection class
     use PDO;        //declaration of PDO class to use
     use Exception;  //error handling
 
@@ -18,8 +18,9 @@
         //CREATE NEW USER
         public function create(array $userData): int {
             $query = "INSERT INTO {$this->table} (
-               email, password_hash, first_name, last_name, providers, google_id)
-               VALUES (:email, :password_hash, :first_name, :last_name, :providers, :google_id)";
+               email, password_hash, first_name, last_name, google_id, profile_picture, providers )
+               VALUES 
+                    (:email, :password_hash, :first_name, :last_name, :google_id, :profile_picture, :providers )";
 
             $stmt = $this->db->prepare($query);
 
@@ -28,32 +29,83 @@
                 ? password_hash($userData['password'], PASSWORD_ARGON2I)
                 : null;
 
-            $stmt->execute([
+            $params =[
                 ':email' => $userData['email'],
                 ':password_hash' => $passwordHash,
                 ':first_name' => $userData['first_name'],
                 ':last_name' => $userData['last_name'],
-                ':google_id' => $userData['google_id'] ?? null, 
-                'profile_picture' => $userData['profile_picture'] ?? null,
-                ':providers' => $userData['providers'] ?? 'local',
-            ]);
+                ':role' => $userData['role'] ?? 'student',
+                ':provider' => $userData['provider'] ?? 'local',
+                ':google_id' => $userData['google_id'] ?? null,
+                ':profile_picture' => $userData['profile_picture'] ?? null,
+                ':email_verified' => $userData['email_verified'] ?? false,
+                ':is_active' => $userData['is_active'] ?? true,
+            ];
 
-            
-
-            $userId = $this->db->lastInsertId();
-
-            if($userData['role'] === 'tutor') {
-                $queryTutor =   "INSERT INTO tutor_profiles (user_id, bio, qualifications, hourly_rate_ is_verified_) 
-                                VALUES (:user_id, :bio, :qualifications, :hourly_rate, :is_verified)";
-                $stmtTutor = $this->db->prepare($queryTutor);
-                $stmtTutor->execute([
-                    ':user_id' => $userId,
-                    ':bio' => $userData['bio'] ?? null,
-                    ':qualifications' => $userData['qualifications'] ?? false,
-                ]);
+            if($stmt->execute($params)) {
+                return (int) $this->db->lastInsertId();
             }
-            return $userId;
-        }   
 
+            throw new Exception("Failed to create user");
+        }
+        
+        public function findByEmail(string $email) : ? array {
+            $query = "SELECT * FROM {$this->table} WHERE email=:email LIMIT 1";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':email'=>$email]);
+
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $user ?: null;
+        }
+
+        public function findById(string $id) : ? array {
+            $query = "SELECT * FROM {$this->table} WHERE id=:id LIMIT 1";
+            $stmt = $this->db->prepare($query);
+            $stmt -> execute([':id' => $id]);
+
+            $user = $stmt -> fetch(PDO::FETCH_ASSOC);
+            return $user ?: null;
+        }
+
+        public function findByGoogleId(string $googleId) : ? array {
+            $query = "SELECT * FROM {$this->table} WHERE google_id = :google_id LIMIT 1";
+            $stmt = $this->db->prepare($query);
+            $stmt -> execute([':google_id' => $googleId]);
+
+            $user = $stmt -> fetch(PDO::FETCH_ASSOC);
+            return $user ?: null;
+        }
+
+        public function update(int $id, array $data): bool {
+            $fields = [];
+            $params = [':id' => $id];
+
+            foreach($data as $key => $value) {
+                $fields[] = "{$key} = :{$key}";
+                $params["$key"] = $value;
+            }
+
+            $query = "UPDATE {$this->table} SET ". implode(', ', $fields) . "WHERE $id = :id";
+            $stmt = $this->db->prepare($query);
+
+            return $stmt->execute($params);
+        }
+
+
+        public function verifyPassword(string $password, string $hash) : bool {
+            return password_verify($password, $hash);
+        }
+
+        public function emailExists(string $email) : bool {
+            return $this->findByEmail($email) !== null;
+        }
+
+        public function deactivate(int $id): bool {
+            return $this->update($id, ['is_active' =>false]);
+        }
+
+        public function activate(int $id): bool {
+            return $this->update($id,['is_active'=>true]);
+        }
     }
 ?>

@@ -12,7 +12,7 @@ backend/
 │   ├── Models/               # Database models
 │   │   ├── AuthUser.php
 │   │   ├── TutorProfile.php
-│   │   ├── Role.php
+│   │   ├── Role.php          #(future) role assignment logic
 │   │   └── Session.php
 │   ├── Services/             # Business logic
 │   │   ├── AuthService.php
@@ -53,3 +53,19 @@ backend/
 ├── composer.json      # PHP dependencies
 ├── README.md         # Documentation
 └── docker-compose.yml # Docker setup
+
+
+#MODELS
+-AuthUser.php → Manages auth_users table. Handles:
+signup/login
+password hashing & checking
+email lookups
+account status (is_active)
+profile picture, Google login, etc.
+-TutorProfile.php → Manages tutor_profiles table. Handles:
+tutor bio, qualifications, hourly rate
+verification status
+availability
+ratings & sessions count
+👉 Together, they separate universal account info from tutor-only info.
+This makes your database cleaner, easier to scale, and avoids headaches later.
