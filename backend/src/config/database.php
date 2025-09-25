@@ -22,6 +22,7 @@ use Exception;
         private $username;
         private $password;
         private $charset;
+        private $port;
 
         public function __construct () {
             $this->host = $_ENV['DB_HOST'];
@@ -29,6 +30,7 @@ use Exception;
             $this->username = $_ENV['DB_USER'];
             $this->password = $_ENV['DB_PASS'];
             $this->charset='utf8mb4';  
+            $this->port = $_ENV['DB_PORT'] ?? '3306';
             
             $this->connect();
         }
@@ -41,7 +43,7 @@ use Exception;
         }
 
         public function connect() {
-            $dsn = "mysql:host={$this->host};dbname={$this->database};charset={$this->charset}";
+            $dsn = "mysql:host={$this->host};port={$this->port};dbname={$this->database};charset={$this->charset}";
 
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

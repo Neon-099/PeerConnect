@@ -16,11 +16,11 @@ class TutorProfile {
 
     //CREATE TUTOR PROFILE TABLE
     public function create(int $userId, array $data): int {
-        $query = "INSERT INTO (user_id, bio, qualification, hourly_rate, avg_rating,
-                                total_sessions, is_verified, is_available)
-            VALUES (:user_id, :bio, :qualifications, :hourly_rate, :avg_rating, :total_sessions,
-                                :is_verified, :is_available
-                    )";
+        $query = "INSERT INTO {$this->table} (
+                user_id, bio, qualifications, hourly_rate, avg_rating, total_sessions, is_verified_tutor, is_available
+            ) VALUES (
+                :user_id, :bio, :qualifications, :hourly_rate, :avg_rating, :total_sessions, :is_verified_tutor, :is_available
+            )";
 
     $stmt = $this->db->prepare($query);
 
@@ -31,8 +31,8 @@ class TutorProfile {
         ':hourly_rate' => $data['hourly_rate'] ?? null,
         ':avg_rating' => $data['avg_rating'] ?? 0.00,
         ':total_sessions' => $data['total_sessions'] ?? 0,
-        ':is_verified_tutor' => $data['is_verified_tutor'] ?? false,
-        ':is_available' => $data['is_available'] ?? true, 
+        ':is_verified_tutor' => (int)($data['is_verified_tutor'] ?? 0),
+        ':is_available' => (int)($data['is_available'] ?? 1), 
     ];
 
     if($stmt->execute($params)) {
@@ -60,7 +60,10 @@ class TutorProfile {
             $params[":{$key}"] = $value;
         }
 
-        $query = "UPDATE {$this->table} SET" . implode(',', $fields). " WHERE user_id = :user_id";
+        if (empty($fields)) {
+            return true;
+        }
+        $query = "UPDATE {$this->table} SET " . implode(', ', $fields). " WHERE user_id = :user_id";
         $stmt = $this->db->prepare($query);
         
         return $stmt->execute($params);

@@ -15,12 +15,17 @@
             $this->db = Database::getInstance()->getConnection();
         }
 
+        public function testConnection() {
+            return $this->db instanceof PDO;
+        }
+
         //CREATE NEW USER
         public function create(array $userData): int {
             $query = "INSERT INTO {$this->table} (
-               email, password_hash, first_name, last_name, google_id, profile_picture, providers )
-               VALUES 
-                    (:email, :password_hash, :first_name, :last_name, :google_id, :profile_picture, :providers )";
+                email, password_hash, first_name, last_name, role, provider, google_id, profile_picture, email_verified, is_active
+            ) VALUES (
+                :email, :password_hash, :first_name, :last_name, :role, :provider, :google_id, :profile_picture, :email_verified, :is_active
+            )";
 
             $stmt = $this->db->prepare($query);
 
@@ -38,8 +43,8 @@
                 ':provider' => $userData['provider'] ?? 'local',
                 ':google_id' => $userData['google_id'] ?? null,
                 ':profile_picture' => $userData['profile_picture'] ?? null,
-                ':email_verified' => $userData['email_verified'] ?? false,
-                ':is_active' => $userData['is_active'] ?? true,
+                ':email_verified' => (int)($userData['email_verified'] ?? 0),
+                ':is_active' => (int)($userData['is_active'] ?? 1),
             ];
 
             if($stmt->execute($params)) {
@@ -82,10 +87,14 @@
 
             foreach($data as $key => $value) {
                 $fields[] = "{$key} = :{$key}";
-                $params["$key"] = $value;
+                $params[":{$key}"] = $value;
             }
 
-            $query = "UPDATE {$this->table} SET ". implode(', ', $fields) . "WHERE $id = :id";
+            if (empty($fields)) {
+                return true;
+            }
+
+            $query = "UPDATE {$this->table} SET ". implode(', ', $fields) . " WHERE id = :id";
             $stmt = $this->db->prepare($query);
 
             return $stmt->execute($params);
