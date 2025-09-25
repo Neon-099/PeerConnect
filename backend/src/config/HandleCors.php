@@ -3,7 +3,7 @@
     // Why CORS? Browsers block requests between different origins (domains/ports) for security
     // We need to explicitly allow our React app to communicate with PHP backend
 
-    function handleCors() {
+    function HandleCors() {
         $allowed_origins = explode(',', $_ENV['CORS_ALLOWED_ORIGINS']);
 
         //GET THE ORIGIN OF THE REQUEST

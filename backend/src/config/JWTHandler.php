@@ -14,6 +14,17 @@
             $this->refresh_expire_time = $_ENV['JWT_REFRESH_EXPIRE_TIME']; //1 week 
         }
 
+        public function generate(int $userId, string $role): string {
+            $payload = [
+                'sub' => $userId,
+                'role' => $role,
+                'iat' => time(),
+                'exp' => time() + $this->expire_time
+            ];
+
+            return \Firebase\JWT\JWT::encode($payload, $this->secret, 'HS256');
+        }
+
         // Why JWT? Stateless authentication, no need to store sessions server-side
         // Contains user info encoded in the token itself
         

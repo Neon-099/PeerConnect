@@ -1,0 +1,17 @@
+services:
+  db:
+    image: mariadb:11.3
+    container_name: peerconnect-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: peerconnect_db
+      MYSQL_USER: peeruser
+      MYSQL_PASSWORD: PeerConnect_0912! 
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+  
+volumes:
+  db_data:
