@@ -26,6 +26,6 @@ return array(
     'Google\\' => array($vendorDir . '/google/apiclient/src'),
     'Firebase\\JWT\\' => array($vendorDir . '/firebase/php-jwt/src'),
     'Dotenv\\' => array($vendorDir . '/vlucas/phpdotenv/src'),
-    'Config\\' => array($baseDir . '/src/Config'),
+    'Config\\' => array($baseDir . '/Config'),
     'App\\' => array($baseDir . '/src'),
 );
