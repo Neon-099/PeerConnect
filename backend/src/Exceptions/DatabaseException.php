@@ -50,7 +50,7 @@ class DatabaseException extends Exception {
 
     //GET QUERY BINDINGS 
     public function getBindings(): array {
-        return $this->connectionInfo;
+        return $this->bindings;
     }
 
     //GET DATABASE CONNECTION INFO
