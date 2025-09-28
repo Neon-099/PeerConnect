@@ -5,16 +5,18 @@ namespace App\Services;
 use App\Models\AuthUser;
 use App\Models\TutorProfile;
 use App\Models\Session;
-use App\Exceptions\AuthException;
+use App\Exceptions\AuthenticationException;
 use App\Exceptions\ValidationException;
+use App\Utils\Logger;
 
 class AuthService {
-    private $authUser;
-    private $tutorProfile;
+    private $authUserModel;
+    private $tutorProfileModel;
     private $sessionModel;
     private $jwtService;
     private $validationService;
 
+    //INIT DEPENDENCIES (for later reuse)
     public function __construct() {
         $this->authUser = new AuthUser();
         $this->tutorProfile = new TutorProfile();
@@ -23,8 +25,532 @@ class AuthService {
         $this->validationService = new ValidationService();
     }
 
+    //REGISTER A NEW USER (student or tutor)
+    public function register(array $userData): array {
+        try {
+            //VALIDATE INPUT DATA BASED ON ROLE
+            $this->validationService->validateRegistration($userData);
+
+            //CHECK IF EMAIL(current) ALREADY EXISTS
+            if($this->authUserModel->emailExist($userData['email'])) {
+                throw new AuthenticationException('Email already exists');
+            }
+
+            //PREPARE BASE USER DATA
+            $baseUserData = [
+                'email' => $userData['email'],
+                'password_hash' => password_hash($userData['password'], PASSWORD_ARGON2ID),
+                'first_name' => $userData['first_name'],
+                'last_name' => $userData['last_name'],
+                'role' => $userData['role'],
+                'providers' => 'manual',
+                'email_verified' => false,
+                'is_active' => true
+            ];
+
+            //ADD ROLE-SPECIFIC FIELDS TO BASE USER DATA
+            if($userData['role'] === 'student') {
+                $baseUserData['student_id'] = $userData['student_id'] ?? null;
+            }
+
+            //CREATE USER in DB
+            $userId = $this->authUserModel->create($baseUserData);
+            if(!$userId) {
+                throw new AuthenticationException('Failed to create user account');
+            }
+
+            //IF TUTOR, CREATE TUTOR PROFILE
+            if($userData['role'] === 'tutor') {
+                    $tutorProfileData = [
+                        'user_id' => $userId,
+                        'specialization' => $userData['specialization'] ?? '',
+                        'bio' => $userData['bio'] ?? '',
+                        'experience_years' => (int)($userData['experience_years'] ?? 0),
+                        'hourly_rate' => (float)($userData['hourly_rate'] ?? 0),
+                        ''
+                    ];
+
+                    $profileId = $this->tutorProfileModel->create($tutorProfileData);
+                    if(!$profileId) {
+                        //ROLEBACK USER CREATION IF TUTOR PROFILE FAILED
+                        $this->authUserModel->delete($userId);
+                        throw new AuthenticationException('Failed to create tutor profile');
+                    }
+                }
+
+                //GET COMPLETE USER DATA
+                $user = $this->authUserModel->findById($userId);
+                if(!$user) {
+                    throw new AuthenticationException('Failed to retrieve user data');
+                }
+
+                //LOG USER SUCCESSFUL REGISTRATION
+                Logger::info('User registered successfully', [
+                    'user_id' => $userId,
+                    'errors' => $userData['email'],
+                    'role' => $userData['role']
+                ]);
+
+                return $this->formatUserData($user);
+            } 
+            catch(ValidationException $e) {
+                Logger::warning('Registration validation failed', [
+                    'email' => $userData['email'],
+                    'errors' => $e->getErrors()
+                ]);
+                throw $e;
+            }
+            catch(AuthenticationException $e) {
+                Logger::error('Registration failed', [
+                    'email' => $userData['email'],
+                    'error' => $e->getMessage()
+                ]);
+                throw $e;
+            }
+            catch(\Exception $e) {
+                Logger::error('Unexpected registration error', [
+                    'email' => $userData['email'] ?? 'unknown',
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]); 
+                throw new AuthenticationException('Unexpected failed due to server error');
+            }
+        }
+
+
+        //LOGIN USER WITH EMAIL AND PASSWORD
+        public function login(string $email, string $password, ?string $role = null) : array {
+            try {
+                //FIND USER BY EMAIL
+                $user = $this->authUserModel->findByEmail($email);
+                if(!$user) {
+                    Logger::warning('Login attempt with non-existent email', ['email' => $email]);
+                }
+
+                //CHECK IF ACCOUNT IS ACTIVE
+                if(!$user['is_active']) {
+                    Logger::warning('Login attempt with inactive account', [
+                        'user_id' => $user['id'],
+                        'email' => $email
+                    ]);
+                    throw new AuthenticationException('Account is inactive');
+                }
+
+                //CHECK ROLE IF SPECIFIED
+                if($role && $user['role'] !== $role ) {
+                    Logger::warning('Login attempt with wrong role', [
+                        'user_id' => $user['id'],
+                        'email' => $email,
+                        'expected_role' => $role,
+                        'actual_role' => $user['role']
+                    ]);
+                    throw new AuthenticationException('Invalid credentials for this role');
+                }
+
+                //CHECK IF USER USES GOOGLE AUTH 
+                if($user['providers'] === 'google') {
+                    Logger::warning('Manual login attempt for Google-only account', [
+                        'user_id' => $user['id'],
+                        'email' => $email
+                    ]);
+                    throw new AuthenticationException('Please use Google Sign-in for this account');
+                }
+
+                //VERIFY PASSWORD (hash)
+                if(!password_verify($password, $user['password_hash'])) {
+                    Logger::warning('Login attempt with invalid password', [
+                        'user_id' => $user['id'],
+                        'email' => $email
+                    ]);
+                    throw new AuthenticationException('Invalid credentials');
+                }
+
+                //UPDATE LAST LOGIN TIMESTAMP
+                $this->authUserModel->updateLastLogin($user['id']);
+                Logger::info('User logged in successfully', [
+                    'user_id' => $user['id'],
+                    'email' => $email,
+                    'role' => $user['role']
+                ]);
+                return $this->createAuthResponse($user);  //WITH JWT + REFRESH TOKEN
+            
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error('Unexpected login error', [
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw new AuthenticationException('Login failed ude to server error');
+            }
+        }
+
+        //GOOGLE OAUTH authentication
+        public function googleAuth(string $googleToken, string $role = 'student'): array {
+            try {
+                $googleService = new GoogleAuthService();
+                $googleUser = $googleService->verifyToken($googleToken);
+
+                //CHECK IF USER EXISTS BY GOOGLE ID
+                $user = $this->authUserModel->findByGoogleId($googleUser['sub']);
+                if(!$user) {
+                    //CHECK IF USER EXISTS WITH SAME EMAIL (manual registration)
+                    $existingUser = $this->authUserModel->findByEmail($googleUser['email']);
+
+                    if($existingUser) {
+                        //LINK GOOGLE ACCOUNT TO EXISTING USER
+                        $updateData = [
+                        'google_id' => $googleUser['sub'],
+                        'providers' => 'both',
+                        'profile_picture' => $googleUser['picture'],
+                        'email_verified' => true
+                        ];
+
+                        //LINK EMAIL ACC IF GOOGLE ACC EXISTS
+                        if($this->authUserModel->update($existingUser['id'], $updateData)) {
+                            $user = $this->authUserModel->findById($existingUser['id']);
+
+                            Logger::info('Google account linked to existing user', [
+                                'user_id' => $existingUser['id'],
+                                'email' => $googleUser['email']
+                            ]);
+                        }
+                        else {
+                            throw new AuthenticationException('Failed to link Google account ');
+                        }
+                    }
+                    else {
+                        //CREATE NEW GOOGLE USER
+                        $userData = [
+                            'email' => $googleUser['email'],
+                            'first_name' => $googleUser['given_name'],
+                            'last_name' => $googleUser['family_name'],
+                            'role' => $role,
+                            'providers' => 'google',
+                            'google_id' => $googleUser['sub'],
+                            'profile_picture' => $googleUser['picture'],
+                            'email_verified' => (bool)$googleUser['email_verified'],
+                            'is_active' => true,
+                            'password_hash' => null // No password for Google users
+                        ];
+
+                        $userId = $this->authUserModel->create($userData);
+
+                        if(!$userId) {
+                            throw new AUthenticationException('Failed to create Google user account');
+                        }
+
+                        //IF TUTOR ROLE, CREATE BASIC TUTOR PROFILE
+                        if($role === 'tutor') {
+                            $tutorProfileData = [
+                                'user_id' => $userId,
+                                'specialization' => '',
+                                'bio' => '',
+                                'experience_years' => 0,
+                                'hourly_rate' => 0.00,
+                                'qualifications' => '',
+                                'is_verified_tutor' => false
+                            ];
+                            
+                            $this->tutorProfileModel->create($tutorProfileData);
+                        }
+
+                        $user = $this->authUserModel->findById($userId);
+
+                        Logger::info('New Google user created', [
+                            'user_id' => $userId,
+                            'email' => $googleUser['email'],
+                            'role' => $role
+                        ]);
+                    }
+                }
+                else {
+                    //UPDATE EXISTING GOOGLE ACCOUNT USERS PROFILE PICTURE AND LAST LOGIN
+                    $updateData = [
+                        'profile_picture' => $googleUser['picture']
+                    ];
+                    $this->authUserModel->update($user['id'], $updateData);
+                    $this->authUserModel->updateLastLogin($user['id']);
+
+                    Logger::info('Existing Google user logged in', [
+                        'user_id' => $user['id'],
+                        'email' => $googleUser['email']
+                    ]);
+                }
+
+                //CHECK IF ACCOUNT IS ACTIVE
+                if(!$user['is_active']) {
+                    throw new AuthenticationException('Account is inactive. Please contact support');
+                }
+
+                return $this->createAuthResponse($user); 
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error('Google authentication error', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw new AuthenticationException('Google authentication failed');
+            }
+        }
+
+        //REFRESH ACCESS TOKEN
+        public function refresh(string $refreshToken): array {
+            try {
+                //VALIDATE REFRESH TOKEN (in DB session table)
+                $session = $this->sessionModel->findByToken($refreshToken);
+                if(!$session) {
+                    Logger::warning('Invalid refresh token used', ['token' => substr($refreshToken, 0, 10), '...']);
+                    throw new AuthenticationException('Invalid refresh token');
+                }   
+
+                $user = $this->authUserModel->findById($session['user_id']);
+                if(!$user) {
+                    Logger::error('User not found for valid refresh token', [
+                        'user_id' => $session['user_id']
+                    ]);
+                    throw new AuthenticationException('User not found');
+                }
+
+                //CHECK IF ACCOUNT IS STILL ACTIVE
+                if(!$user['is_active']) {
+                    //DELETE THE SESSION FOR DEACTIVATED ACCOUNT
+                    $this->sessionModel->delete($refreshToken);
+                    throw new AuthenticationException('Account is deactivated');
+                }
+
+                //GENERATE NEW ACCESS TOKEN
+                $accessToken = $this->jwtService->generateAccessToken($user);
+
+                Logger::info('Token refreshed successfully', [
+                    'user_id' => $user['id'],
+                    'email' => $user['email']
+                ]);
+
+                return [
+                    'access_token' => $accessToken,
+                    'token_type' => 'Bearer',
+                    'expires_in' => config('app.jwt.access_expires'),
+                    'user' => $this->formatUserData($user)
+                ];
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error('Token refresh error', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw new AuthenticationException('Token refresh failed');
+            }
+        }
+
+        //LOGOUT USER (invalidated refresh token)
+        public function logout(string $refreshToken): bool {
+            try {
+                $session = $this->sessionModel->findByRefreshToken($refreshToken);
+                if($session) {
+                    Logger::info('User logged out', [
+                        'user_id' => $session['user_id']
+                    ]);
+                }
+                return $this->sessionModel->delete($refreshToken);
+            }
+            catch (\Exception $e) {
+                Logger::error('Logout error', [
+                    'error' => $e->getMessage()
+                ]);
+                return false;  //DONT THROW EXCEPTION FROM LOGOUT
+            }
+        }
+
+        //LOG OUT FROM ALL DEVICES
+        public function logoutFrommAllDevices(int $userId): bool {
+            try {
+                $result = $this->sessionModel->deleteUserSessions($userId);
+                Logger::info('User logged out from all devices', [
+                    'user_id' => $userId
+                ]);
+
+                return $result;
+            }
+            catch (\Exception $e) {
+                Logger::error('Logout from all devices error', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage()
+                ]);
+                return false;
+            }
+        }
     
+        //GET USER PROFILE WITH ROLE-SPECIFIC DATA
+        public function getUserProfile(int $userId): array {
+            try {
+                $user = $this->authUserModel->findById($userId);
+                if(!$user) {
+                    throw new AuthenticationException('User not found');
+                }
+                $profile = $this->formatUserData($user);
+
+                //ADD TUTOR-SPECIFIC DATA IF USER IS A TUTOR
+                if($user['role'] === 'tutor') {
+                    $tutorProfile = $this->tutorProfileModel->findByUserId($userId);
+                    if ($tutorProfile) {
+                        $profile['tutor_profile'] = [
+                            'specialization' => $tutorProfile['specialization'],
+                            'bio' => $tutorProfile['bio'],
+                            'experience_years' => (int)$tutorProfile['experience_years'],
+                            'hourly_rate' => (float)$tutorProfile['hourly_rate'],
+                            'qualifications' => $tutorProfile['qualifications'],
+                            'is_verified_tutor' => (bool)$tutorProfile['is_verified_tutor'],
+                            'total_sessions' => (int)($tutorProfile['total_sessions'] ?? 0),
+                            'average_rating' => (float)($tutorProfile['average_rating'] ?? 0.0)
+                        ];
+                    } 
+                }
+
+                return $profile;
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error('Get user profile error', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage()
+                ]);
+                throw new AuthenticationException('Failed to retrieve user profile');
+            }
+        }
+
+        //UPDATE USER PROFILE
+        public function updateUserProfile(int $userId, array $updateData): array {
+            try {
+                //VALIDATE UPDATE DATA
+                $this->validationService->validateUpdateProfileUpdate($updateData);
+                $user = $this->authUserModel->findById($userId);
+                if(!$user){
+                    throw new AuthenticationException('User not found');
+                }
+
+                //SEPARATE USER DATA FORM TUTOR PROFILE DATA
+                $userUpdateData = [];
+                $tutorUpdateData = [];
+
+                $allowedUserFields = ['first_name', 'last_name', 'student_id'];
+                $allowedTutorFields = ['specialization', 'bio', 'experience_years', 'hourly_rate', 'qualifications'];
+
+                foreach($updateData as $key => $value) {
+                    if(in_array($key, $allowedUserFields)) {
+                        $userUpdateData[$key] = $value;
+                    }
+                    elseif (in_array($key, $allowedTutorFields)){
+                        $tutorUpdateData[$key] = $value;
+                    }
+                }
+
+                //UPDATE USER DATA
+                if(!empty($userUpdateData)){
+                    if(!$this->authUserModel->update($userId, $userUpdateData)){
+                        throw new AuthenticationException('Failed to update user profile');
+                    }
+                }
+
+                //UPDATE TUTOR PROFILE DATA
+                if(!empty($tutorUpdateData) && $user['role'] === 'tutor'){
+                    $tutorProfile =$this->tutorProfileModel->findByUserId($userId);
+                    if($tutorProfile){
+                        if(!$this->tutorProfileModel->update($tutorProfile['id'], $tutorUpdateData)) {
+                            throw new AuthenticationException('Failed to update tutor profile');
+                        }
+                    }
+                }
+                Logger::info('User profile updated', [
+                    'user_id' => $userId,
+                    'updated_fields' => array_keys(array_merge($userUpdateData, $tutorUpdateData))
+                ]);
+
+                return $this->getUserProfile($userId); //RETURN UPDATED PROFILE
+            }
+            catch(ValidationException $e) {
+                throw $e;
+            }
+            catch(AuthenticationException $e) {
+                throw $e;
+            }
+            catch(\Exception $e){
+                Logger::error('Update user profile error', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage()
+                ]);
+                throw new AuthenticationException('Failed to update profile');
+            }
+
+
+
+        }   
+
+        //CREATE USER AUTHENTICATION RESPONSE WITH TOKENS 
+        private function createAuthResponse(array $user): array {
+            try {
+                $accessToken = $this->jwtService->generateAccessToken($user);
+                $refreshToken = $this->jwtService->generateRefreshToken($user);
+
+                //STORE REFRESH TOKEN IN DATABASE
+                $sessionData = [
+                    'user_id' => $user['id'],
+                    'refresh_token' => $refreshToken,
+                    'expires_at' => date('Y-m-d H:i:s', time() + config('app.jwt.refresh_expires')),
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+                ];
+
+                if(!$this->sessionModel->create($sessionData)) {
+                    throw new AuthenticationException('Failed to create session');
+                }
+
+                return [
+                    'access_token' => $accessToken,
+                    'refresh_token' => $refreshToken,
+                    'token_type' => 'Bearer',
+                    'expires_in' => config('app.jwt.access_expires'),
+                    'user' => $this->formatUserData($user), 
+                ];
+
+            }
+            catch (\Exception $e) {
+                Logger::error('create auth response error', [
+                    'user_id' => $user['id'],
+                    'error' => $e->getMessage()
+                ]);
+                throw new AuthenticationException ('Failed to create authentication response');
+            }
+        }
+
+
+        //FORMATE USER DATA FOR API RESPONSE
+        private function formatUserData(array $user): array {
+            return [
+                'id' => (int)$user['id'],
+                'email' => $user['email'],
+                'first_name' => $user['first_name'],
+                'last_name' => $user['last_name'],
+                'role' => $user['role'],
+                'providers' => $user['providers'],
+                'email_verified' => (bool)$user['email_verified'],
+                'is_active' => (bool)$user['is_active'],
+                'profile_picture' => $user['profile_picture'],
+                'student_id' => $user['student_id'],
+                'last_login_at' => $user['last_login_at'],
+                'created_at' => $user['created_at'],
+            ];
+        }
 }
-
-
 ?>
