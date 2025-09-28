@@ -1,27 +1,9 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-// Load configuration
+// Load configuration and initialize Config helper
 $config = require __DIR__ . '/../config/app.php';
-
-// Global config helper function
-if (!function_exists('config')) {
-    function config($key, $default = null) {
-        global $config;
-        $keys = explode('.', $key);
-        $value = $config;
-        
-        foreach ($keys as $k) {
-            if (is_array($value) && array_key_exists($k, $value)) {
-                $value = $value[$k];
-            } else {
-                return $default;
-            }
-        }
-        
-        return $value;
-    }
-}
+\App\Helpers\Config::init($config);
 
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");

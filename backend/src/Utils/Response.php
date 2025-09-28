@@ -2,7 +2,7 @@
 
 namespace App\Utils;
 
-use App\Exceptions\AuthException;
+use App\Exceptions\AuthenticationException;
 use App\Exceptions\ValidationException;
 use App\Exceptions\DatabaseException;
 
@@ -320,7 +320,7 @@ class Response {
         if($exception instanceof ValidationException) {
             self::validationError($exception->getErrors(), $exception->getMessage());
         }   
-        elseif ($exception instanceof AuthException) {
+        elseif ($exception instanceof AuthenticationException) {
             self::error($exception->getMessage(), $exception->getCode());
         } 
         elseif ($exception instanceof DatabaseException){

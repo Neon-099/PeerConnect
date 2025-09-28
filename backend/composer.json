@@ -9,8 +9,10 @@
     },
      "autoload": {
         "psr-4": {
-            "App\\": "src/",
-            "Config\\": "Config/"
-        }
+            "App\\": "src/"
+        },
+        "files": [
+            "src/Helpers/functions.php"
+        ]
     }
 }
