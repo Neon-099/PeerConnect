@@ -180,7 +180,7 @@ class ValidationException extends Exception {
         );   
     }
 
-    public static function invalidChoice(string $field, string $choices): self {
+    public static function invalidChoice(string $field, $choices): self {
         $fieldName = ucwords(str_replace('_',' ', $field));
         $choiceStr = implode(',', $choices);
         $message = "$fieldName must be one of: $choiceStr";

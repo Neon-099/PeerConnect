@@ -6,7 +6,7 @@ use Exception;
 use App\Utils\Logger;
 
 
-class AuthException extends Exception {
+class AuthenticationException extends Exception {
     private $context;
     private $errorCode;
 
