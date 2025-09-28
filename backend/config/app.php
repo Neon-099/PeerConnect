@@ -1,10 +1,14 @@
 <?php
 
     return [
-        'app_name' =>$_ENV['APP_NAME'] ?? 'Tutor-Student-Platform',
-        'app_version' => '2.0.0',
-        'debug' => $_ENV['APP_DEBUG'] ?? false,
-        'timezone' => $_ENV['APP_TIMEZONE'] ?? 'UTC',
+        'app' => [
+            'app_name' => $_ENV['APP_NAME'] ?? 'Tutor-Student-Platform',
+            'app_version' => '2.0.0',
+            'debug' => $_ENV['APP_DEBUG'] ?? false,
+            'timezone' => $_ENV['APP_TIMEZONE'] ?? 'UTC',
+            'log_level' => $_ENV['APP_LOG_LEVEL'] ?? 'info',
+            'blocked_email_domains' => explode(',', $_ENV['BLOCKED_EMAIL_DOMAINS'] ?? ''),
+        ],
     
         'jwt' => [
             'secret' => $_ENV['JWT_SECRET'] ?? 'your-server-key',
