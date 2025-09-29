@@ -17,15 +17,15 @@ class JWTService {
     private $audience;
 
     public function __construct() {
-        $this->secret = config('app.jwt.secret');
-        $this->algorithm = config('app.jwt.algorithm', 'HS256');
-        $this->accessExpires = config('app.jwt.access_expires', 3600);
-        $this->refreshExpires = config('app.jwt.refresh_expires', 604800);
+        $this->secret = config('jwt.secret');
+        $this->algorithm = config('jwt.algorithm', 'HS256');
+        $this->accessExpires = config('jwt.access_expires', 3600);
+        $this->refreshExpires = config('jwt.refresh_expires', 604800);
         $this->issuer = config('app.app_name', 'Tutor-Student Platform');
         $this->audience = 'app-users';
 
-        if(!$this->secret){
-            throw new \InvalidArgumentException('JWT secret not configured');
+        if(!$this->secret || $this->secret === 'your-server-key'){
+            throw new \InvalidArgumentException('JWT secret not configured. Please set JWT_SECRET in your environment variables.');
         }
     }
 

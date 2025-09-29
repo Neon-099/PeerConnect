@@ -8,6 +8,9 @@ use App\Models\Session;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\ValidationException;
 use App\Utils\Logger;
+use App\Services\JWTService;
+use App\Services\ValidationService;
+use App\Services\GoogleAuthService;
 
 class AuthService {
     private $authUserModel;
@@ -15,12 +18,12 @@ class AuthService {
     private $sessionModel;
     private $jwtService;
     private $validationService;
-
+    
     //INIT DEPENDENCIES (for later reuse)
     public function __construct() {
-        $this->authUser = new AuthUser();
-        $this->tutorProfile = new TutorProfile();
-        $this->session = new Session();
+        $this->authUserModel = new AuthUser();
+        $this->tutorProfileModel = new TutorProfile();
+        $this->sessionModel = new Session();
         $this->jwtService = new JWTService();
         $this->validationService = new ValidationService();
     }
@@ -67,10 +70,11 @@ class AuthService {
                         'bio' => $userData['bio'] ?? '',
                         'experience_years' => (int)($userData['experience_years'] ?? 0),
                         'hourly_rate' => (float)($userData['hourly_rate'] ?? 0),
-                        ''
+                        'qualifications' => $userData['qualifications'] ?? '',
+                        'is_verified_tutor' => false
                     ];
 
-                    $profileId = $this->tutorProfileModel->create($tutorProfileData);
+                    $profileId = $this->tutorProfileModel->create($userId, $tutorProfileData);
                     if(!$profileId) {
                         //ROLEBACK USER CREATION IF TUTOR PROFILE FAILED
                         $this->authUserModel->delete($userId);
@@ -87,7 +91,7 @@ class AuthService {
                 //LOG USER SUCCESSFUL REGISTRATION
                 Logger::info('User registered successfully', [
                     'user_id' => $userId,
-                    'errors' => $userData['email'],
+                    'email' => $userData['email'],
                     'role' => $userData['role']
                 ]);
 
@@ -113,7 +117,7 @@ class AuthService {
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]); 
-                throw new AuthenticationException('Unexpected failed due to server error');
+                throw new AuthenticationException('Registration failed due to server error');
             }
         }
 
@@ -184,7 +188,7 @@ class AuthService {
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                throw new AuthenticationException('Login failed ude to server error');
+                throw new AuthenticationException('Login failed due to server error');
             }
         }
 
@@ -240,7 +244,7 @@ class AuthService {
                         $userId = $this->authUserModel->create($userData);
 
                         if(!$userId) {
-                            throw new AUthenticationException('Failed to create Google user account');
+                            throw new AuthenticationException('Failed to create Google user account');
                         }
 
                         //IF TUTOR ROLE, CREATE BASIC TUTOR PROFILE
@@ -255,7 +259,7 @@ class AuthService {
                                 'is_verified_tutor' => false
                             ];
                             
-                            $this->tutorProfileModel->create($tutorProfileData);
+                            $this->tutorProfileModel->create($userId, $tutorProfileData);
                         }
 
                         $user = $this->authUserModel->findById($userId);
@@ -336,7 +340,7 @@ class AuthService {
                 return [
                     'access_token' => $accessToken,
                     'token_type' => 'Bearer',
-                    'expires_in' => config('app.jwt.access_expires'),
+                    'expires_in' => config('jwt.access_expires'),
                     'user' => $this->formatUserData($user)
                 ];
             }
@@ -372,7 +376,7 @@ class AuthService {
         }
 
         //LOG OUT FROM ALL DEVICES
-        public function logoutFrommAllDevices(int $userId): bool {
+        public function logoutFromAllDevices(int $userId): bool {
             try {
                 $result = $this->sessionModel->deleteUserSessions($userId);
                 Logger::info('User logged out from all devices', [
@@ -434,7 +438,7 @@ class AuthService {
         public function updateUserProfile(int $userId, array $updateData): array {
             try {
                 //VALIDATE UPDATE DATA
-                $this->validationService->validateUpdateProfileUpdate($updateData);
+                $this->validationService->validateProfileUpdate($updateData);
                 $user = $this->authUserModel->findById($userId);
                 if(!$user){
                     throw new AuthenticationException('User not found');
@@ -501,13 +505,13 @@ class AuthService {
         private function createAuthResponse(array $user): array {
             try {
                 $accessToken = $this->jwtService->generateAccessToken($user);
-                $refreshToken = $this->jwtService->generateRefreshToken($user);
+                $refreshToken = $this->jwtService->generateRefreshToken();
 
                 //STORE REFRESH TOKEN IN DATABASE
                 $sessionData = [
                     'user_id' => $user['id'],
                     'refresh_token' => $refreshToken,
-                    'expires_at' => date('Y-m-d H:i:s', time() + config('app.jwt.refresh_expires')),
+                    'expires_at' => date('Y-m-d H:i:s', time() + config('jwt.refresh_expires')),
                     'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
                     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
                 ];
@@ -520,7 +524,7 @@ class AuthService {
                     'access_token' => $accessToken,
                     'refresh_token' => $refreshToken,
                     'token_type' => 'Bearer',
-                    'expires_in' => config('app.jwt.access_expires'),
+                    'expires_in' => config('jwt.access_expires'),
                     'user' => $this->formatUserData($user), 
                 ];
 
