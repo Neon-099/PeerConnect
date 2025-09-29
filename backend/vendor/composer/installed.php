@@ -3,7 +3,7 @@
         'name' => 'peerconnect/backend',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'fd630028cdc4b06f1d59127287eeb24dc9aded99',
+        'reference' => '92a8bafaed90ba86bdb5869090acfb02f86cd208',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -112,7 +112,7 @@
         'peerconnect/backend' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'fd630028cdc4b06f1d59127287eeb24dc9aded99',
+            'reference' => '92a8bafaed90ba86bdb5869090acfb02f86cd208',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

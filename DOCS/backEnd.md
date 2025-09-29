@@ -69,3 +69,8 @@ availability
 ratings & sessions count
 👉 Together, they separate universal account info from tutor-only info.
 This makes your database cleaner, easier to scale, and avoids headaches later.
+
+
+
+#DB MIGRATIONS
+manually installed the mariadb and php test web server

@@ -28,5 +28,14 @@
             'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? 'your-client-id',
             'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'your-client-secret',
         ],
+
+        'database' => [
+            'host' => $_ENV['DB_HOST'] ?? 'localhost',
+            'name' => $_ENV['DB_NAME'] ?? 'peerconnect',
+            'username' => $_ENV['DB_USERNAME'] ?? 'root',
+            'password' => $_ENV['DB_PASSWORD'] ?? '',
+            'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',
+            'port' => $ENV['DB_PORT'] ?? 3306,
+        ],
     ];
 ?>

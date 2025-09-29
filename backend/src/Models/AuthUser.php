@@ -36,11 +36,11 @@
 
             $params =[
                 ':email' => $userData['email'],
-                ':password_hash' => $passwordHash,
+                ':password_hash' => $userData['password_hash'] ?? $passwordHash,
                 ':first_name' => $userData['first_name'],
                 ':last_name' => $userData['last_name'],
                 ':role' => $userData['role'] ?? 'student',
-                ':provider' => $userData['provider'] ?? 'local',
+                ':provider' => $userData['providers'] ?? $userData['provider'] ?? 'manual',
                 ':google_id' => $userData['google_id'] ?? null,
                 ':profile_picture' => $userData['profile_picture'] ?? null,
                 ':email_verified' => (int)($userData['email_verified'] ?? 0),
@@ -115,6 +115,23 @@
 
         public function activate(int $id): bool {
             return $this->update($id,['is_active'=>true]);
+        }
+
+        // Additional methods needed by AuthService
+        public function emailExist(string $email): bool {
+            return $this->emailExists($email);
+        }
+
+        public function delete(int $id): bool {
+            $query = "DELETE FROM {$this->table} WHERE id = :id";
+            $stmt = $this->db->prepare($query);
+            return $stmt->execute([':id' => $id]);
+        }
+
+        public function updateLastLogin(int $id): bool {
+            $query = "UPDATE {$this->table} SET last_login_at = NOW() WHERE id = :id";
+            $stmt = $this->db->prepare($query);
+            return $stmt->execute([':id' => $id]);
         }
     }
 ?>
