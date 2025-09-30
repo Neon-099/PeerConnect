@@ -68,6 +68,67 @@ class TutorProfile {
         
         return $stmt->execute($params);
     }
+
+    // FIND TUTORS WITH BASIC FILTERS AND PAGINATION
+    public function findTutors(array $filters, int $page = 1, int $perPage = 20): array {
+        $where = [];
+        $params = [];
+
+        if (isset($filters['min_rate'])) {
+            $where[] = 'hourly_rate >= :min_rate';
+            $params[':min_rate'] = (float)$filters['min_rate'];
+        }
+        if (isset($filters['max_rate'])) {
+            $where[] = 'hourly_rate <= :max_rate';
+            $params[':max_rate'] = (float)$filters['max_rate'];
+        }
+        if (!empty($filters['verified_only'])) {
+            $where[] = 'is_verified_tutor = 1';
+        }
+        // specialization/experience_years are not in current schema; ignored safely
+
+        $whereSql = empty($where) ? '' : ('WHERE ' . implode(' AND ', $where));
+        $offset = max(0, ($page - 1) * max(1, $perPage));
+
+        $query = "SELECT * FROM {$this->table} {$whereSql} ORDER BY avg_rating DESC, total_sessions DESC LIMIT :limit OFFSET :offset";
+        $stmt = $this->db->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', (int)$perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    // COUNT TUTORS FOR THE SAME FILTERS
+    public function countTutors(array $filters): int {
+        $where = [];
+        $params = [];
+
+        if (isset($filters['min_rate'])) {
+            $where[] = 'hourly_rate >= :min_rate';
+            $params[':min_rate'] = (float)$filters['min_rate'];
+        }
+        if (isset($filters['max_rate'])) {
+            $where[] = 'hourly_rate <= :max_rate';
+            $params[':max_rate'] = (float)$filters['max_rate'];
+        }
+        if (!empty($filters['verified_only'])) {
+            $where[] = 'is_verified_tutor = 1';
+        }
+
+        $whereSql = empty($where) ? '' : ('WHERE ' . implode(' AND ', $where));
+        $query = "SELECT COUNT(*) as total FROM {$this->table} {$whereSql}";
+        $stmt = $this->db->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)($row['total'] ?? 0);
+    }
 }
 
 ?>

@@ -319,6 +319,52 @@ class ValidationService
     }
 
     /**
+     * Validate password change request
+     */
+    public function validatePasswordChange(array $data): void
+    {
+        try {
+            $this->validator = new Validator();
+            
+            // Validate required fields
+            $this->validator
+                ->required($data, ['old_password', 'new_password'])
+                ->minLength($data, 'old_password', 1)
+                ->minLength($data, 'new_password', 8)
+                ->maxLength($data, 'new_password', 128);
+
+            // Validate new password strength
+            if (isset($data['new_password'])) {
+                $this->validatePasswordStrength($data['new_password']);
+            }
+
+            // Ensure new password is different from old password
+            if (isset($data['old_password']) && isset($data['new_password'])) {
+                if ($data['old_password'] === $data['new_password']) {
+                    $this->validator->addErrors(['new_password' => ['New password must be different from old password']]);
+                }
+            }
+
+            // Optional: validate password confirmation if provided
+            if (isset($data['new_password_confirmation'])) {
+                if ($data['new_password'] !== $data['new_password_confirmation']) {
+                    $this->validator->addErrors(['new_password_confirmation' => ['Password confirmation does not match']]);
+                }
+            }
+
+            if ($this->validator->fails()) {
+                throw new ValidationException('Password change validation failed', $this->validator->getErrors());
+            }
+
+        } catch (ValidationException $e) {
+            Logger::debug('Password change validation failed', [
+                'errors' => $e->getErrors()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Validate email format (enhanced version)
      */
     public function validateEmailFormat(string $email): bool

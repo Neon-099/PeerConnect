@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Config\Database;
+use PDO;
 use App\Models\AuthUser;
 use App\Models\TutorProfile;
 use App\Models\Session;
@@ -11,6 +13,7 @@ use App\Utils\Logger;
 use App\Services\JWTService;
 use App\Services\ValidationService;
 use App\Services\GoogleAuthService;
+use Google\Service\ServiceConsumerManagement\Authentication;
 
 class AuthService {
     private $authUserModel;
@@ -496,10 +499,175 @@ class AuthService {
                 ]);
                 throw new AuthenticationException('Failed to update profile');
             }
-
-
-
         }   
+
+        public function verifyEmail(string $email): ?array {
+            try {
+                $db = Database::getInstance()->getConnection();
+
+                $stmt = $db->prepare("SELECT * FROM users WHERE email = :email LIMIT 1");
+                $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+                $stmt->execute();
+
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // If user exists, return user data as an associative array
+                if ($user) {
+                    return $user;
+                }
+
+                // If no user found, return null
+                return null;
+
+            } catch (\Exception $e) {
+                Logger::error('Database error in verifyEmail', [
+                    'email' => $email,
+                    'error' => $e->getMessage()
+                ]);
+                throw new AuthenticationException("Failed to verify email.");
+            }
+        }
+
+        public function changePassword(int $userId, array $input): bool
+        {
+            try {
+                // 1. Fetch user from DB
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT password FROM users WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => $userId]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$user) {
+                    throw new AuthenticationException("User not found");
+                }
+
+                // 2. Verify old password
+                if (!password_verify($input['old_password'], $user['password'])) {
+                    throw new AuthenticationException("Old password is incorrect");
+                }
+
+                // 3. Hash new password (Argon2ID preferred)
+                $newPasswordHash = password_hash($input['new_password'], PASSWORD_ARGON2ID);
+
+                // 4. Update DB with new password
+                $updateStmt = $db->prepare("UPDATE users SET password = :password WHERE id = :id");
+                $success = $updateStmt->execute([
+                    ':password' => $newPasswordHash,
+                    ':id' => $userId
+                ]);
+
+                if (!$success) {
+                    throw new AuthenticationException("Failed to update password");
+                }
+
+                Logger::info("Password updated successfully", ['user_id' => $userId]);
+
+                return true;
+
+            } catch (\Exception $e) {
+                Logger::error("Password change failed", [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage()
+                ]);
+                throw new AuthenticationException("Password change failed: " . $e->getMessage());
+            }
+        }
+
+        /**
+         * Request password reset - generate token & store it
+         */
+        public function requestPasswordReset(string $email): string
+        {
+            try {
+                $db = Database::getInstance()->getConnection();
+
+                // Check if user exists
+                $stmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+                $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+                $stmt->execute();
+
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$user) {
+                    throw new AuthenticationException("No user found with this email.");
+                }
+
+                // Generate secure reset token
+                $token = bin2hex(random_bytes(32));
+                $expiresAt = date("Y-m-d H:i:s", time() + 3600); // 1 hour expiry
+
+                // Store token in password_resets table
+                $stmt = $db->prepare("
+                    INSERT INTO password_resets (user_id, token, expires_at)
+                    VALUES (:user_id, :token, :expires_at)
+                ");
+                $stmt->bindParam(':user_id', $user['id'], PDO::PARAM_INT);
+                $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+                $stmt->bindParam(':expires_at', $expiresAt, PDO::PARAM_STR);
+                $stmt->execute();
+
+                Logger::info("Password reset requested", ['user_id' => $user['id']]);
+
+                return $token; // This would normally be emailed to the user
+
+            } catch (\Exception $e) {
+                Logger::error("DB error in requestPasswordReset", ['error' => $e->getMessage()]);
+                throw new AuthenticationException("Failed to request password reset.");
+            }
+        }
+
+        /**
+         * Reset user password using valid reset token
+         */
+        public function resetPassword(string $token, string $newPassword): bool
+        {
+            try {
+                $db = Database::getInstance()->getConnection();
+
+                // Validate token
+                $stmt = $db->prepare("
+                    SELECT pr.user_id, pr.expires_at, u.email
+                    FROM password_resets pr
+                    JOIN users u ON pr.user_id = u.id
+                    WHERE pr.token = :token
+                    LIMIT 1
+                ");
+                $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+                $stmt->execute();
+
+                $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$reset) {
+                    throw new AuthenticationException("Invalid reset token.");
+                }
+
+                // Check expiry
+                if (strtotime($reset['expires_at']) < time()) {
+                    throw new AuthenticationException("Reset token has expired.");
+                }
+
+                // Hash new password securely
+                $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
+
+                // Update user password
+                $stmt = $db->prepare("UPDATE users SET password = :password WHERE id = :id");
+                $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+                $stmt->bindParam(':id', $reset['user_id'], PDO::PARAM_INT);
+                $stmt->execute();
+
+                // Delete reset token (one-time use)
+                $stmt = $db->prepare("DELETE FROM password_resets WHERE token = :token");
+                $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+                $stmt->execute();
+
+                Logger::info("Password reset successful", ['user_id' => $reset['user_id']]);
+
+                return true;
+
+            } catch (\Exception $e) {
+                Logger::error("DB error in resetPassword", ['error' => $e->getMessage()]);
+                throw new AuthenticationException("Failed to reset password.");
+            }
+        }
+
 
         //CREATE USER AUTHENTICATION RESPONSE WITH TOKENS 
         private function createAuthResponse(array $user): array {

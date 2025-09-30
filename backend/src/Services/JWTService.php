@@ -121,20 +121,29 @@ class JWTService {
             }
 
             Logger::debug('Token verified successfully', [
-                'user_id' => ((array)$payload['user'])->id ?? 'unknown',
-                'expires_at' => date('Y-m-d H:i:s', $payload['exp'])
+                'user_id' => ((array)($payload['user'] ?? []))['id'] ?? 'unknown',
+                'expires_at' => isset($payload['exp']) ? date('Y-m-d H:i:s', (int)$payload['exp']) : 'n/a'
             ]);
 
             return $payload;
         }
-        catch(\Firebase\JWT\ExpiredSignatureException $e) {
+        catch (\Firebase\JWT\ExpiredException $e) {
             Logger::debug('Token expired', ['error' => $e->getMessage()]);
             throw new AuthenticationException('Token expired');
-        }
-        catch (\Firebase\JWT\InvalidTokenException $e) {
+        } 
+        catch (\Firebase\JWT\SignatureInvalidException $e) {
+            Logger::warning('Invalid token signature', ['error' => $e->getMessage()]);
+            throw new AuthenticationException('Invalid token');
+        } 
+        catch (\Firebase\JWT\BeforeValidException $e) {
+            Logger::warning('Token used before valid time', ['error' => $e->getMessage()]);
+            throw new AuthenticationException('Invalid token');
+        } 
+        catch (\UnexpectedValueException|\DomainException|\InvalidArgumentException $e) {
             Logger::warning('Invalid token provided', ['error' => $e->getMessage()]);
             throw new AuthenticationException('Invalid token');
-        } catch (\Exception $e) {
+        } 
+        catch (\Exception $e) {
             Logger::error('Token verification error', [
                 'error' => $e->getMessage()
             ]);
@@ -198,7 +207,7 @@ class JWTService {
 
     //GENERATE UNIQUE TOKEN ID
     private function generateJTI(): string {
-        return uniqId('jwt_', true);
+        return uniqid('jwt_', true);
     }
 
     //GET ALL HTTP HEADERS (polyfills for different PHP environments)
