@@ -1,9 +1,11 @@
+import { auth, storeSession} from '../../utils/auth';
+import {useNavigate, Link} from 'react-router-dom';
+import {GoogleLogin} from '@react-oauth/google';
 import { GraduationCapIcon } from "lucide-react";
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useState } from 'react';
 import { User, GraduationCap, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import {GoogleLogin} from '@react-oauth/google';
+
 
 
 const StudentSignup = () => {
@@ -20,6 +22,8 @@ const StudentSignup = () => {
     confirmPassword: ''
   });
 
+  const navigate = useNavigate();
+
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
@@ -35,15 +39,38 @@ const StudentSignup = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleLoginSubmit = async (e) => {
+    e?.preventDefault?.();
+    try {
+        const role = 'student';
+        const res = await auth.login(formData.email, formData.password, role);
+        storeSession(res);
+        navigate('/dashboard'); //ADJUST WHEN DASHBOARD IS READY
+    }
+    catch (err) {
+        alert(err.message || 'login failed');
+    }
     console.log('Form submitted:', formData, );
     alert('Account created successfully!');
   };
 
-  const handleLoginSubmit = () => {
-    console.log('Login submitted:', formData);
-    alert('Login successful!');
+  const handleSignupSubmit = async (e) => {
+    e?.preventDefault?.();
+    try {
+        const payload = {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            password: formData.password,
+            role: 'student'
+        };
+        const res = await auth.register(payload);
+        storeSession(res.data);
+        navigate('/dashboard');
+    }
+    catch(err){
+        alert(err.message || 'Signup failed');
+    }
   }
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -256,7 +283,7 @@ const StudentSignup = () => {
                                 <div className="pt-6">
                                     <button
                                     type="button"
-                                    onClick={handleContinue}
+                                    onClick={handleSignupSubmit}
                                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                     >
                                     Sign in
@@ -282,8 +309,18 @@ const StudentSignup = () => {
                             <div className="flex items-center justify-center">
                                  <GoogleLogin 
                                 clientId = {googleClientId}
-                                onSuccess={handleGoogleLogin}
-                                onFailure={handleGoogleLogin}
+                                    onSuccess={async (credentialResponse) => {
+                                        try {
+                                            const google_token = credentialResponse.credential;
+                                            const res = await auth.googleAuth(google_token, 'student');
+                                            storeSession(res.data);
+                                            navigate('/dashboard');
+                                        } catch (err) {
+                                            alert(err.message || 'Google login failed');
+                                        }
+                                    }}
+                                onError={() => alert('Google login failed')}
+                                useOneTap
                                 cookiePolicy={'single_host_origin'}
                             />
                             </div>

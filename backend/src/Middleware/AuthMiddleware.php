@@ -22,7 +22,7 @@ class AuthMiddleware {
          $this->excludedRoutes = [
             '/api/auth/register',
             '/api/auth/login',
-            '/api/auth/google',
+            '/api/auth/googleAuth',
             '/api/auth/refresh',
             '/api/health',
             '/api/status',
