@@ -1,4 +1,4 @@
-import { auth, storeSession} from '../../utils/auth';
+import { auth, storeSession} from '../../utils/auth.js';
 import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
 import { GraduationCapIcon } from "lucide-react";
@@ -7,11 +7,9 @@ import { useState } from 'react';
 import { User, GraduationCap, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 
-
 const StudentSignup = () => {
 
   const [activeTab, setActiveTab] = useState('signup');
-  const [currentStep, setCurrentStep] = useState('account');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -31,27 +29,20 @@ const StudentSignup = () => {
     });
   };
 
-  const handleContinue = () => {
-    if (currentStep === 'account') {
-      setCurrentStep('school');
-    } else if (currentStep === 'school') {
-      setCurrentStep('confirm');
-    }
-  };
-
   const handleLoginSubmit = async (e) => {
     e?.preventDefault?.();
     try {
         const role = 'student';
         const res = await auth.login(formData.email, formData.password, role);
         storeSession(res);
-        navigate('/dashboard'); //ADJUST WHEN DASHBOARD IS READY
+        navigate('/student/home'); //ADJUST WHEN DASHBOARD IS READY
     }
     catch (err) {
         alert(err.message || 'login failed');
     }
     console.log('Form submitted:', formData, );
     alert('Account created successfully!');
+    navigate('/student/home');
   };
 
   const handleSignupSubmit = async (e) => {
@@ -66,7 +57,6 @@ const StudentSignup = () => {
         };
         const res = await auth.register(payload);
         storeSession(res.data);
-        navigate('/dashboard');
     }
     catch(err){
         alert(err.message || 'Signup failed');
@@ -135,7 +125,6 @@ const StudentSignup = () => {
                         <h2 className="text-lg font-semibold text-white mb-4"> Login your account</h2>
                         
                         <div className="space-y-4">
-                            {currentStep === 'account' && (
                             <form>
                                 <div className="text-sm text-gray-300 mb-4">Basic Info</div>
                                 
@@ -175,7 +164,7 @@ const StudentSignup = () => {
 
                                 <button
                                 type="button"
-                                onClick={handleContinue}
+                                onClick={handleLoginSubmit}
                                 className=" w-full bg-blue-600 hover:bg-blue-700 text-white py-3  px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     Login
@@ -184,8 +173,6 @@ const StudentSignup = () => {
                                 </svg>
                                 </button>
                             </form>
-                            )}
-
                         </div>
                         </div>
                         )}
@@ -196,7 +183,6 @@ const StudentSignup = () => {
                         <h2 className="text-lg font-semibold text-white mb-4">Create your account</h2>
                         
                         <div className="space-y-4">
-                            {currentStep === 'account' && (
                             <form>
                                 <div className="text-sm text-gray-300 mb-4">Basic Info</div>
                                 
@@ -293,13 +279,7 @@ const StudentSignup = () => {
                                     </button>
                                 </div>
                             </form>
-                            )}
-
-                            
                         </div>
-
-                        {currentStep === 'account' && (
-                            <>
                             <div className="flex items-center my-6">
                                 <div className="flex-1 border-t border-gray-600"></div>
                                 <span className="px-4 text-gray-400 text-sm">or</span>
@@ -338,12 +318,8 @@ const StudentSignup = () => {
                             <div className="items-center mt-4 text-xs text-gray-500 ">
                                 <p>By creating an account, you agree to our Terms of Service and Privacy Policy.</p>
                             </div>
-                            </>
-                        )}
                         </div>
                         )}
-
-
                     </div>
                 </div>
             </main>
