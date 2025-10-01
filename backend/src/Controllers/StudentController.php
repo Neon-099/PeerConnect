@@ -27,7 +27,7 @@ class StudentController {
         //GET/api/student/profile
     public function getProfile(): void    {
         try {
-            //REQUIRE AUTHENTICATION AND STUDENT TOLE
+            //REQUIRE AUTHENTICATION AND STUDENT ROLE
             $user = $this->authMiddleware->requireAuth();
 
             if(!RoleMiddleware::studentOnly($user)) {
@@ -309,7 +309,7 @@ class StudentController {
             Response::serverError('Failed to submit rating');
         }
     }
-        private function getJsonInput():? array {
+    private function getJsonInput():? array {
             $json = file_get_contents('php://input');
             if(empty($json)) return null;
 
