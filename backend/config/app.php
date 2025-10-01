@@ -2,7 +2,7 @@
 
     return [
         'app' => [
-            'app_name' => $_ENV['APP_NAME'] ?? 'Tutor-Student-Platform',
+            'app_name' => $_ENV['APP_NAME'] ?? 'PeerConnect',
             'app_version' => '2.0.0',
             'debug' => $_ENV['APP_DEBUG'] ?? false,
             'timezone' => $_ENV['APP_TIMEZONE'] ?? 'UTC',
@@ -11,7 +11,7 @@
         ],
     
         'jwt' => [
-            'secret' => $_ENV['JWT_SECRET'] ?? 'your-server-key',
+            'secret' => $_ENV['JWT_SECRET'] ?? 'b9ffe076bd39063d15858a48eee1def8',
             'access_expires' => $_ENV['JWT_ACCESS_EXPIRES'] ?? 3600, //1 HOUR
             'refresh_expires' => $_ENV['JWT_REFRESH_EXPIRES'] ?? 604800, //1 WEEK
             'algorithm' => 'HS256',
@@ -32,10 +32,9 @@
         'database' => [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
             'name' => $_ENV['DB_NAME'] ?? 'peerconnect',
-            'username' => $_ENV['DB_USERNAME'] ?? 'root',
-            'password' => $_ENV['DB_PASSWORD'] ?? '',
+            'username' => $_ENV['DB_USER'] ?? 'root',
+            'password' => $_ENV['DB_PASS'] ?? '',
             'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',
             'port' => $ENV['DB_PORT'] ?? 3306,
         ],
     ];
-?>
