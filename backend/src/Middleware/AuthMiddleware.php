@@ -1,6 +1,6 @@
 <?php 
 
-namespace App\Middleware;
+namespace App\middleware;
 
 use App\Services\JWTService;
 use App\Models\AuthUser;

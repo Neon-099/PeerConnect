@@ -1,10 +1,10 @@
 <?php 
 
-namespace App\Middleware;
+namespace App\middleware;
 
 use App\Utils\Response;
 use App\Utils\Logger;
-use App\Exceptions\AuthException;
+use App\Exceptions\AuthenticationException;
 
 class RoleMiddleware 
 {
