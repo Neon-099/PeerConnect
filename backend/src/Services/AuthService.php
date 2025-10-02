@@ -49,7 +49,7 @@ class AuthService {
                 'first_name' => $userData['first_name'],
                 'last_name' => $userData['last_name'],
                 'role' => $userData['role'],
-                'providers' => 'manual',
+                'providers' => 'local',
                 'email_verified' => false,
                 'is_active' => true
             ];
@@ -61,7 +61,8 @@ class AuthService {
 
             //CREATE USER in DB
             $userId = $this->authUserModel->create($baseUserData);
-            if(!$userId) {
+            $user = $this->authUserModel->findById($userId);
+            if(!$user) {
                 throw new AuthenticationException('Failed to create user account');
             }
 
@@ -85,11 +86,11 @@ class AuthService {
                     }
                 }
 
-                //GET COMPLETE USER DATA
-                $user = $this->authUserModel->findById($userId);
-                if(!$user) {
-                    throw new AuthenticationException('Failed to retrieve user data');
-                }
+                // //GET COMPLETE USER DATA
+                // $user = $this->authUserModel->findById($userId);
+                // if(!$user) {
+                //     throw new AuthenticationException('Failed to retrieve user data');
+                // }
 
                 //LOG USER SUCCESSFUL REGISTRATION
                 Logger::info('User registered successfully', [
@@ -98,7 +99,8 @@ class AuthService {
                     'role' => $userData['role']
                 ]);
 
-                return $this->formatUserData($user);
+                //RETURN USER DATA WITH TOKENS FOR IMMEDIATE LOGIN
+                return $this->createAuthResponse($user);
             } 
             catch(ValidationException $e) {
                 Logger::warning('Registration validation failed', [
@@ -132,6 +134,7 @@ class AuthService {
                 $user = $this->authUserModel->findByEmail($email);
                 if(!$user) {
                     Logger::warning('Login attempt with non-existent email', ['email' => $email]);
+                    throw new AuthenticationException('Invalid credentials', 401);
                 }
 
                 //CHECK IF ACCOUNT IS ACTIVE
@@ -718,9 +721,9 @@ class AuthService {
                 'providers' => $user['providers'],
                 'email_verified' => (bool)$user['email_verified'],
                 'is_active' => (bool)$user['is_active'],
-                'profile_picture' => $user['profile_picture'],
-                'student_id' => $user['student_id'],
-                'last_login_at' => $user['last_login_at'],
+                'profile_picture' => $user['profile_picture'] ?? null,
+                'student_id' => $user['student_id'] ?? null,
+                'last_login_at' => $user['last_login_at'] ?? null,
                 'created_at' => $user['created_at'],
             ];
         }

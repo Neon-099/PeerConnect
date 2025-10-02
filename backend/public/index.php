@@ -36,47 +36,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $method = $_SERVER['REQUEST_METHOD'];
 
-$auth = new AuthController();
-$student = new StudentController();
+// $auth = new AuthController();
+// $student = new StudentController();
+
+// Add comprehensive debugging
+error_log("=== REQUEST DEBUG ===");
+error_log("URI: " . $uri);
+error_log("Method: " . $method);
+error_log("Raw REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'not set'));
+error_log("Raw PATH_INFO: " . ($_SERVER['PATH_INFO'] ?? 'not set'));
+
+try {
+    $auth = new AuthController();
+    $student = new StudentController();
+    error_log("DEBUG: Controllers created successfully");
+} catch (Exception $e) {
+    error_log("ERROR: Failed to create controllers: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server initialization failed: ' . $e->getMessage()]);
+    exit;
+}
+
+error_log("DEBUG: About to enter routing switch");
 
 switch(true) {
     //AUTH 
     case $uri === '/api/auth/register' && $method === 'POST':
+        error_log("DEBUG: Matched register route");
         $auth->register();
         break;
     case $uri === '/api/auth/login' && $method === 'POST':
+        error_log("DEBUG: Matched login route");
         $auth->login();
         break;
     case $uri === '/api/auth/refresh' && $method === 'POST':
+        error_log("DEBUG: Matched refresh route");
         $auth->refresh();
+        break;
+    case $uri === '/api/auth/googleAuth' && $method === 'POST':
+        error_log("DEBUG: Matched googleAuth route");
+        $auth->googleAuth();
         break;
 
     //STUDENT
     case $uri === '/api/student/profile' && $method === 'GET':
+        error_log("DEBUG: Matched student profile GET route");
         $student->getProfile();
         break;
     case $uri === '/api/student/profile' && $method === 'PUT':
+        error_log("DEBUG: Matched student profile PUT route");
         $student->updateProfile();
         break;
     case $uri === '/api/student/tutors' && $method === 'GET':
+        error_log("DEBUG: Matched student tutors route");
         $student->findTutors();
         break;
     case preg_match('#^/api/student/tutors/(\d+)$#', $uri, $m) && $method === 'GET':
+        error_log("DEBUG: Matched student tutor details route");
         $student->getTutorDetails((int)$m[1]);
         break;
 
     case $uri === '/debug/users' && $method === 'GET':
-            try {
-                $db = \Config\Database::getInstance()->getConnection();
-                $stmt = $db->query("SELECT id, email, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC");
-                $users = $stmt->fetchAll();
-                echo json_encode(['success' => true, 'users' => $users]);
-            } catch (Exception $e) {
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-            }
-            break;
-            
+        error_log("DEBUG: Matched debug users route");
+        try {
+            $db = \Config\Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT id, email, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC");
+            $users = $stmt->fetchAll();
+            echo json_encode(['success' => true, 'users' => $users]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        break;
+        
     default:
+        error_log("DEBUG: No route matched - URI: '$uri', Method: '$method'");
+        error_log("DEBUG: Available routes:");
+        error_log("  POST /api/auth/register");
+        error_log("  POST /api/auth/login");
+        error_log("  POST /api/auth/refresh");
+        error_log("  POST /api/auth/googleAuth");
+        error_log("  GET /api/student/profile");
+        error_log("  PUT /api/student/profile");
+        error_log("  GET /api/student/tutors");
+        error_log("  GET /api/student/tutors/{id}");
+        error_log("  GET /debug/users");
         http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Endpoint not found']);
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Endpoint not found',
+            'debug' => [
+                'uri' => $uri,
+                'method' => $method,
+                'raw_uri' => $_SERVER['REQUEST_URI'] ?? 'not set'
+            ]
+        ]);
 }

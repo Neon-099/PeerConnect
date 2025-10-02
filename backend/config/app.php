@@ -11,7 +11,7 @@
         ],
     
         'jwt' => [
-            'secret' => $_ENV['JWT_SECRET'] ?? 'b9ffe076bd39063d15858a48eee1def8',
+            'secret' => $_ENV['JWT_SECRET'] ?? 'a8f5f167f44f4964e6c998dee827110c8b7e5c8c5e8c5e8c5e8c5e8c5e8c5e8c',
             'access_expires' => $_ENV['JWT_ACCESS_EXPIRES'] ?? 3600, //1 HOUR
             'refresh_expires' => $_ENV['JWT_REFRESH_EXPIRES'] ?? 604800, //1 WEEK
             'algorithm' => 'HS256',
@@ -28,13 +28,13 @@
             'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? 'your-client-id',
             'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'your-client-secret',
         ],
-
+        
         'database' => [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
             'name' => $_ENV['DB_NAME'] ?? 'peerconnect',
             'username' => $_ENV['DB_USER'] ?? 'root',
             'password' => $_ENV['DB_PASS'] ?? '',
             'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',
-            'port' => $ENV['DB_PORT'] ?? 3306,
+            'port' => $_ENV['DB_PORT'] ?? 3306,
         ],
     ];

@@ -22,9 +22,9 @@
         //CREATE NEW USER
         public function create(array $userData): int {
             $query = "INSERT INTO {$this->table} (
-                email, password_hash, first_name, last_name, role, provider, google_id, profile_picture, email_verified, is_active
+                email, password_hash, first_name, last_name, role, providers, google_id, profile_picture, email_verified, is_active
             ) VALUES (
-                :email, :password_hash, :first_name, :last_name, :role, :provider, :google_id, :profile_picture, :email_verified, :is_active
+                :email, :password_hash, :first_name, :last_name, :role, :providers, :google_id, :profile_picture, :email_verified, :is_active
             )";
 
             $stmt = $this->db->prepare($query);
@@ -40,7 +40,7 @@
                 ':first_name' => $userData['first_name'],
                 ':last_name' => $userData['last_name'],
                 ':role' => $userData['role'] ?? 'student',
-                ':provider' => $userData['providers'] ?? $userData['provider'] ?? 'manual',
+                ':providers' => $userData['providers'] ?? $userData['provider'] ?? 'local',
                 ':google_id' => $userData['google_id'] ?? null,
                 ':profile_picture' => $userData['profile_picture'] ?? null,
                 ':email_verified' => (int)($userData['email_verified'] ?? 0),

@@ -65,7 +65,7 @@ class Validator {
             }
             
             //ADDITIONAL EMAIL VALIDATION
-            $domain = substr($email, strrchr($email, '@'), 1);
+            $domain = substr($email, strpos($email, '@') + 1);
             if(!$domain || strlen($domain) < 3) {
                 $this->addError($field, 'Email domain is invalid');
                 return $this;
@@ -77,7 +77,6 @@ class Validator {
                 $this->addError($field, 'This email domain is blocked');
             }
         }
-
         return $this;
     }
 
