@@ -17,7 +17,8 @@ const StudentSignup = () => {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    providers: ''
   });
 
   const navigate = useNavigate();
@@ -30,33 +31,34 @@ const StudentSignup = () => {
   };
 
   const handleLoginSubmit = async (e) => {
-    e?.preventDefault?.();
+    e.preventDefault();
     try {
         const role = 'student';
         const res = await auth.login(formData.email, formData.password, role);
         storeSession(res);
         navigate('/student/home'); //ADJUST WHEN DASHBOARD IS READY
+        console.log('Form submitted:', formData, );
+        alert('Account logged in successfully!');
     }
     catch (err) {
         alert(err.message || 'login failed');
     }
-    console.log('Form submitted:', formData, );
-    alert('Account created successfully!');
-    navigate('/student/home');
   };
 
   const handleSignupSubmit = async (e) => {
-    e?.preventDefault?.();
+    e.preventDefault();
     try {
         const payload = {
             first_name: formData.firstName,
             last_name: formData.lastName,
             email: formData.email,
             password: formData.password,
-            role: 'student'
+            role: 'student',
         };
         const res = await auth.register(payload);
         storeSession(res.data);
+        alert("Account created successfully!");
+        setActiveTab('login');
     }
     catch(err){
         alert(err.message || 'Signup failed');
@@ -125,7 +127,7 @@ const StudentSignup = () => {
                         <h2 className="text-lg font-semibold text-white mb-4"> Login your account</h2>
                         
                         <div className="space-y-4">
-                            <form>
+                            <form onSubmit={handleLoginSubmit}>
                                 <div className="text-sm text-gray-300 mb-4">Basic Info</div>
                                 
                                 <div>
@@ -163,8 +165,7 @@ const StudentSignup = () => {
 
 
                                 <button
-                                type="button"
-                                onClick={handleLoginSubmit}
+                                type="submit"
                                 className=" w-full bg-blue-600 hover:bg-blue-700 text-white py-3  px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     Login
@@ -183,7 +184,7 @@ const StudentSignup = () => {
                         <h2 className="text-lg font-semibold text-white mb-4">Create your account</h2>
                         
                         <div className="space-y-4">
-                            <form>
+                            <form onSubmit={handleSignupSubmit}>
                                 <div className="text-sm text-gray-300 mb-4">Basic Info</div>
                                 
                                 <div className="grid grid-cols-2 gap-4">
@@ -268,8 +269,7 @@ const StudentSignup = () => {
 
                                 <div className="pt-6">
                                     <button
-                                    type="button"
-                                    onClick={handleSignupSubmit}
+                                    type="submit"
                                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                     >
                                     Sign in

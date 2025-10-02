@@ -8,7 +8,7 @@ export const auth = {
 		if (data.access_token || data.refresh_token) {
 			storeSessionTokens(data);
 		}
-		return { data };
+		return data;
 	},
 
 	async login(email, password, role = 'student') {
@@ -27,7 +27,7 @@ export const auth = {
 			body: { token: google_token, role },
 		});
 		storeSessionTokens(data);
-		return { data };
+		return data ;
 	},
 };
 
@@ -35,7 +35,7 @@ export function storeSession(result) {
 	// Normalize both usages from your component:
 	// - login uses full `res`
 	// - signup/google uses `{ data }`
-	const data = result?.data ?? result;
+	const data = result;
 	if (!data) return;
 
 	if (data.access_token || data.refresh_token) {
