@@ -25,8 +25,10 @@
         ],
 
         'google' => [
-            'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? 'your-client-id',
-            'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'your-client-secret',
+            'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com',
+            'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'GOCSPXc5ZqO7V13TlfNahvH2HvaFZxWigG',
+            'redirect_uri' => $_ENV['GOOGLE_REDIRECT_URI'] ?? '',
+            'allowed_domains' => explode(',', $_ENV['GOOGLE_ALLOWED_DOMAINS'] ?? ''),
         ],
         
         'database' => [

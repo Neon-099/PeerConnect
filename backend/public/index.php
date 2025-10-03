@@ -77,6 +77,9 @@ switch(true) {
         error_log("DEBUG: Matched googleAuth route");
         $auth->googleAuth();
         break;
+    case $uri === '/api/auth/logout' && $method === 'POST': 
+        error_log("DEBUG: Matched logout route");
+        break;
 
     //STUDENT
     case $uri === '/api/student/profile' && $method === 'GET':
