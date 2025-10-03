@@ -1,4 +1,4 @@
-import { api, storeSessionTokens } from './api';
+import { api, storeSessionTokens, getAccessToken } from './api';
 
 export const auth = {
 	async register(payload) {
@@ -24,11 +24,30 @@ export const auth = {
 	async googleAuth(google_token, role = 'student') {
 		const data = await api('/api/auth/googleAuth', {
 			method: 'POST',
-			body: { token: google_token, role },
+			body: { google_token: google_token, role },
 		});
 		storeSessionTokens(data);
 		return data ;
 	},
+
+	async logout() {
+		try {
+			const refreshToken = localStorage.getItem('pc_refresh_token');
+			if(refreshToken) {
+				await api('/api/auth/logout', {
+					method: 'POST',
+					body: { refresh_token: refreshToken}
+				});
+			}
+		}
+		catch (err) {
+			console.warn('Logout API call failed:', error);
+		} finally {
+			localStorage.removeItem('pc_access_token');
+			localStorage.removeItem('pc_refresh_token');
+			localStorage.removeItem('pc_user');
+		}
+	}
 };
 
 export function storeSession(result) {
@@ -44,4 +63,10 @@ export function storeSession(result) {
 	if (data.user) {
 		localStorage.setItem('pc_user', JSON.stringify(data.user));
 	}
+}
+
+export function clearSession() {
+	localStorage.removeItem('pc_access_token');
+	localStorage.removeItem('pc_refresh_token');
+	localStorage.removeItem('pc_user');
 }

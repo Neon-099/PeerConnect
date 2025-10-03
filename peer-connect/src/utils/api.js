@@ -14,13 +14,18 @@ export async function api(path, { method = 'GET', body, token } = {}) {
 	const t = token || getAccessToken();
 	if (t) headers.Authorization = `Bearer ${t}`;
 
+	console.log('API Request:', { method, path, body, headers });
+
 	const res = await fetch(`${API_BASE}${path}`, {
 		method,
 		headers,
 		body: body ? JSON.stringify(body) : undefined,
 	});
 
+	console.log('API Response:', { status: res.status, statusText: res.statusText });
+
 	const json = await res.json().catch(() => ({}));
+	console.log('API Response JSON:', json);
 
 	// Backend Response::success returns { success, message, data }
 	if (!res.ok || json?.success === false) {

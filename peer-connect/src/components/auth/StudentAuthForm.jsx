@@ -32,21 +32,26 @@ const StudentSignup = () => {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    console.log('Login form submitted with data:', formData);
     try {
         const role = 'student';
+        console.log('Calling auth.login...');
         const res = await auth.login(formData.email, formData.password, role);
+        console.log('Login response:', res);
         storeSession(res);
         navigate('/student/home'); //ADJUST WHEN DASHBOARD IS READY
         console.log('Form submitted:', formData, );
         alert('Account logged in successfully!');
     }
     catch (err) {
+        console.error('Login error:', err);
         alert(err.message || 'login failed');
     }
   };
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
+    console.log('Signup form submitted with data:', formData);
     try {
         const payload = {
             first_name: formData.firstName,
@@ -55,20 +60,48 @@ const StudentSignup = () => {
             password: formData.password,
             role: 'student',
         };
+        console.log('Calling auth.register with payload:', payload);
         const res = await auth.register(payload);
-        storeSession(res.data);
+        console.log('Register response:', res);
+        storeSession(res);
         alert("Account created successfully!");
         setActiveTab('login');
     }
     catch(err){
+        console.error('Signup error:', err);
         alert(err.message || 'Signup failed');
     }
   }
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-  const handleGoogleLogin = () => {
-    console.log('Google Login submitted', formData);
+  const handleGoogleSuccess = async(credentialResponse) => {
+    try {
+        console.log('Google authentication response:', credentialResponse);
+
+        if(!credentialResponse.credential) {
+            throw new Error('No credential received form Google');
+        }
+
+        const google_token = credentialResponse.credential;
+        console.log('Calling backend with google token...');
+
+        const res = await auth.googleAuth(google_token, 'student');
+        console.log('Google auth response', res);
+
+        storeSession(res);
+        alert('Google authentication successful');
+        navigate('/student/home');
+    }
+    catch(err) {
+        console.error('Google authentication error', err);
+        alert(err.message || 'Google authentication failed');
+    }
+  }
+
+  const handleGoogleError = (err) => {
+    console.error('Google authentication error:', err);
+    alert('Google authentication failed. Please try again!');
   }
 
     return (
@@ -287,22 +320,25 @@ const StudentSignup = () => {
                             </div>
 
                             <div className="flex items-center justify-center">
-                                 <GoogleLogin 
-                                clientId = {googleClientId}
-                                    onSuccess={async (credentialResponse) => {
-                                        try {
-                                            const google_token = credentialResponse.credential;
-                                            const res = await auth.googleAuth(google_token, 'student');
-                                            storeSession(res.data);
-                                            navigate('/dashboard');
-                                        } catch (err) {
-                                            alert(err.message || 'Google login failed');
-                                        }
-                                    }}
-                                onError={() => alert('Google login failed')}
-                                useOneTap
-                                cookiePolicy={'single_host_origin'}
-                            />
+                                 {googleClientId && googleClientId !== 'your-google-client-id-here' ? (
+                                        <GoogleLogin 
+                                        clientId={googleClientId}
+                                        onSuccess={handleGoogleSuccess}
+                                        onError={handleGoogleError}
+                                        useOneTap={false}
+                                        cookiePolicy={'single_host_origin'}
+                                        theme="outline"
+                                        size="large"
+                                        text="signup_with"
+                                        shape="rectangular"
+                                        />
+                                    ) : (
+                                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <p className="text-sm text-yellow-800">
+                                            Google authentication is not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.
+                                        </p>
+                                        </div>
+                                    )}
                             </div>
                            
                             <div className="text-center mt-6">
