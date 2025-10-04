@@ -46,3 +46,44 @@ CREATE TABLE tutor_profiles (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE tutoring_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tutor_id INT,
+    student_id INT,
+    subject_id INT,  -- Fixed: was "subject_id (100)"
+    session_date DATETIME,
+    notes TEXT,
+    status ENUM('pending','confirmed','completed','cancelled') DEFAULT 'pending',
+    FOREIGN KEY (tutor_id) REFERENCES users(id),
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (subject_id) REFERENCES learning_subjects(id)
+);
+
+CREATE TABLE tutor_availability (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tutor_id INT,
+    available_day VARCHAR(20),
+    start_time TIME,
+    end_time TIME, 
+    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE  -- Fixed: was "REFERENCE"
+);
+
+CREATE TABLE session_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT,
+    student_id INT,
+    rating TINYINT CHECK (rating BETWEEN 1 AND 5),  -- Fixed: was "TINYIT"
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  -- Fixed: was "sessions(id)"
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE tutor_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,  -- Fixed: was "PRIMARY_KEY"
+    tutor_id INT,
+    subject_id INT,
+    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
+);
