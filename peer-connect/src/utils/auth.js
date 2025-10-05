@@ -30,6 +30,31 @@ export const auth = {
 		return data ;
 	},
 
+	//REQUEST PASSWORD RESET
+	async requestPasswordReset (email) {
+		const data = await api('/api/auth/forgotPassword', {
+			method: 'POST',
+			body: {email}
+		});
+		return data;
+	},
+
+	async verifyResetCode (token, code) {
+		const data = await api('/api/auth/verifyResetCode', {
+			method: 'POST',
+			body: {token, code}
+		});
+		return data;
+	},
+
+	async resetPassword (token, code, newPassword) {
+		const data = await api('/api/auth/resetPassword', {
+			method: 'POST',
+			body: {token, code, password: newPassword}
+		});
+		return data;
+	},
+
 	async logout() {
 		try {
 			const refreshToken = localStorage.getItem('pc_refresh_token');
@@ -48,6 +73,8 @@ export const auth = {
 			localStorage.removeItem('pc_user');
 		}
 	}
+
+	
 };
 
 export function storeSession(result) {
@@ -69,4 +96,12 @@ export function clearSession() {
 	localStorage.removeItem('pc_access_token');
 	localStorage.removeItem('pc_refresh_token');
 	localStorage.removeItem('pc_user');
+}
+
+export function getRemainingAttempts() {
+	const attemptsMatch = errorMessage.match(`/(\d+) attempts remaining`);
+	if(attemptsMatch) {
+		return parseInt(attemptsMatch[1]);
+	}
+	return null;
 }
