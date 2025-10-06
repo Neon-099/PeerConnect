@@ -1,11 +1,9 @@
 import { auth, storeSession} from '../../utils/auth.js';
 import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
-import { GraduationCapIcon } from "lucide-react";
-import { useEffect } from "react";
 import { useState } from 'react';
-import { User, GraduationCap, CheckCircle, Eye, EyeOff } from 'lucide-react';
-
+import { User, GraduationCapIcon, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import PasswordResetModal from './PasswordResetModal.jsx';
 
 const StudentSignup = () => {
 
@@ -20,6 +18,14 @@ const StudentSignup = () => {
     confirmPassword: '',
     providers: ''
   });
+
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState(0);
+  const [remainingAttempts, setRemainingAttempts] = useState(5);
+  const [loginError, setLoginError] = useState('');
+  const [showForgotPasswordSuggestion, setShowForgotPasswordSuggestion] = useState(false);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -42,13 +48,100 @@ const StudentSignup = () => {
         navigate('/student/home'); //ADJUST WHEN DASHBOARD IS READY
         console.log('Form submitted:', formData, );
         alert('Account logged in successfully!');
-    }
+
+        //RESET ATTEMPT TRACKING ON SUCCESSFUL LOGIN
+        setLoginAttempts(0);
+        setIsAccountLocked(false);
+        setLockoutTime(0);
+        setLoginError('');
+    }   
     catch (err) {
         console.error('Login error:', err);
         alert(err.message || 'login failed');
+    
+        //HANDLE DIFFERENT TYPES OF LOGIN ERROR
+        const errorMessage = err.message || 'Login failed';
+        const rateLimitInfo = getRateLimitInfo(errorMessage);
+        const attemptsLeft = getRemainingAttempts(errorMessage);
+
+        if(rateLimitInfo.isRateLimited) {
+            //ACCOUNT IS LOCKED DUE TO RATE LIMITING 
+            setIsAccountLocked(true);
+            setLockoutTime(rateLimitInfo.lockoutSeconds);
+            setLoginError(`Account locked for ${rateLimitInfo.lockoutMinutes} minutes due to too many failed attempts.`);
+            setShowForgotPasswordSuggestion(true);
+
+            //START COUNTDOWN 
+            startLockoutCountDown(rateLimitInfo.lockoutSeconds);
+        }
+        else if (attemptsLeft !== null) {
+            //FAILED ATTEMPT BUT NOT LOCKED YET
+            setLoginAttempts(prev => prev + 1);
+            setRemainingAttempts(attemptsLeft);
+            setLoginError(`Invalid email or password. ${attemptsLeft} attempts remaining.`);
+
+            //SHOW IF FORGOT PASSWORD SUGGESTIONS AFTER 2 FAILED ATTEMPTS
+            if(!attemptsLeft <= 3){
+                setShowForgotPasswordSuggestion(true);
+            }
+        }
+        else if (errorMessage.toLowerCase().includes('Invalid email or password')){
+            //GENERIC INVALID CREDENTIALS ERROR
+            setLoginAttempts(prev => prev + 1);
+            setLoginError('Invalid email or password. Please check your credentials');
+
+            //SHOW FORGOT PASSWORD SUGGESTION 2 FAILED ATTEMPTS
+            if(loginAttempts >= 2) {
+                setShowForgotPasswordSuggestion(true);
+            } 
+        }
+        else {
+            //OTHER ERRORS
+            setLoginError(errorMessage);
+        }
     }
   };
 
+  const startLockoutCountdown = (seconds) => {
+    setLockoutTime(seconds);
+    const timer = setInterval(() => {
+        setLockoutTime(prev => {
+            if(prev <= 1) {
+                clearInterval(timer);
+                setIsAccountLocked(false);
+                setLockoutTime(0);
+                setRemainingAttempts(5);
+                return 0;
+            }
+            return prev - 1;
+        });
+    }, 1000);
+  }
+
+  const formatLockoutTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  
+
+  const handlePasswordResetSuccess = () => {
+    alert('Password reset successful! Please login with your new password');
+    setActiveTab('login');
+
+    setLoginAttempts(0);
+    setRemainingAttempts(5);
+    setIsAccountLocked(false);
+    setLoginError('');
+    setShowForgotPasswordSuggestion(false);
+  }
+
+  const handleForgotPassword = () => {
+    setShowPasswordResetModal(true);
+    setShowForgotPasswordSuggestion(false);
+  }
+  
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     console.log('Signup form submitted with data:', formData);
@@ -72,6 +165,8 @@ const StudentSignup = () => {
         alert(err.message || 'Signup failed');
     }
   }
+
+  
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -123,7 +218,7 @@ const StudentSignup = () => {
 
 
             <main >
-                <div className="min-h-screen flex items-center justify-center ">
+                 <div className="min-h-screen flex items-center justify-center ">
                     <div>
 
                     </div>
@@ -172,11 +267,12 @@ const StudentSignup = () => {
                                     onChange={handleInputChange}
                                     className="w-full px-3 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     required
+                                    disabled={isAccountLocked}
                                 />
                                 </div>
 
                                 <div className="pb-9">
-                                    <label className="block text-sm text-gray-300 mb-2">Password</label>
+                                    <label className="block text-md text-gray-300 mb-2">Password</label>
                                     <div className="relative">
                                     <input
                                         type={showPassword ? "text" : "password"}
@@ -185,23 +281,76 @@ const StudentSignup = () => {
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         required
+                                        disabled={isAccountLocked}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-3 text-gray-400 hover:text-gray-300"
+                                        disabled={isAccountLocked}
                                     >
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                     </div>
-                                </div>
+                                    
+                                    {/* Login Error Display */}
+                                    {loginError && (
+                                        <div className="mt-2 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                                            <div className="flex items-center space-x-2 text-red-400 text-sm">
+                                                {isAccountLocked ? <Lock size={16} /> : <AlertTriangle size={16} />}
+                                                <span>{loginError}</span>
+                                            </div>
+                                            
+                                            {/* Lockout Countdown */}
+                                            {isAccountLocked && lockoutTime > 0 && (
+                                                <div className="mt-2 text-orange-400 text-xs">
+                                                    Account unlocks in: {formatLockoutTime(lockoutTime)}
+                                                </div>
+                                            )}
+                                            
+                                            {/* Remaining Attempts */}
+                                            {!isAccountLocked && remainingAttempts < 5 && (
+                                                <div className="mt-2 text-yellow-400 text-xs">
+                                                    {remainingAttempts} attempts remaining
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
+                                    {/* Forgot Password Suggestion */}
+                                    {showForgotPasswordSuggestion && !isAccountLocked && (
+                                        <div className="mt-2 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-2 text-blue-400 text-sm">
+                                                    <AlertTriangle size={16} />
+                                                    <span>Having trouble logging in?</span>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleForgotPasswordClick}
+                                                    className="text-blue-400 hover:text-blue-300 text-sm font-medium underline"
+                                                >
+                                                    Reset Password
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowPasswordResetModal(true)}
+                                        className='text-white text-[11px] hover:text-blue-400 transition-colors mt-2'
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                </div>
 
                                 <button
                                 type="submit"
-                                className=" w-full bg-blue-600 hover:bg-blue-700 text-white py-3  px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                disabled={isAccountLocked}
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                 >
-                                    Login
+                                    {isAccountLocked ? 'Account Locked' : 'Login'}
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
@@ -359,6 +508,13 @@ const StudentSignup = () => {
                     </div>
                 </div>
             </main>
+
+            {/* Password Reset Modal */}
+            <PasswordResetModal
+                isOpen={showPasswordResetModal}
+                onClose={() => setShowPasswordResetModal(false)}
+                onSuccess={handlePasswordResetSuccess}
+            />
         </div>
     )
 }

@@ -328,20 +328,6 @@ const EditProfileModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Security */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Security</label>
-                <div className="space-y-3">
-                  <button className="w-full flex items-center gap-3 px-4 py-3 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors">
-                    <Key className="w-5 h-5" />
-                    Change Password
-                  </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                    <LogOut className="w-5 h-5" />
-                    Log Out
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
