@@ -18,8 +18,7 @@ class ValidationService
     /**
      * Validate registration data based on user role
      */
-    public function validateRegistration(array $data): void
-    {
+    public function validateRegistration(array $data): void{
         try {
             // Reset validator for new validation
             $this->validator = new Validator();
@@ -70,8 +69,7 @@ class ValidationService
     /**
      * Validate student-specific registration data
      */
-    private function validateStudentRegistration(array $data): void
-    {
+    private function validateStudentRegistration(array $data): void{
         // Student ID validation (optional but if provided, must be valid)
         if (isset($data['student_id']) && !empty($data['student_id'])) {
             $this->validator
@@ -86,8 +84,7 @@ class ValidationService
     /**
      * Validate tutor-specific registration data
      */
-    private function validateTutorRegistration(array $data): void
-    {
+    private function validateTutorRegistration(array $data): void{
         // Required tutor fields
         $tutorRequiredFields = [];
         
@@ -124,8 +121,7 @@ class ValidationService
     /**
      * Validate password strength
      */
-    private function validatePasswordStrength(string $password): void
-    {
+    public function validatePasswordStrength(string $password): void{
         $errors = [];
         
         // Check minimum length (already checked in main validation)
@@ -171,8 +167,7 @@ class ValidationService
     /**
      * Validate login data
      */
-    public function validateLogin(array $data): void
-    {
+    public function validateLogin(array $data): void{
         try {
             $this->validator = new Validator();
             
@@ -202,8 +197,7 @@ class ValidationService
     /**
      * Validate Google authentication data
      */
-    public function validateGoogleAuth(array $data): void
-    {
+    public function validateGoogleAuth(array $data): void{
         try {
             $this->validator = new Validator();
             
@@ -231,8 +225,7 @@ class ValidationService
     /**
      * Validate profile update data
      */
-    public function validateProfileUpdate(array $data): void
-    {
+    public function validateProfileUpdate(array $data): void{
         try {
             $this->validator = new Validator();
             
@@ -297,8 +290,7 @@ class ValidationService
     /**
      * Validate refresh token request
      */
-    public function validateRefreshToken(array $data): void
-    {
+    public function validateRefreshToken(array $data): void{
         try {
             $this->validator = new Validator();
             
@@ -321,8 +313,7 @@ class ValidationService
     /**
      * Validate password change request
      */
-    public function validatePasswordChange(array $data): void
-    {
+    public function validatePasswordChange(array $data): void{
         try {
             $this->validator = new Validator();
             
@@ -367,8 +358,7 @@ class ValidationService
     /**
      * Validate email format (enhanced version)
      */
-    public function validateEmailFormat(string $email): bool
-    {
+    public function validateEmailFormat(string $email): bool{
         // Basic format validation
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return false;
@@ -394,8 +384,7 @@ class ValidationService
     /**
      * Validate file upload (for profile pictures, documents)
      */
-    public function validateFileUpload(array $file, array $allowedTypes = [], int $maxSize = 5242880): array
-    {
+    public function validateFileUpload(array $file, array $allowedTypes = [], int $maxSize = 5242880): array{
         $errors = [];
 
         // Check if file was uploaded
@@ -444,8 +433,7 @@ class ValidationService
     /**
      * Sanitize input data
      */
-    public function sanitizeInput(array $data): array
-    {
+    public function sanitizeInput(array $data): array{
         $sanitized = [];
         
         foreach ($data as $key => $value) {

@@ -13,6 +13,7 @@ use App\Utils\Logger;
 use App\Services\JWTService;
 use App\Services\ValidationService;
 use App\Services\GoogleAuthService;
+use App\Services\EmailService;
 use Google\Service\ServiceConsumerManagement\Authentication;
 
 class AuthService {
@@ -21,6 +22,8 @@ class AuthService {
     private $sessionModel;
     private $jwtService;
     private $validationService;
+    private $rateLimitingService;
+    private $emailService;
     
     //INIT DEPENDENCIES (for later reuse)
     public function __construct() {
@@ -29,6 +32,8 @@ class AuthService {
         $this->sessionModel = new Session();
         $this->jwtService = new JWTService();
         $this->validationService = new ValidationService();
+        $this->rateLimitingService = new RateLimitingService();
+        $this->emailService = new EmailService();
     }
 
     //REGISTER A NEW USER (student or tutor)
@@ -128,74 +133,70 @@ class AuthService {
 
 
         //LOGIN USER WITH EMAIL AND PASSWORD
-        public function login(string $email, string $password, ?string $role = null) : array {
-            try {
-                //FIND USER BY EMAIL
-                $user = $this->authUserModel->findByEmail($email);
-                if(!$user) {
-                    Logger::warning('Login attempt with non-existent email', ['email' => $email]);
-                    throw new AuthenticationException('Invalid credentials', 401);
-                }
+        public function login(string $email, string $password, string | null $role = null): array {
+        try {
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
-                //CHECK IF ACCOUNT IS ACTIVE
-                if(!$user['is_active']) {
-                    Logger::warning('Login attempt with inactive account', [
-                        'user_id' => $user['id'],
-                        'email' => $email
-                    ]);
-                    throw new AuthenticationException('Account is inactive');
-                }
-
-                //CHECK ROLE IF SPECIFIED
-                if($role && $user['role'] !== $role ) {
-                    Logger::warning('Login attempt with wrong role', [
-                        'user_id' => $user['id'],
-                        'email' => $email,
-                        'expected_role' => $role,
-                        'actual_role' => $user['role']
-                    ]);
-                    throw new AuthenticationException('Invalid credentials for this role');
-                }
-
-                //CHECK IF USER USES GOOGLE AUTH 
-                if($user['providers'] === 'google') {
-                    Logger::warning('Manual login attempt for Google-only account', [
-                        'user_id' => $user['id'],
-                        'email' => $email
-                    ]);
-                    throw new AuthenticationException('Please use Google Sign-in for this account');
-                }
-
-                //VERIFY PASSWORD (hash)
-                if(!password_verify($password, $user['password_hash'])) {
-                    Logger::warning('Login attempt with invalid password', [
-                        'user_id' => $user['id'],
-                        'email' => $email
-                    ]);
-                    throw new AuthenticationException('Invalid credentials');
-                }
-
-                //UPDATE LAST LOGIN TIMESTAMP
-                $this->authUserModel->updateLastLogin($user['id']);
-                Logger::info('User logged in successfully', [
-                    'user_id' => $user['id'],
-                    'email' => $email,
-                    'role' => $user['role']
-                ]);
-                return $this->createAuthResponse($user);  //WITH JWT + REFRESH TOKEN
-            
+            // Check rate limiting
+            if ($this->rateLimitingService->isRateLimited($email, 'login', 5, 15)) {
+                $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, 'login');
+                throw new AuthenticationException(
+                    "Too many failed login attempts. Please try again in " . ceil($lockoutTime / 60) . " minutes.",
+                    429,
+                    'RATE_LIMITED'
+                );
             }
-            catch (AuthenticationException $e) {
-                throw $e;
+
+            // Validate input
+            $this->validationService->validateLogin(['email' => $email, 'password' => $password, 'role' => $role]);
+
+            // Find user
+            $user = $this->authUserModel->findByEmail($email);
+            if (!$user || !$user['is_active']) {
+                $this->rateLimitingService->recordFailedAttempt($email, 'login');
+                throw new AuthenticationException('Invalid email or password');
             }
-            catch (\Exception $e) {
-                Logger::error('Unexpected login error', [
-                    'email' => $email,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                throw new AuthenticationException('Login failed due to server error');
+
+            // Check role if specified
+            if ($role && $user['role'] !== $role) {
+                $this->rateLimitingService->recordFailedAttempt($email, 'login');
+                throw new AuthenticationException('Invalid role for this account');
             }
+
+            // Verify password
+            if (!$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
+                $this->rateLimitingService->recordFailedAttempt($email, 'login');
+                throw new AuthenticationException('Invalid email or password');
+            }
+
+            // Record successful login
+            $this->rateLimitingService->recordSuccessfulAttempt($email, 'login');
+
+            // Update last login
+            $this->authUserModel->updateLastLogin($user['id']);
+
+            // Create auth response
+            $result = $this->createAuthResponse($user);
+
+            Logger::info('Login successful', [
+                'user_id' => $user['id'],
+                'email' => $user['email'],
+                'role' => $user['role'],
+                'ip' => $ipAddress
+            ]);
+
+            return $result;
+
+        } catch (AuthenticationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Logger::error('Login error', [
+                'error' => $e->getMessage(),
+                'email' => $email,
+                'ip' => $ipAddress
+            ]);
+            throw new AuthenticationException('Login failed. Please try again.');
+        }
         }
 
         //GOOGLE OAUTH authentication
@@ -579,10 +580,21 @@ class AuthService {
         /**
          * Request password reset - generate token & store it
          */
-        public function requestPasswordReset(string $email): string
-        {
+        public function requestPasswordReset(string $email): array{
             try {
                 $db = Database::getInstance()->getConnection();
+                
+                $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+
+                //CHECK RATE LIMITING 
+                if($this->rateLimitingService->isRateLimited($email, 'password_reset', 3, 15)){
+                    $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, 'password_reset');
+                    throw new AuthenticationException('Too many password reset attempts. Please try again later.', 
+                        429,
+                        'RATE_LIMITED'
+                    );
+                }
+
 
                 // Check if user exists
                 $stmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
@@ -591,47 +603,150 @@ class AuthService {
 
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$user) {
-                    throw new AuthenticationException("No user found with this email.");
+                    //RECORD FAILED ATTEMPT 
+                    $this->rateLimitingService->recordFailedAttempt($email, 'password_reset');
+                    throw new AuthenticationException("If an account with this email exists, a password reset code has been sent.");
                 }
 
                 // Generate secure reset token
                 $token = bin2hex(random_bytes(32));
-                $expiresAt = date("Y-m-d H:i:s", time() + 3600); // 1 hour expiry
+                $expiresAt = date("Y-m-d H:i:s", time() + 3600); // 1 hour expiry   
+
+                //GENERATE VERIFICATION CODE
+                $verificationCode = $this->emailService->generateVerificationCode();
 
                 // Store token in password_resets table
                 $stmt = $db->prepare("
-                    INSERT INTO password_resets (user_id, token, expires_at)
-                    VALUES (:user_id, :token, :expires_at)
+                    INSERT INTO password_resets (user_id, token, verification_code, expires_at, attempts, max_attempts)
+                    VALUES (:user_id, :token, :verification_code, :expires_at, 0, 3)
+                    ON DUPLICATE KEY UPDATE
+                    token = VALUES(token),
+                    verification_code = VALUES(verification_code),
+                    expires_at = VALUES(expires_at),
+                    attempts = 0,
+                    is_used = FALSE
                 ");
                 $stmt->bindParam(':user_id', $user['id'], PDO::PARAM_INT);
                 $stmt->bindParam(':token', $token, PDO::PARAM_STR);
                 $stmt->bindParam(':expires_at', $expiresAt, PDO::PARAM_STR);
+                $stmt->bindParam(':expires_at', $expiresAt, PDO::PARAM_STR);
                 $stmt->execute();
 
-                Logger::info("Password reset requested", ['user_id' => $user['id']]);
+                //SEND VERIFICATION CODE TO EMAIL
+                $emailSent = $this->emailService->sendVerificationCode($email, $verificationCode, 'password_reset');
+                if(!$emailSent){
+                    throw new AuthenticationException("Failed to send verification email. Please try again later");
+                }
 
-                return $token; // This would normally be emailed to the user
+                Logger::info("Password reset requested", [
+                    'user_id' => $user['id'],
+                    'email' => $email,
+                    'ip' => $ipAddress
+                ]);
 
-            } catch (\Exception $e) {
-                Logger::error("DB error in requestPasswordReset", ['error' => $e->getMessage()]);
+                return [
+                    'message' => 'Password reset code sent to your email',
+                    'token' => $token,
+                    'expires_in' => 900, //15 minutes
+                ]; // This would normally be emailed to the user
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            } 
+            catch (\Exception $e) {
+                Logger::error("DB error in requestPasswordReset", [
+                    'error' => $e->getMessage(),
+                    'email' => $email
+                ]);
                 throw new AuthenticationException("Failed to request password reset.");
             }
         }
 
-        /**
-         * Reset user password using valid reset token
-         */
-        public function resetPassword(string $token, string $newPassword): bool
-        {
+        //VERIFY PASSWORD RESET CODE
+        public function verifyPasswordResetCode(string $token, string $code): bool {
             try {
                 $db = Database::getInstance()->getConnection();
 
-                // Validate token
+                //GET RESET RECORD
                 $stmt = $db->prepare("
-                    SELECT pr.user_id, pr.expires_at, u.email
+                SELECT pr.*, u.email
+                FROM password_resets pr
+                JOIN user u ON pr.user_id = u.id
+                WHERE pr.token = :token AND pr.is_used = FALSE
+                LIMIT 1
+                ");
+
+                $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+                $stmt->execute();
+            
+                $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+                if(!$reset) {
+                    throw new AuthenticationException("Invalid or expired reset token");
+                }
+
+                //CHECK EXPIRY
+                if(strtotime($reset['expires_at']) < time()) {
+                    throw new AuthenticationException("Reset code has expired.");
+                }
+
+                //CHECK ATTEMPTS 
+                if(!$reset['attempts'] >= $reset['max_attempts']){
+                    throw new AuthenticationException("Too many verification attempts. Please request a new reset code");
+                }
+
+                //VERIFY CODE
+                if(!$reset['verification_code'] !== $code) {
+                    //INCREMENT ATTEMPTS
+                    $stmt = $db->prepare("
+                    UPDATE password_resets
+                    SET attempts = attempts + 1
+                    WHERE token = :token
+                    ");
+                    $stmt->bindParam(':token', $token);
+                    $stmt->execute();
+
+                    $remainingAttempts = $reset['max_attempts'] - ($reset['attempts'] + 1);
+                    throw new AuthenticationException("Invalid verification code . {$remainingAttempts} attempts remaining");
+                }
+                
+                Logger::info("Password reset code verified", [
+                    'user_id' => $reset['user_id'],
+                    'email' => $reset['email']
+                ]);
+
+                return true;
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error("Password reset code verification failed", [
+                    'error' => $e->getMessage(),
+                    'token' => substr($token, 0, 10)
+                ]);
+                throw new AuthenticationException("Failed to verify reset code");
+            }
+        }
+        
+        /**
+         * Reset user password using valid reset token
+         */
+         /**
+         * Enhanced password reset with code verification
+         */
+        public function resetPassword(string $token, string $code, string $newPassword): bool {
+            try {
+                $db = Database::getInstance()->getConnection();
+
+                // First verify the code
+                $this->verifyPasswordResetCode($token, $code);
+
+                // Get reset record
+                $stmt = $db->prepare("
+                    SELECT pr.*, u.email
                     FROM password_resets pr
                     JOIN users u ON pr.user_id = u.id
-                    WHERE pr.token = :token
+                    WHERE pr.token = :token AND pr.is_used = FALSE
                     LIMIT 1
                 ");
                 $stmt->bindParam(':token', $token, PDO::PARAM_STR);
@@ -639,34 +754,59 @@ class AuthService {
 
                 $reset = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$reset) {
-                    throw new AuthenticationException("Invalid reset token.");
+                    throw new AuthenticationException("Invalid or expired reset token.");
                 }
 
-                // Check expiry
-                if (strtotime($reset['expires_at']) < time()) {
-                    throw new AuthenticationException("Reset token has expired.");
-                }
+                // Validate new password
+                $this->validationService->validatePasswordStrength($newPassword);
 
                 // Hash new password securely
-                $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
+                $hashedPassword = password_hash($newPassword, PASSWORD_ARGON2ID);
 
-                // Update user password
-                $stmt = $db->prepare("UPDATE users SET password = :password WHERE id = :id");
-                $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
-                $stmt->bindParam(':id', $reset['user_id'], PDO::PARAM_INT);
-                $stmt->execute();
+                // Start transaction
+                $db->beginTransaction();
 
-                // Delete reset token (one-time use)
-                $stmt = $db->prepare("DELETE FROM password_resets WHERE token = :token");
-                $stmt->bindParam(':token', $token, PDO::PARAM_STR);
-                $stmt->execute();
+                try {
+                    // Update user password
+                    $stmt = $db->prepare("UPDATE users SET password_hash = :password WHERE id = :id");
+                    $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+                    $stmt->bindParam(':id', $reset['user_id'], PDO::PARAM_INT);
+                    $stmt->execute();
 
-                Logger::info("Password reset successful", ['user_id' => $reset['user_id']]);
+                    // Mark reset token as used
+                    $stmt = $db->prepare("UPDATE password_resets SET is_used = TRUE WHERE token = :token");
+                    $stmt->bindParam(':token', $token, PDO::PARAM_STR);
+                    $stmt->execute();
 
-                return true;
+                    // Clear any existing sessions for security
+                    $stmt = $db->prepare("DELETE FROM sessions WHERE user_id = :user_id");
+                    $stmt->bindParam(':user_id', $reset['user_id'], PDO::PARAM_INT);
+                    $stmt->execute();
 
+                    $db->commit();
+
+                    // Record successful attempt
+                    $this->rateLimitingService->recordSuccessfulAttempt($reset['email'], 'password_reset');
+
+                    Logger::info("Password reset successful", [
+                        'user_id' => $reset['user_id'],
+                        'email' => $reset['email']
+                    ]);
+
+                    return true;
+
+                } catch (\Exception $e) {
+                    $db->rollBack();
+                    throw $e;
+                }
+
+            } catch (AuthenticationException $e) {
+                throw $e;
             } catch (\Exception $e) {
-                Logger::error("DB error in resetPassword", ['error' => $e->getMessage()]);
+                Logger::error("Password reset failed", [
+                    'error' => $e->getMessage(),
+                    'token' => substr($token, 0, 10) . '...'
+                ]);
                 throw new AuthenticationException("Failed to reset password.");
             }
         }
@@ -728,4 +868,3 @@ class AuthService {
             ];
         }
 }
-?>

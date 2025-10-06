@@ -80,6 +80,18 @@ switch(true) {
     case $uri === '/api/auth/logout' && $method === 'POST': 
         error_log("DEBUG: Matched logout route");
         break;
+    case $uri === '/api/auth/forgotPassword' && $method === 'POST':
+        error_log("DEBUG: Matched forgotPassword route");
+        $auth->forgotPassword();
+        break;
+    case $uri === '/api/auth/verifyResetCode' && $method === 'POST':
+        error_log("DEBUG: Matched verifyResetCode route");
+        $auth->verifyResetCode();
+        break;
+    case $uri === '/api/auth/resetPassword' && $method === 'POST':
+        error_log("DEBUG: Matched resetPassword route");
+        $auth->resetPassword();
+        break;
 
     //STUDENT
     case $uri === '/api/student/profile' && $method === 'GET':

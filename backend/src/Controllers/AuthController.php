@@ -443,43 +443,90 @@ class AuthController {
         }
     }
 
-    //REQUEST PASSWORD WITH TOKEN
-        //POST/api/auth/forgotPassword
-    public function forgotPassword(): void {
+    /**
+     * Verify password reset code
+     * POST /api/auth/verifyResetCode
+     */
+    public function verifyResetCode(): void
+    {
         try {
             $input = $this->getJsonInput();
 
-            if(!$input || !isset($input['email'])) {
+            if (!$input || !isset($input['token']) || !isset($input['code'])) {
+                Response::error('Token and verification code are required', 400);
+                return;
+            }
+
+            $isValid = $this->authService->verifyPasswordResetCode($input['token'], $input['code']);
+
+            if ($isValid) {
+                Response::success([], 'Verification code is valid');
+            } else {
+                Response::error('Invalid verification code', 400);
+            }
+
+        } catch (AuthenticationException $e) {
+            Response::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            Logger::error('Reset code verification error', [
+                'error' => $e->getMessage()
+            ]);
+            Response::error('Failed to verify reset code', 500);
+        }
+    }
+
+    /**
+     * Request password reset with email verification
+     * POST /api/auth/forgotPassword
+     */
+    public function forgotPassword(): void
+    {
+        try {
+            $input = $this->getJsonInput();
+
+            if (!$input || !isset($input['email'])) {
                 Response::error('Email is required', 400);
                 return;
             }
 
             Logger::info('Password reset requested', [
-                'email' => $input['email']
+                'email' => $input['email'],
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
             ]);
 
-            // Implement password reset in AuthService
-            $this->authService->requestPasswordReset($input['email']);
+            $result = $this->authService->requestPasswordReset($input['email']);
 
-            //ALWAYS RETURN SUCCESS TO PREVENT EMAIL ENUMERATION
-            Response::success([], 'If the email exists, a password reset link has been sent.');
-        }
-        catch (\Exception $e) {
+            Response::success($result, 'Password reset code sent to your email');
+
+        } catch (AuthenticationException $e) {
+            Logger::warning('Password reset request failed', [
+                'error' => $e->getMessage(),
+                'email' => $input['email'] ?? 'unknown',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]);
+            Response::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
             Logger::error('Password reset request error', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'email' => $input['email'] ?? 'unknown'
             ]);
-            Response::success([], 'If the email exists, a password reset link has been sent.');
+            Response::success([], 'If the email exists, a password reset code has been sent.');
         }
     }
 
     //RESET PASSWORD WITH TOKEN
        //POST/api/auth/resetPassword
-    public function resetPassword(): void {
+     /**
+     * Reset password with code verification
+     * POST /api/auth/resetPassword
+     */
+    public function resetPassword(): void
+    {
         try {
             $input = $this->getJsonInput();
 
-            if(!$input || !isset($input['token']) || !isset($input['password'])) {
-                Response::error('Password reset token and new password are required', 400);
+            if (!$input || !isset($input['token']) || !isset($input['code']) || !isset($input['password'])) {
+                Response::error('Token, verification code, and new password are required', 400);
                 return;
             }
 
@@ -487,16 +534,25 @@ class AuthController {
                 'token_prefix' => substr($input['token'], 0, 10) . '...'
             ]);
 
-             // Implement password reset in AuthService
-            $this->authService->resetPassword($input['token'], $input['password']);
+            $success = $this->authService->resetPassword(
+                $input['token'],
+                $input['code'],
+                $input['password']
+            );
 
-            Response::success([], 'Password reset successful');
-        }
-        catch (\Exception $e) {
+            if ($success) {
+                Response::success([], 'Password reset successful');
+            } else {
+                Response::error('Password reset failed', 400);
+            }
+
+        } catch (AuthenticationException $e) {
+            Response::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
             Logger::error('Password reset error', [
                 'error' => $e->getMessage()
             ]);
-            Response::error('Password reset failed', 400);
+            Response::error('Password reset failed', 500);
         }
     }
 
