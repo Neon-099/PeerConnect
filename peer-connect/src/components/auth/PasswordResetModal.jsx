@@ -407,8 +407,8 @@ const PasswordResetModal = ({ isOpen, onClose, onSuccess }) => {
                   <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
-              )}
-
+              )} 
+              /*strik*/
               {success && (
                 <div className="flex items-center space-x-2 text-green-600 text-sm">
                   <CheckCircle size={16} />
