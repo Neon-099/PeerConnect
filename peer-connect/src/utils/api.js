@@ -10,7 +10,10 @@ export function storeSessionTokens({ access_token, refresh_token }) {
 }
 
 export async function api(path, { method = 'GET', body, token } = {}) {
-	const headers = { 'Content-Type': 'application/json' };
+	const headers = {
+		'Content-Type': 'application/json', 
+		'Accept' : 'application/json',
+	 };
 	const t = token || getAccessToken();
 	if (t) headers.Authorization = `Bearer ${t}`;
 

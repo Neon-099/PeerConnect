@@ -3,7 +3,7 @@ import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
 import { useState } from 'react';
 import { User, GraduationCapIcon, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import PasswordResetModal from './PasswordResetModal.jsx';
+import PasswordResetModal from '../PasswordResetModal.jsx';
 
 const StudentSignup = () => {
 
@@ -168,7 +168,7 @@ const StudentSignup = () => {
 
   
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleClientId = '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
 
   const handleGoogleSuccess = async(credentialResponse) => {
     try {
@@ -471,21 +471,21 @@ const StudentSignup = () => {
                             <div className="flex items-center justify-center">
                                  {googleClientId && googleClientId !== 'your-google-client-id-here' ? (
                                         <GoogleLogin 
-                                        clientId={googleClientId}
-                                        onSuccess={handleGoogleSuccess}
-                                        onError={handleGoogleError}
-                                        useOneTap={false}
-                                        cookiePolicy={'single_host_origin'}
-                                        theme="outline"
-                                        size="large"
-                                        text="signup_with"
-                                        shape="rectangular"
+                                            clientId={googleClientId}
+                                            onSuccess={handleGoogleSuccess}
+                                            onError={handleGoogleError}
+                                            useOneTap={false}
+                                            cookiePolicy={'single_host_origin'}
+                                            theme="outline"
+                                            size="large"
+                                            text="signup_with"
+                                            shape="rectangular"
                                         />
                                     ) : (
                                         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                        <p className="text-sm text-yellow-800">
-                                            Google authentication is not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.
-                                        </p>
+                                            <p className="text-sm text-yellow-800">
+                                                Google authentication is not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file.
+                                            </p>
                                         </div>
                                     )}
                             </div>
