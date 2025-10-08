@@ -33,7 +33,7 @@ class AuthController {
     public function register(): void {
         try {
             //GET AND VALIDATE INPUT
-            $input= $this->getJsonInput();
+            $input = $this->getJsonInput();
 
             if(!$input){
                 Response::error('Invalid JSON data', 400);
@@ -542,7 +542,8 @@ class AuthController {
 
             if ($success) {
                 Response::success([], 'Password reset successful');
-            } else {
+            } 
+            else {
                 Response::error('Password reset failed', 400);
             }
 

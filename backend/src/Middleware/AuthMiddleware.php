@@ -24,6 +24,9 @@ class AuthMiddleware {
             '/api/auth/login',
             '/api/auth/googleAuth',
             '/api/auth/refresh',
+            '/api/auth/forgotPassword',                 // Password reset request
+            '/api/auth/verifyResetCode',       // Verify reset code
+            '/api/auth/resetPassword',         // Reset password
             '/api/health',
             '/api/status',
             '/api',

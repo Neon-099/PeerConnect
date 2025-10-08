@@ -586,26 +586,37 @@ class AuthService {
                 
                 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
-                //CHECK RATE LIMITING 
-                if($this->rateLimitingService->isRateLimited($email, 'password_reset', 3, 15)){
+                //CHECK RATE LIMITING
+                if($this->rateLimitingServices->isRateLimiting($email, 'password_reset', 3, 15)){
                     $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, 'password_reset');
-                    throw new AuthenticationException('Too many password reset attempts. Please try again later.', 
-                        429,
-                        'RATE_LIMITED'
-                    );
+                    throw new AuthenticationException("Too many request reset attempts. Please try again!", 
+                    429, 
+                    'RATE_LIMITED');
                 }
 
-
-                // Check if user exists
-                $stmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+                // Check if user exists AND has local authentication
+                $stmt = $db->prepare("
+                    SELECT id, providers, password_hash 
+                    FROM users 
+                    WHERE email = :email 
+                    LIMIT 1
+                ");
                 $stmt->bindParam(':email', $email, PDO::PARAM_STR);
                 $stmt->execute();
 
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$user) {
-                    //RECORD FAILED ATTEMPT 
                     $this->rateLimitingService->recordFailedAttempt($email, 'password_reset');
                     throw new AuthenticationException("If an account with this email exists, a password reset code has been sent.");
+                }
+
+                //CHECK IF USER CAN RESET PASS
+                if ($user['providers'] === 'google') {
+                    throw new AuthenticationException("This account uses Google sign-in. Please use 'Sign in with Google' instead of password reset.");
+                }
+
+                if ($user['providers'] === 'both' && !$user['password_hash']) {
+                    throw new AuthenticationException("This account doesn't have a password set. Please use 'Sign in with Google' or contact support.");
                 }
 
                 // Generate secure reset token
@@ -626,9 +637,10 @@ class AuthService {
                     attempts = 0,
                     is_used = FALSE
                 ");
+                // In requestPasswordReset method
                 $stmt->bindParam(':user_id', $user['id'], PDO::PARAM_INT);
                 $stmt->bindParam(':token', $token, PDO::PARAM_STR);
-                $stmt->bindParam(':expires_at', $expiresAt, PDO::PARAM_STR);
+                $stmt->bindParam(':verification_code', $verificationCode, PDO::PARAM_STR);  // ADD THIS LINE
                 $stmt->bindParam(':expires_at', $expiresAt, PDO::PARAM_STR);
                 $stmt->execute();
 
@@ -743,7 +755,7 @@ class AuthService {
 
                 // Get reset record
                 $stmt = $db->prepare("
-                    SELECT pr.*, u.email
+                    SELECT pr.*, u.email, u.providers, u.password_hash
                     FROM password_resets pr
                     JOIN users u ON pr.user_id = u.id
                     WHERE pr.token = :token AND pr.is_used = FALSE
@@ -755,6 +767,11 @@ class AuthService {
                 $reset = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$reset) {
                     throw new AuthenticationException("Invalid or expired reset token.");
+                }
+
+                //CHECK IF USER CAN HAVE PASSWORD RESET
+                if($reset['providers'] === 'google') {
+                    throw new AuthenticationException("This account uses Google sign-in only. Password reset not available");
                 }
 
                 // Validate new password
