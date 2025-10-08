@@ -5,7 +5,8 @@
     "require": {
         "firebase/php-jwt": "^6.11",
         "google/apiclient": "^2.18",
-        "vlucas/phpdotenv": "^5.6"
+        "vlucas/phpdotenv": "^5.6",
+        "phpmailer/phpmailer": "^6.11"
     },
      "autoload": {
         "psr-4": {

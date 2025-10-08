@@ -30,6 +30,15 @@
             'redirect_uri' => $_ENV['GOOGLE_REDIRECT_URI'] ?? '',
             'allowed_domains' => explode(',', $_ENV['GOOGLE_ALLOWED_DOMAINS'] ?? ''),
         ],
+
+        'email' => [
+            'smtp_host' => $_ENV['EMAIL_SMTP_HOST'] ?? 'smtp.gmail.com',
+            'smtp_port' => $_ENV['EMAIL_SMTP_PORT'] ?? 587,
+            'smtp_username' => $_ENV['EMAIL_SMTP_USERNAME'] ?? '',
+            'smtp_password' => $_ENV['EMAIL_SMTP_PASSWORD'] ?? '',
+            'from_email' => $_ENV['EMAIL_FROM_EMAIL'] ?? 'noreply@peerconnect.com',
+            'from_name' => $_ENV['EMAIL_FROM_NAME'] ?? 'PeerConnect',
+        ],
         
         'database' => [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
