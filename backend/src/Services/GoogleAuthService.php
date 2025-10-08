@@ -4,7 +4,7 @@
 namespace App\Services;
 
 use Google_Client;
-use Google_Service_Oauth2;
+use Google\Service\Oauth2 as GoogleServiceOauth2 ;
 use App\Exceptions\AuthenticationException;
 use App\Utils\Logger;
 
@@ -17,12 +17,16 @@ class GoogleAuthService
     private $allowedDomains;
     private $oauth2Service;
 
-    public function __construct() 
-    {
-        $this->clientId = config('app.google.client_id');
-        $this->clientSecret = config('app.google.client_secret');
-        $this->redirectUri = config('app.google.redirect_uri', '');
-        $this->allowedDomains = config('app.google.allowed_domains', []);
+    public function __construct() {
+         // Try config first, fallback to environment variables
+        $this->clientId = config('app.google.client_id') ?: ($_ENV['GOOGLE_CLIENT_ID'] ?? null);
+        $this->clientSecret = config('app.google.client_secret') ?: ($_ENV['GOOGLE_CLIENT_SECRET'] ?? null);
+        $this->redirectUri = config('app.google.redirect_uri', '') ?: ($_ENV['GOOGLE_REDIRECT_URI'] ?? '');
+        
+
+        //ALLOWED EMAIL DOMAINS PROPERLY
+        $allowedDomainsEnv = $_ENV['GOOGLE_ALLOWED_DOMAINS'] ?? '';
+        $this->allowedDomains = empty($allowedDomainsEnv) ? [] : explode(',', $allowedDomainsEnv); 
 
         if (!$this->clientId || !$this->clientSecret) {
             throw new \InvalidArgumentException('Google OAuth credentials not configured');
@@ -34,8 +38,7 @@ class GoogleAuthService
     /**
      * Initialize Google Client with comprehensive configuration
      */
-    private function initializeClient(): void
-    {
+    private function initializeClient(): void {
         try {
             $this->client = new Google_Client();
             
@@ -71,7 +74,7 @@ class GoogleAuthService
             ]));
 
             // Initialize OAuth2 service
-            $this->oauth2Service = new Google_Service_Oauth2($this->client);
+            $this->oauth2Service = new GoogleServiceOauth2($this->client);
 
             Logger::debug('Google OAuth client initialized successfully');
 
@@ -92,15 +95,18 @@ class GoogleAuthService
      * @return array User data extracted from token
      * @throws AuthenticationException
      */
-    public function verifyToken(string $idToken, string | null $expectedAudience = null): array
-    {
+    public function verifyToken(string $idToken, string | null $expectedAudience = null): array {
         try {
-            Logger::debug('Attempting to verify Google ID token');
+                Logger::debug('Attempting to verify Google ID token', [
+                    'token_length' => strlen($idToken),
+                    'expected_audience' => $expectedAudience,
+                    'client_id' => $this->clientId
+                ]);
 
-            // Use the client ID as audience if not provided
+            //USE THE CLIENT ID AS AUDIENCE IF NOT PROVIDED: token ensures intended for app only
             $audience = $expectedAudience ?: $this->clientId;
 
-            // Verify the token
+            // VERIFY THE TOKEN
             $payload = $this->client->verifyIdToken($idToken, $audience);
             
             if (!$payload) {
@@ -108,13 +114,60 @@ class GoogleAuthService
                 throw new AuthenticationException('Invalid Google token', 401, 'GOOGLE_TOKEN_INVALID');
             }
 
-            // Extract and validate user data
-            $userData = $this->extractUserDataFromPayload($payload);
+            // EXTRACT AND VALIDATE USER DATA
+            $userData = [
+                'sub' => $payload['sub'] ?? '',
+                'email' => $payload['email'] ?? '',
+                'email_verified' => $payload['email_verified'] ?? false,
+                'given_name' => $payload['given_name'] ?? '',
+                'family_name' => $payload['family_name'] ?? '',
+                'name' => $payload['name'] ?? '',
+                'picture' => $payload['picture'] ?? null,
+                'locale' => $payload['locale'] ?? 'en',
+                'hd' => $payload['hd'] ?? null, // Hosted domain
+                'aud' => $payload['aud'] ?? '',
+                'iss' => $payload['iss'] ?? '',
+                'exp' => $payload['exp'] ?? 0,
+                'iat' => $payload['iat'] ?? 0
+            ];
             
-            // Additional validation
-            $this->validateTokenPayload($payload);
+            //VALIDATE REQUIRED FIELDS
+            if(empty($userData['sub']) || empty($userData['email'])){
+                Logger::warning('Google token missing required fields', [
+                    'has_sub' => !empty($userData['sub']),
+                    'has_email' => !empty($userData['email'])
+                ]);
+                throw new AuthenticationException('Invalid Google token - missing required fields', 401, 'GOOGLE_TOKEN_INVALID');
+            }
+
+            //VALIDATE AUDIENCE:  
+            if($userData['aud'] !== $this->clientId){
+                Logger::warning('Google token audience mismatch', [
+                    'expected' => $this->clientId,
+                    'actual' => $userData['aud']
+                ]);
+                // In development mode, allow audience mismatch
+                if (config('app.debug', false)) {
+                    Logger::info('Allowing audience mismatch in debug mode');
+                } else {
+                    throw new AuthenticationException('Invalid Google token - audience mismatch', 401, 'GOOGLE_TOKEN_INVALID');
+                }
+            }
+
+            //VALIDATE ISSUER
+            $validIssuers = [
+                'https://accounts.google.com',
+                'accounts.google.com'
+            ];
+            if(!in_array($userData['iss'], $validIssuers)){ //MUST MATCH GOOGLE ENDPOINT
+                Logger::warning('Google token issuer invalid', [
+                    'issuer' => $userData['iss']
+                ]);
+                throw new AuthenticationException('Invalid Google token - invalid issuer', 402, 'GOGGLE_TOKEN');
+            }
+
+            //VALIDATIONS
             $this->validateEmailDomain($userData['email']);
-            $this->validateTokenExpiry($payload);
 
             Logger::info('Google token verified successfully', [
                 'email' => $userData['email'],
@@ -137,7 +190,7 @@ class GoogleAuthService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw new AuthenticationException('Google authentication failed');
+            throw new AuthenticationException('Google authentication failed: '. $e->getMessage(), 401, 'GOOGLE_TOKEN_VERIFICATION_FAILED');
         }
     }
 
@@ -148,8 +201,7 @@ class GoogleAuthService
      * @return array User data and token information
      * @throws AuthenticationException
      */
-    public function exchangeAuthCode(string $authCode): array
-    {
+    public function exchangeAuthCode(string $authCode): array{
         try {
             Logger::debug('Exchanging Google auth code for access token');
 
@@ -224,8 +276,7 @@ class GoogleAuthService
      * @param array $additionalParams Additional OAuth parameters
      * @return string Authorization URL
      */
-    public function getAuthUrl(array | null $scopes = null, string | null $state = null, array $additionalParams = []): string
-    {
+    public function getAuthUrl(array | null $scopes = null, string | null $state = null, array $additionalParams = []): string {
         try {
             // Use provided scopes or defaults
             if ($scopes !== null) {
@@ -268,8 +319,7 @@ class GoogleAuthService
      * @param string $accessToken Access token to revoke
      * @return bool True if successful
      */
-    public function revokeToken(string $accessToken): bool
-    {
+    public function revokeToken(string $accessToken): bool {
         try {
             $result = $this->client->revokeToken($accessToken);
             
@@ -296,8 +346,7 @@ class GoogleAuthService
      * @return array New token data
      * @throws AuthException
      */
-    public function refreshAccessToken(string $refreshToken): array
-    {
+    public function refreshAccessToken(string $refreshToken): array {
         try {
             Logger::debug('Refreshing Google access token');
 
@@ -327,8 +376,7 @@ class GoogleAuthService
      * @return array User profile data
      * @throws AuthException
      */
-    public function getUserProfile(string $accessToken): array
-    {
+    public function getUserProfile(string $accessToken): array {
         try {
             $this->client->setAccessToken($accessToken);
             
@@ -363,8 +411,7 @@ class GoogleAuthService
      * @param array $payload Token payload
      * @throws AuthException
      */
-    private function validateTokenPayload(array $payload): void
-    {
+    private function validateTokenPayload(array $payload): void {
         // Check required claims
         $requiredClaims = ['sub', 'email', 'aud', 'iss', 'exp', 'iat'];
         foreach ($requiredClaims as $claim) {
@@ -398,8 +445,7 @@ class GoogleAuthService
      * @return array User data
      * @throws AuthException
      */
-    private function extractUserDataFromPayload(array $payload): array
-    {
+    private function extractUserDataFromPayload(array $payload): array {
         // Validate required fields
         $requiredFields = ['sub', 'email'];
         foreach ($requiredFields as $field) {
@@ -429,8 +475,7 @@ class GoogleAuthService
      * @param array $payload Token payload
      * @throws AuthException
      */
-    private function validateTokenExpiry(array $payload): void
-    {
+    private function validateTokenExpiry(array $payload): void {
         if (isset($payload['exp'])) {
             $expiryTime = $payload['exp'];
             $currentTime = time();
@@ -458,8 +503,7 @@ class GoogleAuthService
      * @param string $email Email to validate
      * @throws AuthException
      */
-    private function validateEmailDomain(string $email): void
-    {
+    private function validateEmailDomain(string $email): void {
         if (empty($this->allowedDomains)) {
             return; // No domain restrictions
         }
@@ -486,8 +530,7 @@ class GoogleAuthService
      * @param array $userData User data from Google
      * @return bool True if G Suite account
      */
-    public function isGSuiteAccount(array $userData): bool
-    {
+    public function isGSuiteAccount(array $userData): bool {
         return !empty($userData['hd']);
     }
 

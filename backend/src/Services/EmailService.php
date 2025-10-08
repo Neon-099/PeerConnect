@@ -4,6 +4,10 @@ namespace App\Services;
 
 use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 
 class EmailService 
 {
@@ -14,8 +18,7 @@ class EmailService
     private $fromEmail;
     private $fromName;
 
-    public function __construct() 
-    {
+    public function __construct() {
         $this->smtpHost = config('email.smtp_host', 'smtp.gmail.com');
         $this->smtpPort = config('email.smtp_port', 587);
         $this->smtpUsername = config('email.smtp_username');
@@ -32,25 +35,37 @@ class EmailService
      * @param string $type Type of verification (password_reset, email_verification)
      * @return bool Success status
      */
+    //USING PHPMAILER
     public function sendVerificationCode(string $toEmail, string $code, string $type = 'email_verification'): bool
     {
         try {
             $subject = $this->getEmailSubject($type);
             $body = $this->getEmailBody($toEmail, $code, $type);
 
-            // For development, just log the email
-            if (config('app.debug', false)) {
-                Logger::info('Email would be sent', [
-                    'to' => $toEmail,
-                    'subject' => $subject,
-                    'code' => $code,
-                    'type' => $type
-                ]);
-                return true;
-            }
+            //PHPMAILER INSTANCE
+            $mail = new PHPMailer(true);
 
-            // In production, you would use PHPMailer or similar
-            // For now, we'll simulate success
+            //SERVER SETTINGS
+            $mail->isSMTP();
+            $mail->Host = $this->smtpHost;
+            $mail->SMTPAuth = true;
+            $mail->Username = $this->smtpUsername;
+            $mail->Password = $this->smtpPassword;
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; 
+            $mail->Port = $this->smtpPort;
+
+
+            //RECIPIENTS
+            $mail->setFrom($this->fromEmail, $this->fromName);
+            $mail->addAddress($toEmail);
+
+            //CONTENT
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $body;
+
+            $mail->send();
+
             Logger::info('Verification code email sent', [
                 'to' => $toEmail,
                 'type' => $type
