@@ -9,20 +9,25 @@ export function storeSessionTokens({ access_token, refresh_token }) {
 	if (refresh_token) localStorage.setItem('pc_refresh_token', refresh_token);
 }
 
-export async function api(path, { method = 'GET', body, token } = {}) {
+export async function api(path, { method = 'GET', body, token, isFormData = false } = {}) {
 	const headers = {
-		'Content-Type': 'application/json', 
-		'Accept' : 'application/json',
-	 };
+		'Accept': 'application/json',
+	};
+	
+	// Only set Content-Type for JSON requests
+	if (!isFormData) {
+		headers['Content-Type'] = 'application/json';
+	}
+	
 	const t = token || getAccessToken();
 	if (t) headers.Authorization = `Bearer ${t}`;
 
-	console.log('API Request:', { method, path, body, headers });
+	console.log('API Request:', { method, path, body, headers, isFormData });
 
 	const res = await fetch(`${API_BASE}${path}`, {
 		method,
 		headers,
-		body: body ? JSON.stringify(body) : undefined,
+		body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
 	});
 
 	console.log('API Response:', { status: res.status, statusText: res.statusText });
@@ -37,3 +42,22 @@ export async function api(path, { method = 'GET', body, token } = {}) {
 	}
 	return json?.data ?? json;
 }
+
+// Add convenience methods
+export const apiClient = {
+	async post(path, data, options = {}) {
+		return api(path, { method: 'POST', body: data, ...options });
+	},
+	
+	async get(path, options = {}) {
+		return api(path, { method: 'GET', ...options });
+	},
+	
+	async put(path, data, options = {}) {
+		return api(path, { method: 'PUT', body: data, ...options });
+	},
+	
+	async delete(path, options = {}) {
+		return api(path, { method: 'DELETE', ...options });
+	}
+};

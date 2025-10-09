@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, GraduationCap, BookOpen, MapPin, Calendar, Upload, ArrowRight, CheckCircle } from 'lucide-react';
-import { api } from '../utils/api.js';
+import { apiClient } from '../utils/api.js';
 
 const StudentProfileCreation = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -11,7 +11,7 @@ const StudentProfileCreation = () => {
     // student_id: '',
     // major: '',
     // graduation_year: '',
-    university: '',
+    school: '',
     bio: '',
     
     // Academic Info
@@ -90,15 +90,6 @@ const StudentProfileCreation = () => {
     }));
   };
 
-  const handleAvailabilityToggle = (option) => {
-    setFormData(prev => ({
-      ...prev,
-      availability: prev.availability.includes(option)
-        ? prev.availability.filter(item => item !== option)
-        : [...prev.availability, option]
-    }));
-  };
-
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -117,7 +108,7 @@ const StudentProfileCreation = () => {
         // if (!formData.student_id.trim()) newErrors.student_id = 'Student ID is required';
         // if (!formData.major.trim()) newErrors.major = 'Major is required';
         // if (!formData.graduation_year.trim()) newErrors.graduation_year = 'Graduation year is required';
-        if (!formData.university.trim()) newErrors.university = 'University is required';
+        if (!formData.school.trim()) newErrors.school = 'School is required';
         //BIO IS OPTIONAL
         break;
       case 2:
@@ -153,43 +144,44 @@ const StudentProfileCreation = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep(currentStep)) return;
+ const handleSubmit = async () => {
+  if (!validateStep(currentStep)) return;
+  
+  setIsLoading(true);
+  try {
+    // Create FormData for file upload
+    const submitData = new FormData();
     
-    setIsLoading(true);
-    try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-      
-      // Add all form fields
-      Object.keys(formData).forEach(key => {
-        if (key === 'subjects_of_interest' || key === 'availability') {
-          submitData.append(key, JSON.stringify(formData[key]));
-        } else if (key === 'profile_picture' && formData[key]) {
-          submitData.append('profile_picture', formData[key]);
-        } else if (formData[key]) {
-          submitData.append(key, formData[key]);
-        }
-      });
-
-      // Call API to create profile
-      const response = await api.post('/student/profile/setup', submitData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      //SUCCESS, NAVIGATE
-      if (response.data.success) {
-        // Redirect to home page
-        navigate('/student/home');
+    // Add all form fields
+    Object.keys(formData).forEach(key => {
+      if (key === 'subjects_of_interest') {
+        submitData.append(key, JSON.stringify(formData[key]));
+      } else if (key === 'profile_picture' && formData[key]) {
+        submitData.append('profile_picture', formData[key]);
+      } else if (formData[key]) {
+        submitData.append(key, formData[key]);
       }
-    } catch (error) {
-      console.error('Profile setup error:', error);
-      alert('Failed to create profile. Please try again.');
-    } finally {
-      setIsLoading(false);
+    });
+
+    // Use apiClient with FormData support
+    const result = await apiClient.post('/api/student/profileCreation', submitData, {
+      isFormData: true
+    });
+    
+    console.log('Full API Response:', result);
+    
+    if (result.success) {
+      navigate('/student/home');
+    } else {
+      throw new Error(result.message || 'Failed to create profile');
     }
-  };
+  } catch (error) {
+    console.error('Profile setup error:', error);
+    alert('Failed to create profile. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -225,17 +217,17 @@ const StudentProfileCreation = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">University *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">School or University *</label>
                 <input
                   type="text"
-                  value={formData.university}
-                  onChange={(e) => handleInputChange('university', e.target.value)}
+                  value={formData.school}
+                  onChange={(e) => handleInputChange('school', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                    errors.university ? 'border-red-500' : 'border-gray-300'
+                    errors.school ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Your university name"
+                  placeholder="Your School name"
                 />
-                {errors.university && <p className="mt-1 text-sm text-red-600">{errors.university}</p>}
+                {errors.school && <p className="mt-1 text-sm text-red-600">{errors.school}</p>}
               </div>
             </div> 
 
@@ -329,24 +321,6 @@ const StudentProfileCreation = () => {
                 ))}
               </select>
               {errors.preferred_learning_style && <p className="mt-1 text-sm text-red-600">{errors.preferred_learning_style}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Availability *</label>
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                {availabilityOptions.map((option) => (
-                  <label key={option} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                    <input
-                      type="checkbox"
-                      checked={formData.availability.includes(option)}
-                      onChange={() => handleAvailabilityToggle(option)}
-                      className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                    />
-                    <span className="text-sm text-gray-700">{option}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.availability && <p className="mt-1 text-sm text-red-600">{errors.availability}</p>}
             </div>
 
           </div>

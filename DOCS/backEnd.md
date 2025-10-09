@@ -74,3 +74,5 @@ This makes your database cleaner, easier to scale, and avoids headaches later.
 
 #DB MIGRATIONS
 manually installed the mariadb and php test web server
+
+mysql -h localhost -P 3307 -u peeruser -p peerconnect_db
