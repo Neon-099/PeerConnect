@@ -7,6 +7,7 @@ import Landing from './pages/Student/Landing.jsx';
 import StudentAuthForm from './components/auth/StudentAuthForm.jsx';
 import Homes from './pages/student/Homes.jsx';
 import PasswordResetModal from './components/PasswordResetModal.jsx';
+import StudentProfileCreation from './components/StudentProfileCreation.jsx';
 
 function App() {
 
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />}/>
           <Route path="/signup" element={<StudentAuthForm />}/>
+          <Route path="/student/profileCreation" element={<StudentProfileCreation />}/>
           <Route path="/resetPassword" element={<PasswordResetModal />}/>
           <Route path="/student/home" element={<Homes />}/>
         </Routes>

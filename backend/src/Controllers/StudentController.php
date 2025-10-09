@@ -23,6 +23,26 @@ class StudentController {
     }
 
 
+    //CREATE PROFILE
+        //POST /api/student/profileCreation
+    public function createProfile (): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();  //to verify the request is from logged in user
+        
+            if(!RoleModel)
+
+            $profileData = [
+                'university' => $input['university'] ?? null,
+                'bio' => $input['bio'] ?? null,
+                'subject_of_interests' => $json_decode[$input['subject_of_interests']] ?? null,
+                'academic_level' => $input['academic_level'] ?? null,
+                'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
+                'profile_picture' => $profilePicture
+            ];
+        }
+    }
+
+
     //GET STUDENT PROFILE
         //GET/api/student/profile
     public function getProfile(): void    {
@@ -318,4 +338,3 @@ class StudentController {
        
     }
 }
-?>

@@ -45,7 +45,7 @@ const StudentSignup = () => {
         const res = await auth.login(formData.email, formData.password, role);
         console.log('Login response:', res);
         storeSession(res);
-        navigate('/student/home'); //ADJUST WHEN DASHBOARD IS READY
+        navigate('/student/profileCreation'); 
         console.log('Form submitted:', formData, );
         alert('Account logged in successfully!');
 
@@ -72,7 +72,7 @@ const StudentSignup = () => {
             setShowForgotPasswordSuggestion(true);
 
             //START COUNTDOWN 
-            startLockoutCountDown(rateLimitInfo.lockoutSeconds);
+            startLockoutCountdown(rateLimitInfo.lockoutSeconds);
         }
         else if (attemptsLeft !== null) {
             //FAILED ATTEMPT BUT NOT LOCKED YET
@@ -101,6 +101,31 @@ const StudentSignup = () => {
         }
     }
   };
+
+  const handleSignupSubmit = async (e) => {
+    e.preventDefault();
+    console.log('Signup form submitted with data:', formData);
+    try {
+        const payload = {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            password: formData.password,
+            role: 'student',
+        };
+        console.log('Calling auth.register with payload:', payload);
+        const res = await auth.register(payload);
+        console.log('Register response:', res);
+        storeSession(res);
+        alert("Account created successfully!");
+        setActiveTab('login');
+        navigate('/student/profileCreation');
+    }
+    catch(err){
+        console.error('Signup error:', err);
+        alert(err.message || 'Signup failed');
+    }
+  }
 
   const startLockoutCountdown = (seconds) => {
     setLockoutTime(seconds);
@@ -142,31 +167,6 @@ const StudentSignup = () => {
     setShowForgotPasswordSuggestion(false);
   }
   
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault();
-    console.log('Signup form submitted with data:', formData);
-    try {
-        const payload = {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            password: formData.password,
-            role: 'student',
-        };
-        console.log('Calling auth.register with payload:', payload);
-        const res = await auth.register(payload);
-        console.log('Register response:', res);
-        storeSession(res);
-        alert("Account created successfully!");
-        setActiveTab('login');
-    }
-    catch(err){
-        console.error('Signup error:', err);
-        alert(err.message || 'Signup failed');
-    }
-  }
-
-  
 
   const googleClientId = '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
 
@@ -186,7 +186,7 @@ const StudentSignup = () => {
 
         storeSession(res);
         alert('Google authentication successful');
-        navigate('/student/home');
+        navigate('/student/profileCreation');
     }
     catch(err) {
         console.error('Google authentication error', err);

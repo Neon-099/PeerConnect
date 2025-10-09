@@ -1,0 +1,503 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, GraduationCap, BookOpen, MapPin, Calendar, Upload, ArrowRight, CheckCircle } from 'lucide-react';
+import { api } from '../utils/api.js';
+
+const StudentProfileCreation = () => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    // Basic Info
+    // student_id: '',
+    // major: '',
+    // graduation_year: '',
+    university: '',
+    bio: '',
+    
+    // Academic Info
+    subjects_of_interest: [],
+    academic_level: '',
+    // gpa: '',
+    
+    // Preferences
+    preferred_learning_style: '',
+    availability: [],
+    timezone: '',
+    
+    // Profile Picture
+    profile_picture: null
+  });
+
+  const [errors, setErrors] = useState({});
+  const [newSubject, setNewSubject] = useState('');
+
+  const navigate = useNavigate();
+
+  const steps = [
+    { number: 1, title: 'Basic Info', icon: User },
+    { number: 2, title: 'Academic Details', icon: GraduationCap },
+    { number: 3, title: 'Learning Preferences', icon: BookOpen },
+    { number: 4, title: 'Profile Picture', icon: Upload }
+  ];
+
+  const academicLevels = [
+    'High School',
+    'Undergraduate (Freshman)',
+    'Undergraduate (Sophomore)',
+    'Undergraduate (Junior)',
+    'Undergraduate (Senior)',
+    'Graduate Student',
+    'PhD Student'
+  ];
+
+  const learningStyles = [
+    'Visual Learner',
+    'Auditory Learner',
+    'Kinesthetic Learner',
+    'Reading/Writing Learner',
+    'Mixed Learning Style'
+  ];
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const handleAddSubject = () => {
+    if (newSubject.trim() && !formData.subjects_of_interest.includes(newSubject.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        subjects_of_interest: [...prev.subjects_of_interest, newSubject.trim()]
+      }));
+      setNewSubject('');
+    }
+  };
+
+  const handleRemoveSubject = (subjectToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      subjects_of_interest: prev.subjects_of_interest.filter(subject => subject !== subjectToRemove)
+    }));
+  };
+
+  const handleAvailabilityToggle = (option) => {
+    setFormData(prev => ({
+      ...prev,
+      availability: prev.availability.includes(option)
+        ? prev.availability.filter(item => item !== option)
+        : [...prev.availability, option]
+    }));
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        profile_picture: file
+      }));
+    }
+  };
+
+  const validateStep = (step) => {
+    const newErrors = {};
+    
+    switch (step) {
+      case 1:
+        // if (!formData.student_id.trim()) newErrors.student_id = 'Student ID is required';
+        // if (!formData.major.trim()) newErrors.major = 'Major is required';
+        // if (!formData.graduation_year.trim()) newErrors.graduation_year = 'Graduation year is required';
+        if (!formData.university.trim()) newErrors.university = 'University is required';
+        //BIO IS OPTIONAL
+        break;
+      case 2:
+        if (formData.subjects_of_interest.length === 0) newErrors.subjects_of_interest = 'At least one subject of interest is required';
+        if (!formData.academic_level) newErrors.academic_level = 'Academic level is required';
+        break;
+      case 3:
+        if (!formData.preferred_learning_style) newErrors.preferred_learning_style = 'Learning style preference is required';
+        // if (formData.availability.length === 0) newErrors.availability = 'At least one availability slot is required';
+        break;
+      case 4:
+        // Profile picture is optional
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < steps.length) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        handleSubmit();
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep(currentStep)) return;
+    
+    setIsLoading(true);
+    try {
+      // Create FormData for file upload
+      const submitData = new FormData();
+      
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        if (key === 'subjects_of_interest' || key === 'availability') {
+          submitData.append(key, JSON.stringify(formData[key]));
+        } else if (key === 'profile_picture' && formData[key]) {
+          submitData.append('profile_picture', formData[key]);
+        } else if (formData[key]) {
+          submitData.append(key, formData[key]);
+        }
+      });
+
+      // Call API to create profile
+      const response = await api.post('/student/profile/setup', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      //SUCCESS, NAVIGATE
+      if (response.data.success) {
+        // Redirect to home page
+        navigate('/student/home');
+      }
+    } catch (error) {
+      console.error('Profile setup error:', error);
+      alert('Failed to create profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+           {/* <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Student ID *</label>
+              <input
+                type="text"
+                value={formData.student_id}
+                onChange={(e) => handleInputChange('student_id', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.student_id ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter your student ID"
+              />
+              {errors.student_id && <p className="mt-1 text-sm text-red-600">{errors.student_id}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Major *</label>
+              <input
+                type="text"
+                value={formData.major}
+                onChange={(e) => handleInputChange('major', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.major ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="e.g., Computer Science, Biology, etc."
+              />
+              {errors.major && <p className="mt-1 text-sm text-red-600">{errors.major}</p>}
+            </div> */}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">University *</label>
+                <input
+                  type="text"
+                  value={formData.university}
+                  onChange={(e) => handleInputChange('university', e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.university ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Your university name"
+                />
+                {errors.university && <p className="mt-1 text-sm text-red-600">{errors.university}</p>}
+              </div>
+            </div> 
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                placeholder="Tell us about yourself, your academic goals, and what you're looking for in a tutor..."
+              />
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Subjects of Interest *</label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {formData.subjects_of_interest.map((subject, index) => (
+                  <span
+                    key={index}
+                    className="px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium flex items-center gap-2"
+                  >
+                    {subject}
+                    <button
+                      onClick={() => handleRemoveSubject(subject)}
+                      className="text-teal-500 hover:text-teal-700"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  placeholder="Add subject (e.g., Calculus, Physics)"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
+                />
+                <button
+                  onClick={handleAddSubject}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Add
+                </button>
+              </div>
+              {errors.subjects_of_interest && <p className="mt-1 text-sm text-red-600">{errors.subjects_of_interest}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Academic Level *</label>
+              <select
+                value={formData.academic_level}
+                onChange={(e) => handleInputChange('academic_level', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.academic_level ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select your academic level</option>
+                {academicLevels.map((level) => (
+                  <option key={level} value={level}>{level}</option>
+                ))}
+              </select>
+              {errors.academic_level && <p className="mt-1 text-sm text-red-600">{errors.academic_level}</p>}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Learning Style *</label>
+              <select
+                value={formData.preferred_learning_style}
+                onChange={(e) => handleInputChange('preferred_learning_style', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.preferred_learning_style ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select your learning style</option>
+                {learningStyles.map((style) => (
+                  <option key={style} value={style}>{style}</option>
+                ))}
+              </select>
+              {errors.preferred_learning_style && <p className="mt-1 text-sm text-red-600">{errors.preferred_learning_style}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Availability *</label>
+              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                {availabilityOptions.map((option) => (
+                  <label key={option} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                    <input
+                      type="checkbox"
+                      checked={formData.availability.includes(option)}
+                      onChange={() => handleAvailabilityToggle(option)}
+                      className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span className="text-sm text-gray-700">{option}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.availability && <p className="mt-1 text-sm text-red-600">{errors.availability}</p>}
+            </div>
+
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="mx-auto w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                {formData.profile_picture ? (
+                  <img
+                    src={URL.createObjectURL(formData.profile_picture)}
+                    alt="Profile preview"
+                    className="w-32 h-32 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-16 h-16 text-gray-400" />
+                )}
+              </div>
+              <input
+                type="file"
+                id="profile-picture"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <label
+                htmlFor="profile-picture"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 cursor-pointer"
+              >
+                <Upload className="w-5 h-5" />
+                {formData.profile_picture ? 'Change Photo' : 'Upload Photo'}
+              </label>
+              <p className="text-sm text-gray-500 mt-2">Optional: Add a profile picture to help tutors recognize you</p>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-3">
+            <GraduationCap className="w-8 h-8 text-teal-600" />
+            <h1 className="text-2xl font-bold text-gray-900">PeerConnect</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.number;
+              const isCompleted = currentStep > step.number;
+              
+              return (
+                <div key={step.number} className="flex items-center">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
+                    isCompleted 
+                      ? 'bg-teal-600 border-teal-600 text-white' 
+                      : isActive 
+                        ? 'bg-teal-600 border-teal-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-400'
+                  }`}>
+                    {isCompleted ? (
+                      <CheckCircle className="w-6 h-6" />
+                    ) : (
+                      <Icon className="w-6 h-6" />
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className={`text-sm font-medium ${
+                      isActive ? 'text-teal-600' : isCompleted ? 'text-teal-600' : 'text-gray-500'
+                    }`}>
+                      {step.title}
+                    </p>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`w-16 h-0.5 mx-4 ${
+                      isCompleted ? 'bg-teal-600' : 'bg-gray-300'
+                    }`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                {steps[currentStep - 1].title}
+              </h2>
+              <p className="text-gray-600">
+                {currentStep === 1 && "Let's start with your basic information"}
+                {currentStep === 2 && "Tell us about your academic background"}
+                {currentStep === 3 && "Help us understand your learning preferences"}
+                {currentStep === 4 && "Add a profile picture to complete your setup"}
+              </p>
+            </div>
+
+            {renderStepContent()}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="px-8 py-6 bg-gray-50 rounded-b-xl flex justify-between">
+            <button
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className={`px-6 py-3 rounded-lg font-medium ${
+                currentStep === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              Previous
+            </button>
+            
+            <button
+              onClick={handleNext}
+              disabled={isLoading}
+              className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isLoading ? (
+                'Creating Profile...'
+              ) : currentStep === steps.length ? (
+                'Complete Setup'
+              ) : (
+                <>
+                  Next
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StudentProfileCreation;
