@@ -221,7 +221,11 @@ switch(true) {
         break;
 
     //STUDENT
-    case $uri === '/api/student/profile' && $method === 'GET':
+    case $uri === '/api/student/profileCreation' && $method === 'POST':
+        error_log("DEBUG: Matched student profile creation POST route");
+        $student->getProfile();
+        break;
+    case $uri === '/api/student/profileCreation' && $method === 'GET':
         error_log("DEBUG: Matched student profile GET route");
         $student->getProfile();
         break;

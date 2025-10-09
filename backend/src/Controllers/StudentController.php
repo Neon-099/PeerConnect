@@ -6,55 +6,131 @@ use App\Services\AuthService;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Models\TutorProfile;
+use App\Models\StudentProfile;
 use App\Utils\Response;
 use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
+
 use Google\Service\ServiceConsumerManagement\Authentication;
 
 class StudentController {
     private $authService;
     private $authMiddleware;
     private $tutorProfileModel;
+    private $studentProfileModel;
 
     public function __construct() {
         $this -> authService = new AuthService();
         $this -> authMiddleware = new AuthMiddleware();
         $this -> tutorProfileModel = new TutorProfile();
+        $this -> studentProfileModel = new StudentProfile();
     }
 
 
     //CREATE PROFILE
         //POST /api/student/profileCreation
-    public function createProfile (): void {
-        try {
-            $user = $this->authMiddleware->requireAuth();  //to verify the request is from logged in user
+        public function createStudentProfile (): void {
+            try {
+                $user = $this->authMiddleware->requireAuth();
+                
+                if(!RoleMiddleware::studentOnly($user)){
+                    return;
+                }
         
-            if(!RoleModel)
-
-            $profileData = [
-                'university' => $input['university'] ?? null,
-                'bio' => $input['bio'] ?? null,
-                'subject_of_interests' => $json_decode[$input['subject_of_interests']] ?? null,
-                'academic_level' => $input['academic_level'] ?? null,
-                'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
-                'profile_picture' => $profilePicture
-            ];
+                // Get form data instead of JSON
+                $input = $_POST;
+                Logger::info('Received form data', ['input' => $input, 'files' => $_FILES]);
+                
+                if(empty($input)){  
+                    Response::error('No data provided', 400);
+                    return;
+                }
+        
+                //FILE UPLOADING
+                $profilePicture = null;
+                if(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK ){
+                    $profilePicture = $this->handleProfilePictureUpload($_FILES['profile_picture']);
+                }
+        
+                $profileData = [
+                    'school' => $input['school'] ?? null,
+                    'bio' => $input['bio'] ?? null,
+                    'subjects_of_interest' => json_decode($input['subjects_of_interest'] ?? '[]', true ),
+                    'academic_level' => $input['academic_level'] ?? null,
+                    'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
+                    'profile_picture' => $profilePicture
+                ];
+        
+                Logger::info('Student profile setup', [
+                    'user_id' => $user['user_id'],
+                    'profile_data' => $profileData
+                ]);
+        
+                //CREATE STUDENT PROFILE USING THE NEW MODEL
+                $profileId = $this->studentProfileModel->create($user['user_id'], $profileData);
+        
+                //UPDATE USER TABLE WITH PROFILE PICTURE
+                if($profilePicture) {
+                    $this->authService->updateUserProfile($user['user_id'], ['profile_picture' => $profilePicture]);
+                }
+        
+                Response::success(['profile_id' => $profileId], 'Profile created successfully');
+        
+            }
+            catch (\Exception $e){
+                Logger::error('Create student profile error', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'user_id' => $user['user_id'] ?? 'unknown'
+                ]);
+                Response::serverError('Failed to create profile: ' . $e->getMessage());
+            }
         }
+
+    private function handleProfilePictureUpload($file):? string {
+        //DEFINE WHERE THE FILE WILL BE SAVED
+        $uploadDir = __DIR__ . '/../../storage/uploads/profiles';
+        if(!is_dir($uploadDir)){
+            mkdir($uploadDir, 0755, true);   //this auto create if the folder dont exists
+        }
+
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $maxSize = 6 * 1024 * 1024; //6MB
+
+        if(!in_array($file['type'], $allowedTypes)){
+            throw new \Exception('Invalid file types...');
+        }
+        if($file['size'] > $maxSize){
+            throw new \Exception('File too large!');
+        }
+
+        $extension = pathInfo($file['name'], PATHINFO_EXTENSION);
+        $filename = uniqid() . '_' . time() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+
+        if(move_uploaded_file($file['tmp_name'], $filepath)){
+            return 'uploads/profiles/' . $filename;
+        }
+        throw new \Exception('Failed to upload profile picture');
     }
 
 
     //GET STUDENT PROFILE
         //GET/api/student/profile
-    public function getProfile(): void    {
+    public function getProfile(): void {
         try {
-            //REQUIRE AUTHENTICATION AND STUDENT ROLE
             $user = $this->authMiddleware->requireAuth();
 
             if(!RoleMiddleware::studentOnly($user)) {
                 return;
             }
 
-            $profile = $this->authService->getUserProfile($user['user_id']);
+            $profile = $this->studentProfileModel->findByUserId($user['user_id']);
+            
+            if(!$profile) {
+                Response::error('Profile not found. Please complete your profile setup.', 404);
+                return;
+            }
 
             Response::success($profile, 'Student profile retrieved successfully');
         }
@@ -92,9 +168,14 @@ class StudentController {
                 'fields' => array_keys($input)
             ]);
 
-            $updatedProfile =$this->authService->updateUserProfile($user['user_id'], $input);
+            $updated = $this->studentProfileModel->update($user['user_id'], $input);
 
-            Response::success($updatedProfile, 'Profile updated successfully');
+            if($updated) {
+                $profile = $this->studentProfileModel->findByUserId($user['user_id']);
+                Response::success($profile, 'Profile updated successfully');
+            } else {
+                Response::error('Failed to update profile', 500);
+            }
         }
         catch (AuthenticationException $e){
             Response::handleException($e);
@@ -120,7 +201,7 @@ class StudentController {
 
             //GET QUERY PARAMETERS
             $filters = [
-                 'specialization' => $_GET['specialization'] ?? null,
+                'specialization' => $_GET['specialization'] ?? null,
                 'min_rate' => $_GET['min_rate'] ?? null,
                 'max_rate' => $_GET['max_rate'] ?? null,
                 'experience_years' => $_GET['experience_years'] ?? null,

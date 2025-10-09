@@ -78,6 +78,33 @@ CREATE TABLE email_verification_codes (
     INDEX idx_expires_at (expires_at)
 );
 
+-- student_profiles table
+CREATE TABLE student_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    school VARCHAR(255) NULL,
+    bio TEXT NULL,
+    academic_level ENUM('high_school', 'undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior', 'graduate', 'phd') NULL,
+    preferred_learning_style ENUM('visual', 'auditory', 'kinesthetic', 'reading_writing', 'mixed') NULL,
+    timezone VARCHAR(50) NULL,
+    profile_completed BOOLEAN DEFAULT FALSE,
+    profile_completed_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- student_subjects_of_interest (many-to-many relationship)
+CREATE TABLE student_subjects_of_interest (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_subject (user_id, subject)
+);
+
+
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -25,7 +25,8 @@ class TutorProfile {
     $stmt = $this->db->prepare($query);
 
     $params = [
-       ':user_id' => $userId,
+        ':user_id' => $userId,
+        ':specialization' => $data['specialization'] ?? null,
         ':bio' => $data['bio'] ?? null,
         ':qualifications' => $data['qualifications'] ?? null,
         ':hourly_rate' => $data['hourly_rate'] ?? null,

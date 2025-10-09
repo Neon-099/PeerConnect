@@ -37,104 +37,104 @@ class AuthService {
     }
 
     //REGISTER A NEW USER (student or tutor)
-    public function register(array $userData): array {
-        try {
-            //VALIDATE INPUT DATA BASED ON ROLE
-            $this->validationService->validateRegistration($userData);
+        public function register(array $userData): array {
+            try {
+                //VALIDATE INPUT DATA BASED ON ROLE
+                $this->validationService->validateRegistration($userData);
 
-            //CHECK IF EMAIL(current) ALREADY EXISTS
-            if($this->authUserModel->emailExist($userData['email'])) {
-                throw new AuthenticationException('Email already exists');
-            }
-
-            //PREPARE BASE USER DATA
-            $baseUserData = [
-                'email' => $userData['email'],
-                'password_hash' => password_hash($userData['password'], PASSWORD_ARGON2ID),
-                'first_name' => $userData['first_name'],
-                'last_name' => $userData['last_name'],
-                'role' => $userData['role'],
-                'providers' => 'local',
-                'email_verified' => false,
-                'is_active' => true
-            ];
-
-            //ADD ROLE-SPECIFIC FIELDS TO BASE USER DATA
-            if($userData['role'] === 'student') {
-                $baseUserData['student_id'] = $userData['student_id'] ?? null;
-            }
-
-            //CREATE USER in DB
-            $userId = $this->authUserModel->create($baseUserData);
-            $user = $this->authUserModel->findById($userId);
-            if(!$user) {
-                throw new AuthenticationException('Failed to create user account');
-            }
-
-            //IF TUTOR, CREATE TUTOR PROFILE
-            if($userData['role'] === 'tutor') {
-                    $tutorProfileData = [
-                        'user_id' => $userId,
-                        'specialization' => $userData['specialization'] ?? '',
-                        'bio' => $userData['bio'] ?? '',
-                        'experience_years' => (int)($userData['experience_years'] ?? 0),
-                        'hourly_rate' => (float)($userData['hourly_rate'] ?? 0),
-                        'qualifications' => $userData['qualifications'] ?? '',
-                        'is_verified_tutor' => false
-                    ];
-
-                    $profileId = $this->tutorProfileModel->create($userId, $tutorProfileData);
-                    if(!$profileId) {
-                        //ROLEBACK USER CREATION IF TUTOR PROFILE FAILED
-                        $this->authUserModel->delete($userId);
-                        throw new AuthenticationException('Failed to create tutor profile');
-                    }
+                //CHECK IF EMAIL(current) ALREADY EXISTS
+                if($this->authUserModel->emailExist($userData['email'])) {
+                    throw new AuthenticationException('Email already exists');
                 }
 
-                // //GET COMPLETE USER DATA
-                // $user = $this->authUserModel->findById($userId);
-                // if(!$user) {
-                //     throw new AuthenticationException('Failed to retrieve user data');
-                // }
+                //PREPARE BASE USER DATA
+                $baseUserData = [
+                    'email' => $userData['email'],
+                    'password_hash' => password_hash($userData['password'], PASSWORD_ARGON2ID),
+                    'first_name' => $userData['first_name'],
+                    'last_name' => $userData['last_name'],
+                    'role' => $userData['role'],
+                    'providers' => 'local',
+                    'email_verified' => false,
+                    'is_active' => true
+                ];
 
-                //LOG USER SUCCESSFUL REGISTRATION
-                Logger::info('User registered successfully', [
-                    'user_id' => $userId,
-                    'email' => $userData['email'],
-                    'role' => $userData['role']
-                ]);
+                //ADD ROLE-SPECIFIC FIELDS TO BASE USER DATA
+                if($userData['role'] === 'student') {
+                    $baseUserData['student_id'] = $userData['student_id'] ?? null;
+                }
 
-                //RETURN USER DATA WITH TOKENS FOR IMMEDIATE LOGIN
-                return $this->createAuthResponse($user);
-            } 
-            catch(ValidationException $e) {
-                Logger::warning('Registration validation failed', [
-                    'email' => $userData['email'],
-                    'errors' => $e->getErrors()
-                ]);
-                throw $e;
-            }
-            catch(AuthenticationException $e) {
-                Logger::error('Registration failed', [
-                    'email' => $userData['email'],
-                    'error' => $e->getMessage()
-                ]);
-                throw $e;
-            }
-            catch(\Exception $e) {
-                Logger::error('Unexpected registration error', [
-                    'email' => $userData['email'] ?? 'unknown',
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]); 
-                throw new AuthenticationException('Registration failed due to server error');
-            }
+                //CREATE USER in DB
+                $userId = $this->authUserModel->create($baseUserData);
+                $user = $this->authUserModel->findById($userId);
+                if(!$user) {
+                    throw new AuthenticationException('Failed to create user account');
+                }
+
+                //IF TUTOR, CREATE TUTOR PROFILE
+                if($userData['role'] === 'tutor') {
+                        $tutorProfileData = [
+                            'user_id' => $userId,
+                            'specialization' => $userData['specialization'] ?? '',
+                            'bio' => $userData['bio'] ?? '',
+                            'experience_years' => (int)($userData['experience_years'] ?? 0),
+                            'hourly_rate' => (float)($userData['hourly_rate'] ?? 0),
+                            'qualifications' => $userData['qualifications'] ?? '',
+                            'is_verified_tutor' => false
+                        ];
+
+                        $profileId = $this->tutorProfileModel->create($userId, $tutorProfileData);
+                        if(!$profileId) {
+                            //ROLEBACK USER CREATION IF TUTOR PROFILE FAILED
+                            $this->authUserModel->delete($userId);
+                            throw new AuthenticationException('Failed to create tutor profile');
+                        }
+                    }
+
+                    // //GET COMPLETE USER DATA
+                    // $user = $this->authUserModel->findById($userId);
+                    // if(!$user) {
+                    //     throw new AuthenticationException('Failed to retrieve user data');
+                    // }
+
+                    //LOG USER SUCCESSFUL REGISTRATION
+                    Logger::info('User registered successfully', [
+                        'user_id' => $userId,
+                        'email' => $userData['email'],
+                        'role' => $userData['role']
+                    ]);
+
+                    //RETURN USER DATA WITH TOKENS FOR IMMEDIATE LOGIN
+                    return $this->createAuthResponse($user);
+                } 
+                catch(ValidationException $e) {
+                    Logger::warning('Registration validation failed', [
+                        'email' => $userData['email'],
+                        'errors' => $e->getErrors()
+                    ]);
+                    throw $e;
+                }
+                catch(AuthenticationException $e) {
+                    Logger::error('Registration failed', [
+                        'email' => $userData['email'],
+                        'error' => $e->getMessage()
+                    ]);
+                    throw $e;
+                }
+                catch(\Exception $e) {
+                    Logger::error('Unexpected registration error', [
+                        'email' => $userData['email'] ?? 'unknown',
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]); 
+                    throw new AuthenticationException('Registration failed due to server error');
+                }
         }
 
 
         //LOGIN USER WITH EMAIL AND PASSWORD
         public function login(string $email, string $password, string | null $role = null): array {
-        try {
+            try {
             $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
             // Check rate limiting
@@ -187,16 +187,18 @@ class AuthService {
 
             return $result;
 
-        } catch (AuthenticationException $e) {
-            throw $e;
-        } catch (\Exception $e) {
-            Logger::error('Login error', [
-                'error' => $e->getMessage(),
-                'email' => $email,
-                'ip' => $ipAddress
-            ]);
-            throw new AuthenticationException('Login failed. Please try again.');
-        }
+            } 
+            catch (AuthenticationException $e) {
+                throw $e;
+            } 
+            catch (\Exception $e) {
+                Logger::error('Login error', [
+                    'error' => $e->getMessage(),
+                    'email' => $email,
+                    'ip' => $ipAddress
+                ]);
+                throw new AuthenticationException('Login failed. Please try again.');
+            }
         }
 
         //GOOGLE OAUTH authentication
@@ -400,39 +402,74 @@ class AuthService {
                 return false;
             }
         }
-    
+
         //GET USER PROFILE WITH ROLE-SPECIFIC DATA
+        // public function getUserProfile(int $userId): array {
+        //     try {
+        //         $user = $this->authUserModel->findById($userId);
+        //         if(!$user) {
+        //             throw new AuthenticationException('User not found');
+        //         }
+        //         $profile = $this->formatUserData($user);
+
+
+
+        //         //ADD TUTOR-SPECIFIC DATA IF USER IS A TUTOR
+        //         if($user['role'] === 'tutor') {
+        //             $tutorProfile = $this->tutorProfileModel->findByUserId($userId);
+        //             if ($tutorProfile) {
+        //                 $profile['tutor_profile'] = [
+        //                     'specialization' => $tutorProfile['specialization'],
+        //                     'bio' => $tutorProfile['bio'],
+        //                     'experience_years' => (int)$tutorProfile['experience_years'],
+        //                     'hourly_rate' => (float)$tutorProfile['hourly_rate'],
+        //                     'qualifications' => $tutorProfile['qualifications'],
+        //                     'is_verified_tutor' => (bool)$tutorProfile['is_verified_tutor'],
+        //                     'total_sessions' => (int)($tutorProfile['total_sessions'] ?? 0),
+        //                     'average_rating' => (float)($tutorProfile['average_rating'] ?? 0.0)
+        //                 ];
+        //             } 
+        //         }
+
+        //         return $profile;
+        //     }
+        //     catch (AuthenticationException $e) {
+        //         throw $e;
+        //     }
+        //     catch (\Exception $e) {
+        //         Logger::error('Get user profile error', [
+        //             'user_id' => $userId,
+        //             'error' => $e->getMessage()
+        //         ]);
+        //         throw new AuthenticationException('Failed to retrieve user profile');
+        //     }
+        // }
+
         public function getUserProfile(int $userId): array {
             try {
                 $user = $this->authUserModel->findById($userId);
-                if(!$user) {
+                if (!$user) {
                     throw new AuthenticationException('User not found');
                 }
-                $profile = $this->formatUserData($user);
 
-                //ADD TUTOR-SPECIFIC DATA IF USER IS A TUTOR
-                if($user['role'] === 'tutor') {
-                    $tutorProfile = $this->tutorProfileModel->findByUserId($userId);
-                    if ($tutorProfile) {
-                        $profile['tutor_profile'] = [
-                            'specialization' => $tutorProfile['specialization'],
-                            'bio' => $tutorProfile['bio'],
-                            'experience_years' => (int)$tutorProfile['experience_years'],
-                            'hourly_rate' => (float)$tutorProfile['hourly_rate'],
-                            'qualifications' => $tutorProfile['qualifications'],
-                            'is_verified_tutor' => (bool)$tutorProfile['is_verified_tutor'],
-                            'total_sessions' => (int)($tutorProfile['total_sessions'] ?? 0),
-                            'average_rating' => (float)($tutorProfile['average_rating'] ?? 0.0)
-                        ];
-                    } 
+                // Get student profile if exists
+                $studentProfileModel = new \App\Models\StudentProfile();
+                $profile = $studentProfileModel->findByUserId($userId);
+                
+                if ($profile) {
+                    return $profile;
                 }
 
-                return $profile;
-            }
-            catch (AuthenticationException $e) {
-                throw $e;
-            }
-            catch (\Exception $e) {
+                // Return basic user data if no profile exists
+                return [
+                    'user_id' => $user['id'],
+                    'first_name' => $user['first_name'],
+                    'last_name' => $user['last_name'],
+                    'email' => $user['email'],
+                    'profile_picture' => $user['profile_picture'],
+                    'profile_completed' => false
+                ];
+            } catch (\Exception $e) {
                 Logger::error('Get user profile error', [
                     'user_id' => $userId,
                     'error' => $e->getMessage()
