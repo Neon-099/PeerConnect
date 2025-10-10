@@ -1,37 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, GraduationCap, BookOpen, MapPin, Calendar, Upload, ArrowRight, CheckCircle } from 'lucide-react';
-import { apiClient } from '../utils/api.js';
+import { apiClient, getAccessToken } from '../utils/api.js';
 
 const StudentProfileCreation = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Basic Info
-    // student_id: '',
-    // major: '',
-    // graduation_year: '',
     school: '',
     bio: '',
-    
     // Academic Info
     subjects_of_interest: [],
     academic_level: '',
-    // gpa: '',
-    
     // Preferences
     preferred_learning_style: '',
-    availability: [],
-    timezone: '',
-    
     // Profile Picture
     profile_picture: null
   });
 
   const [errors, setErrors] = useState({});
   const [newSubject, setNewSubject] = useState('');
+  const [isAuthenticated, setIsAuthentication] = useState(false);
 
   const navigate = useNavigate();
+
+
+  
+  //AUTHENTICATION CHECK for token
+  useEffect(() => {
+    const token = getAccessToken();
+    if(!token) {  //if no token
+      navigate('/signup'); //redirect to login
+      return;
+    }
+    setIsAuthentication(true);
+  }, [navigate]);
+
 
   const steps = [
     { number: 1, title: 'Basic Info', icon: User },
@@ -41,21 +46,20 @@ const StudentProfileCreation = () => {
   ];
 
   const academicLevels = [
-    'High School',
-    'Undergraduate (Freshman)',
-    'Undergraduate (Sophomore)',
-    'Undergraduate (Junior)',
-    'Undergraduate (Senior)',
-    'Graduate Student',
-    'PhD Student'
+    { label: 'High School', value: 'high_school' },
+    { label: 'Undergraduate (Freshman)', value: 'undergraduate_freshman' },
+    { label: 'Undergraduate (Sophomore)', value: 'undergraduate_sophomore' },
+    { label: 'Undergraduate (Junior)', value: 'undergraduate_junior' },
+    { label: 'Undergraduate (Senior)', value: 'undergraduate_senior' },
+    { label: 'Graduate Student', value: 'graduate' },
   ];
 
   const learningStyles = [
-    'Visual Learner',
-    'Auditory Learner',
-    'Kinesthetic Learner',
-    'Reading/Writing Learner',
-    'Mixed Learning Style'
+    { label: 'Visual Learner', value: 'visual' },
+    { label: 'Auditory Learner', value: 'auditory' },
+    { label: 'Kinesthetic Learner', value: 'kinesthetic' },
+    { label: 'Reading/Writing Learner', value: 'reading_writing' },
+    { label: 'Mixed Learning Style', value: 'mixed' }
   ];
 
   const handleInputChange = (field, value) => {
@@ -144,26 +148,39 @@ const StudentProfileCreation = () => {
     }
   };
 
+
+
  const handleSubmit = async () => {
   if (!validateStep(currentStep)) return;
   
   setIsLoading(true);
   try {
+
+    console.log('Current formData', formData);
     // Create FormData for file upload
     const submitData = new FormData();
-    
+
     // Add all form fields
     Object.keys(formData).forEach(key => {
       if (key === 'subjects_of_interest') {
         submitData.append(key, JSON.stringify(formData[key]));
+        console.log(`Added ${key}:`, JSON.stringify(formData[key]));
       } 
       else if (key === 'profile_picture' && formData[key]) {
         submitData.append('profile_picture', formData[key]);
+        console.log(`Added ${key}:`, formData[key]);
       } 
       else if (formData[key]) {
         submitData.append(key, formData[key]);
+        console.log(`Added ${key}:`, formData[key]);
       }
     });
+
+    // Debug: Check FormData contents
+    console.log('FormData entries:');
+    for (let [key, value] of submitData.entries()) {
+      console.log(`${key}:`, value);
+    }
 
     // Use apiClient with FormData support
     const result = await apiClient.post('/api/student/profileCreation', submitData, {
@@ -183,39 +200,24 @@ const StudentProfileCreation = () => {
   } finally {
     setIsLoading(false);
   }
-};
+  };  
 
+  if(!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verifying authentication...</p>
+        </div>
+      </div>
+    );
+  }
+  
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
-           {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Student ID *</label>
-              <input
-                type="text"
-                value={formData.student_id}
-                onChange={(e) => handleInputChange('student_id', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  errors.student_id ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Enter your student ID"
-              />
-              {errors.student_id && <p className="mt-1 text-sm text-red-600">{errors.student_id}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Major *</label>
-              <input
-                type="text"
-                value={formData.major}
-                onChange={(e) => handleInputChange('major', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  errors.major ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="e.g., Computer Science, Biology, etc."
-              />
-              {errors.major && <p className="mt-1 text-sm text-red-600">{errors.major}</p>}
-            </div> */}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -297,7 +299,7 @@ const StudentProfileCreation = () => {
               >
                 <option value="">Select your academic level</option>
                 {academicLevels.map((level) => (
-                  <option key={level} value={level}>{level}</option>
+                  <option key={level.value} value={level.value}>{level.label}</option>
                 ))}
               </select>
               {errors.academic_level && <p className="mt-1 text-sm text-red-600">{errors.academic_level}</p>}
@@ -319,7 +321,7 @@ const StudentProfileCreation = () => {
               >
                 <option value="">Select your learning style</option>
                 {learningStyles.map((style) => (
-                  <option key={style} value={style}>{style}</option>
+                  <option key={style.value} value={style.value}>{style.label}</option>
                 ))}
               </select>
               {errors.preferred_learning_style && <p className="mt-1 text-sm text-red-600">{errors.preferred_learning_style}</p>}
