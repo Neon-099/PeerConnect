@@ -29,72 +29,80 @@ class StudentController {
 
     //CREATE PROFILE
         //POST /api/student/profileCreation
-        public function createStudentProfile(): void {
-            try {
-                Logger::info('Profile creation request started', [
-                    'method' => $_SERVER['REQUEST_METHOD'],
-                    'uri' => $_SERVER['REQUEST_URI'],
-                    'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
-                ]);
+    public function createStudentProfile(): void {
+        try {
+            Logger::info('Profile creation request started', [
+                'method' => $_SERVER['REQUEST_METHOD'],
+                'uri' => $_SERVER['REQUEST_URI'],
+                'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
+            ]);
 
-                $user = $this->authMiddleware->requireAuth();
-                Logger::info('User authentication', ['user_id' => $user['user_id']]);
-                
-                if(!RoleMiddleware::studentOnly($user)){
-                    return;
-                }
-        
-                // Get form data instead of JSON
-                $input = $_POST;
-                Logger::info('Received form data', ['input' => $input, 'files' => $_FILES]);
-                
-                if(empty($input)){  
-                    Response::error('No data provided', 400);
-                    return;
-                }
-        
-                //FILE UPLOADING
-                $profilePicture = null;
-                if(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK ){
-                    $profilePicture = $this->handleProfilePictureUpload($_FILES['profile_picture']);
-                }
-        
-                $profileData = [
-                    'school' => $input['school'] ?? null,
-                    'bio' => $input['bio'] ?? null,
-                    'subjects_of_interest' => json_decode($input['subjects_of_interest'] ?? '[]', true ),
-                    'academic_level' => $input['academic_level'] ?? null,
-                    'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
-                    'profile_picture' => $profilePicture
-                ];
-        
-                Logger::info('Student profile setup', [
-                    'user_id' => $user['user_id'],
-                    'profile_data' => $profileData
-                ]);
-        
-                //CREATE STUDENT PROFILE USING THE NEW MODEL
-                $profileId = $this->studentProfileModel->create($user['user_id'], $profileData);
-        
-                //UPDATE USER TABLE WITH PROFILE PICTURE
-                if($profilePicture) {
-                    $this->authService->updateUserProfile($user['user_id'], ['profile_picture' => $profilePicture]);
-                }
-        
-                Response::success(['profile_id' => $profileId], 'Profile created successfully');
-        
+
+            error_log("=== PROFILE CREATION REQUEST STARTED ===");
+            error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+            error_log("Request URI: " . $_SERVER['REQUEST_URI']);
+            error_log("POST data: " . print_r($_POST, true));
+            error_log("FILES data: " . print_r($_FILES, true));
+            error_log("Headers: " . print_r(getallheaders(), true));
+
+            $user = $this->authMiddleware->requireAuth();
+            Logger::info('User authentication', ['user_id' => $user['user_id']]);
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
             }
-            catch (\Exception $e){
-                Logger::error('Create student profile error', [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                    'user_id' => $user['user_id'] ?? 'unknown',
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]);
-                Response::serverError('Failed to create profile: ' . $e->getMessage());
+    
+            // Get form data instead of JSON
+            $input = $_POST;
+            Logger::info('Received form data', ['input' => $input, 'files' => $_FILES]);
+            
+            if(empty($input)){  
+                Response::error('No data provided', 400);
+                return;
             }
+    
+            //FILE UPLOADING
+            $profilePicture = null;
+            if(isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK ){
+                $profilePicture = $this->handleProfilePictureUpload($_FILES['profile_picture']);
+            }
+    
+            $profileData = [
+                'school' => $input['school'] ?? null,
+                'bio' => $input['bio'] ?? null,
+                'subjects_of_interest' => json_decode($input['subjects_of_interest'] ?? '[]', true ),
+                'academic_level' => $input['academic_level'] ?? null,
+                'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
+                'profile_picture' => $profilePicture
+            ];
+    
+            Logger::info('Student profile setup', [
+                'user_id' => $user['user_id'],
+                'profile_data' => $profileData
+            ]);
+    
+            //CREATE STUDENT PROFILE USING THE NEW MODEL
+            $profileId = $this->studentProfileModel->create($user['user_id'], $profileData);
+    
+            //UPDATE USER TABLE WITH PROFILE PICTURE
+            if($profilePicture) {
+                $this->authService->updateUserProfile($user['user_id'], ['profile_picture' => $profilePicture]);
+            }
+    
+            Response::success(['profile_id' => $profileId], 'Profile created successfully');
+    
         }
+        catch (\Exception $e){
+            Logger::error('Create student profile error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $user['user_id'] ?? 'unknown',
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            Response::serverError('Failed to create profile: ' . $e->getMessage());
+        }
+    }
 
     private function handleProfilePictureUpload($file):? string {
         //DEFINE WHERE THE FILE WILL BE SAVED

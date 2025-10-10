@@ -130,7 +130,6 @@ class StudentProfile {
         $profile = $this->findByProfileId($profileId);
         if(!$profile) return [];
         
-        
         $query = "SELECT subject FROM student_subjects_of_interest WHERE user_id = :user_id";
         $stmt = $this->db->prepare($query);
         $stmt->execute([':user_id' => $profile['user_id']]);

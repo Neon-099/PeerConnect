@@ -133,5 +133,22 @@
             $stmt = $this->db->prepare($query);
             return $stmt->execute([':id' => $id]);
         }
+
+        public function findByApiKey(string $apiKey): ?array {
+        $query = "SELECT * FROM {$this->table} WHERE api_key = :api_key AND is_active = 1";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':api_key', $apiKey);
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null; 
+        }
+
+        public function updateLastActivity(int $userId): bool {
+            $query = "UPDATE {$this->table} SET last_activity_at = NOW() WHERE id = :user_id";
+            $stmt = $this->db->prepare($query);
+            $stmt->bindParam(':user_id', $userId);
+            return $stmt->execute();
+        }
     }
 ?>

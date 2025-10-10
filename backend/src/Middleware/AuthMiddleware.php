@@ -231,6 +231,8 @@ class AuthMiddleware {
 
                     //RENAME ID TO USER_ID FOR CONSISTENCY
 
+                    $user['user_id'] = $user['id'];
+                    unset($user['id']);
                     return $user;
                 }
                 catch (\Exception $e) {
@@ -288,7 +290,7 @@ class AuthMiddleware {
             'first_name' => $dbData['first_name'],
             'last_name' => $dbData['last_name'],
             'role' => $dbData['role'],
-            'provider' => $dbData['provider'],
+            'providers' => $dbData['providers'],
             'email_verified' => (bool) $dbData['email_verified'],
             'is_active' => (bool) $dbData['is_active'],
             'profile_picture' => $dbData['profile_picture'],
