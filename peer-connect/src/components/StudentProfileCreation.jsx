@@ -156,9 +156,11 @@ const StudentProfileCreation = () => {
     Object.keys(formData).forEach(key => {
       if (key === 'subjects_of_interest') {
         submitData.append(key, JSON.stringify(formData[key]));
-      } else if (key === 'profile_picture' && formData[key]) {
+      } 
+      else if (key === 'profile_picture' && formData[key]) {
         submitData.append('profile_picture', formData[key]);
-      } else if (formData[key]) {
+      } 
+      else if (formData[key]) {
         submitData.append(key, formData[key]);
       }
     });
@@ -170,10 +172,10 @@ const StudentProfileCreation = () => {
     
     console.log('Full API Response:', result);
     
-    if (result.success) {
+    if (result && result.profile_id) {
       navigate('/student/home');
     } else {
-      throw new Error(result.message || 'Failed to create profile');
+      throw new Error('Failed to create profile');
     }
   } catch (error) {
     console.error('Profile setup error:', error);

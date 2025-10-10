@@ -29,9 +29,16 @@ class StudentController {
 
     //CREATE PROFILE
         //POST /api/student/profileCreation
-        public function createStudentProfile (): void {
+        public function createStudentProfile(): void {
             try {
+                Logger::info('Profile creation request started', [
+                    'method' => $_SERVER['REQUEST_METHOD'],
+                    'uri' => $_SERVER['REQUEST_URI'],
+                    'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set'
+                ]);
+
                 $user = $this->authMiddleware->requireAuth();
+                Logger::info('User authentication', ['user_id' => $user['user_id']]);
                 
                 if(!RoleMiddleware::studentOnly($user)){
                     return;
@@ -81,7 +88,9 @@ class StudentController {
                 Logger::error('Create student profile error', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
-                    'user_id' => $user['user_id'] ?? 'unknown'
+                    'user_id' => $user['user_id'] ?? 'unknown',
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
                 ]);
                 Response::serverError('Failed to create profile: ' . $e->getMessage());
             }

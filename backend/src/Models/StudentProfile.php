@@ -68,12 +68,19 @@ class StudentProfile {
         return $profile;
     }
 
+    private function findByProfileId(int $profileId):? array {
+        $query = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':id' => $profileId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?? null;
+    }
+
     public function update (int $userId, array $data): bool{
         $fields = [];
         $params = [':user_id' => $userId];
         
         foreach($data as $key => $value){
-            if($key !== 'subject_of_interest' && $key !== 'availability'){
+            if($key !== 'subject_of_interest'){
                 $fields[] = "{$key} = : {$key}";
                 $params[":{$key}"] = $value;
             }
@@ -102,28 +109,42 @@ class StudentProfile {
     }
 
     public function insertSubjectsOfInterest(int $profileId, array $subjects): void {
+        //GET USER_ID FROM PROFILE
+        $profile = $this->findByProfileId($profileId);
+        if(!$profile){
+            throw new Exception("Profile not found");
+        }
+
         $query = "INSERT INTO student_subjects_of_interest (user_id, subject) VALUES (:user_id, :subject)";
         $stmt = $this->db->prepare($query);
     
         foreach($subjects as $subject) {
             $stmt->execute([
-                ':user_id' => $profileId,
+                ':user_id' => $profile['user_id'],
                 ':subject' => $subject
             ]);
         }
     }
     
     private function getSubjectsOfInterest(int $profileId): array {
+        $profile = $this->findByProfileId($profileId);
+        if(!$profile) return [];
+        
+        
         $query = "SELECT subject FROM student_subjects_of_interest WHERE user_id = :user_id";
         $stmt = $this->db->prepare($query);
-        $stmt->execute([':user_id' => $profileId]);
+        $stmt->execute([':user_id' => $profile['user_id']]);
         
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
     
     private function deleteSubjectsOfInterest(int $profileId): void {
+        
+        $profile = $this->findByProfileId($profileId);
+        if(!$profile) return;
+        
         $query = "DELETE FROM student_subjects_of_interest WHERE user_id = :user_id";
         $stmt = $this->db->prepare($query);
-        $stmt->execute([':user_id' => $profileId]);
+        $stmt->execute([':user_id' => $profile['user_id']]);
     }
 }
