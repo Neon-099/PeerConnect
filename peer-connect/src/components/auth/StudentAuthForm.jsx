@@ -1,4 +1,5 @@
 import { auth, storeSession} from '../../utils/auth.js';
+import {apiClient} from '../../utils/api'
 import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
 import { useState } from 'react';
@@ -36,6 +37,19 @@ const StudentSignup = () => {
     });
   };
 
+  const checkUserProfile = async () => {
+    try {
+        const response = await apiClient.get('/api/student/profile');
+        return response;
+    }
+    catch (error) {
+        if(error.message.includes('Profile not exists!') || error.message.includes('404')){
+            return null;
+        }
+        throw error;
+    }
+  }
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     console.log('Login form submitted with data:', formData);
@@ -45,9 +59,18 @@ const StudentSignup = () => {
         const res = await auth.login(formData.email, formData.password, role);
         console.log('Login response:', res);
         storeSession(res);
-        navigate('/student/profileCreation'); 
-        console.log('Form submitted:', formData, );
+        
+        const profile = await checkUserProfile();
+        if(profile) {
+            navigate('/student/home');
+        }
+        else {
+            navigate('/student/profileCreation'); 
+            console.log('Form submitted:', formData, );
+           
+        } 
         alert('Account logged in successfully!');
+
 
         //RESET ATTEMPT TRACKING ON SUCCESSFUL LOGIN
         setLoginAttempts(0);
@@ -61,8 +84,8 @@ const StudentSignup = () => {
     
         //HANDLE DIFFERENT TYPES OF LOGIN ERROR
         const errorMessage = err.message || 'Login failed';
-        const rateLimitInfo = getRateLimitInfo(errorMessage);
-        const attemptsLeft = getRemainingAttempts(errorMessage);
+        const rateLimitInfo = setRateLimitInfo(errorMessage);
+        const attemptsLeft = setRemainingAttempts(errorMessage);
 
         if(rateLimitInfo.isRateLimited) {
             //ACCOUNT IS LOCKED DUE TO RATE LIMITING 
@@ -117,6 +140,7 @@ const StudentSignup = () => {
         const res = await auth.register(payload);
         console.log('Register response:', res);
         storeSession(res);
+
         alert("Account created successfully!");
         setActiveTab('login');
         navigate('/student/profileCreation');
@@ -149,7 +173,6 @@ const StudentSignup = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  
 
   const handlePasswordResetSuccess = () => {
     alert('Password reset successful! Please login with your new password');
@@ -166,7 +189,6 @@ const StudentSignup = () => {
     setShowPasswordResetModal(true);
     setShowForgotPasswordSuggestion(false);
   }
-  
 
   const googleClientId = '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
 
@@ -183,7 +205,7 @@ const StudentSignup = () => {
 
         const res = await auth.googleAuth(google_token, 'student');
         console.log('Google auth response', res);
-
+        
         storeSession(res);
         alert('Google authentication successful');
         navigate('/student/profileCreation');

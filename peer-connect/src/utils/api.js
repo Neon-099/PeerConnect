@@ -40,7 +40,7 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 		const msg = json?.message || `Request failed (${res.status})`;
 		throw new Error(msg);
 	}
-	return json;
+	return json?.data ?? json;
 }
 
 // Add convenience methods

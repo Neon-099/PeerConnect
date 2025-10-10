@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle, 
     Mail, Bell, Star, Edit, TrendingUp, Shield, Key, LogOut, MessageSquare,
     ChevronUp, ChevronDown, Book, RotateCcw} from 'lucide-react';
 import EditProfileModal from '../../components/EditProfileModal';
 import { auth } from '../../utils/auth';
+import {apiClient} from '../../utils/api';
 
 const Homes = () =>  {
   const [activeTab, setActiveTab] = useState('home');
@@ -18,6 +19,35 @@ const Homes = () =>  {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+
+  const [userProfile, setUserProfile] = useState(null);
+  const [studentProfile, setStudentProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  //PROFILE DATA
+  useEffect(() => {
+    const fetchProfileData = async() => {
+        try {
+          setIsLoading(true);
+
+          //FETCH USER PROFILE
+          const userResponse = await apiClient.get('/api/user/profile');
+          setUserProfile(userResponse);
+
+          //FETCH STUDENT DATA
+          const studentData = await apiClient.get('/api/student/profile');
+          setStudentProfile(studentData);
+
+        }
+        catch (error) {
+          console.error(`Error fetching profile data:`, error);
+        }
+        finally {
+          setIsLoading(false);
+        }
+    }
+    fetchProfileData();
+  }, []);
 
   const navigate = useNavigate();
 
@@ -41,7 +71,6 @@ const Homes = () =>  {
       alert('Logout failed please try again!');
     }
   }
-
 
   const upcomingSessions = [
     {
@@ -408,18 +437,31 @@ const Homes = () =>  {
                 <p className="text-sm text-gray-500">Manage your information and upcoming sessions</p>
               </div>
 
+              {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
+                </div>
+              ) : (
+
+              
+
               <div className="flex gap-30">
                 {/* Left Column - Profile Card */}
                 <div className="w-96 ml-[-140px]">
                   <div className="bg-white rounded-xl p-8 border border-gray-200">
                     <div className="flex flex-col items-center mb-6">
                       <img 
-                        src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop" 
-                        alt="Alex Johnson" 
+                        src={userProfile?.profile_picture  || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"} 
+                        alt={userProfile?.first_name || 'Student'} 
                         className="w-24 h-24 rounded-full object-cover mb-4"
                       />
-                      <h2 className="text-xl font-semibold text-gray-800 mb-1">Alex Johnson</h2>
-                      <p className="text-sm text-gray-600">alex.johnson@university.edu</p>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-1">
+                         {userProfile?.first_name} {userProfile?.last_name}
+                      </h2>
+                      <p className="text-sm text-gray-600">{userProfile?.email}</p>
+                      {studentProfile?.school && (
+                        <p className="text-sm text-gray-600">{studentProfile?.school}</p>
+                      )}
                     </div>
                     
                     <button 
@@ -454,24 +496,54 @@ const Homes = () =>  {
                 </div>
 
                 {/* Right Column - Details */}
-                <div className="flex-1">
-                  <div className="bg-white rounded-xl p-8 border border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
+                  <div className="flex-1">
+                    <div className="bg-white rounded-xl p-8 border border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
                     
-                    {/* Subjects of Interest */}
-                    <div className="mb-8">
-                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Subjects of interest</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {subjectsOfInterest.map((subject, index) => (
-                          <span 
-                            key={index}
-                            className="px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium"
-                          >
-                            {subject}
-                          </span>
-                        ))}
+                    {/* Academic Level */}
+                    {studentProfile?.academic_level && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Academic Level</h3>
+                        <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                          {studentProfile.academic_level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Learning Style */}
+                    {studentProfile?.preferred_learning_style && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Preferred Learning Style</h3>
+                        <span className="px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm font-medium">
+                          {studentProfile.preferred_learning_style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Bio */}
+                    {studentProfile?.bio && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Bio</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{studentProfile.bio}</p>
+                      </div>
+                    )}
+
+                    {/* Subjects of Interest */}
+                    {studentProfile?.subjects_of_interest && studentProfile.subjects_of_interest.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Subjects of Interest</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {studentProfile.subjects_of_interest.map((subject, index) => (
+                            <span 
+                              key={index}
+                              className="px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium"
+                            >
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Upcoming Tutoring Sessions */}
                     <div className="mb-8">
@@ -519,6 +591,8 @@ const Homes = () =>  {
                   </div>
                 </div>
               </div>
+
+              )}
             </div>
           </div>
 

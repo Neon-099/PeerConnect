@@ -17,6 +17,7 @@ export const auth = {
 			body: { email, password, role },
 		});
 		// Expecting { access_token, refresh_token, user, ... }
+		console.log(data);
 		storeSessionTokens(data);
 		return data;
 	},
