@@ -199,16 +199,23 @@ const StudentSignup = () => {
         if(!credentialResponse.credential) {
             throw new Error('No credential received form Google');
         }
-
         const google_token = credentialResponse.credential;
         console.log('Calling backend with google token...');
 
         const res = await auth.googleAuth(google_token, 'student');
         console.log('Google auth response', res);
-        
         storeSession(res);
         alert('Google authentication successful');
-        navigate('/student/profileCreation');
+
+        const profile = checkUserProfile();
+        if(profile) {
+            navigate('/student/home');
+        }
+        else{
+            navigate('/student/profileCreation');
+        }
+
+        
     }
     catch(err) {
         console.error('Google authentication error', err);

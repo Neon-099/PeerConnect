@@ -24,6 +24,8 @@ const Homes = () =>  {
   const [studentProfile, setStudentProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   //PROFILE DATA
   useEffect(() => {
     const fetchProfileData = async() => {
@@ -49,7 +51,10 @@ const Homes = () =>  {
     fetchProfileData();
   }, []);
 
-  const navigate = useNavigate();
+  //PROFILE UPDATE 
+  const handleProfileUpdate = (updatedProfile) => {
+    setUserProfile(updatedProfile);
+  }
 
   const handleLogout = async () => {
     try {
@@ -105,13 +110,6 @@ const Homes = () =>  {
     }
   ];
 
-  const subjectsOfInterest = [
-    'Calculus',
-    'Physics',
-    'Organic Chemistry',
-    'Computer Science'
-  ];
-
   const pastSessions = [
     {
       id: 1,
@@ -126,7 +124,6 @@ const Homes = () =>  {
       date: 'Aug 12'
     }
   ];
-
  
   const recentNotifications = [
     {
@@ -471,6 +468,53 @@ const Homes = () =>  {
                       <Edit className="w-4 h-4" />
                       Edit Profile
                     </button>
+
+                    <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
+
+                    {/* Academic Level */}
+                    {studentProfile?.academic_level && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Academic Level</h3>
+                        <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                          {studentProfile.academic_level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Learning Style */}
+                    {studentProfile?.preferred_learning_style && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Preferred Learning Style</h3>
+                        <span className="px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm font-medium">
+                          {studentProfile.preferred_learning_style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Subjects of Interest */}
+                    {studentProfile?.subjects_of_interest && studentProfile.subjects_of_interest.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Subjects of Interest</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {studentProfile.subjects_of_interest.map((subject, index) => (
+                            <span 
+                              key={index}
+                              className="px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium"
+                            >
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bio */}
+                    {studentProfile?.bio && (
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Bio</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{studentProfile.bio}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Security Section */}
@@ -499,52 +543,6 @@ const Homes = () =>  {
                   <div className="flex-1">
                     <div className="bg-white rounded-xl p-8 border border-gray-200">
                       <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
-                    
-                    {/* Academic Level */}
-                    {studentProfile?.academic_level && (
-                      <div className="mb-6">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Academic Level</h3>
-                        <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
-                          {studentProfile.academic_level.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Learning Style */}
-                    {studentProfile?.preferred_learning_style && (
-                      <div className="mb-6">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Preferred Learning Style</h3>
-                        <span className="px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm font-medium">
-                          {studentProfile.preferred_learning_style.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Bio */}
-                    {studentProfile?.bio && (
-                      <div className="mb-6">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Bio</h3>
-                        <p className="text-sm text-gray-600 leading-relaxed">{studentProfile.bio}</p>
-                      </div>
-                    )}
-
-                    {/* Subjects of Interest */}
-                    {studentProfile?.subjects_of_interest && studentProfile.subjects_of_interest.length > 0 && (
-                      <div className="mb-8">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Subjects of Interest</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {studentProfile.subjects_of_interest.map((subject, index) => (
-                            <span 
-                              key={index}
-                              className="px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-medium"
-                            >
-                              {subject}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Upcoming Tutoring Sessions */}
                     <div className="mb-8">
                       <h3 className="text-sm font-semibold text-gray-700 mb-4">Upcoming tutoring sessions</h3>
@@ -1301,6 +1299,7 @@ const Homes = () =>  {
       <EditProfileModal 
         isOpen={isEditProfileModalOpen} 
         onClose={() => setIsEditProfileModalOpen(false)} 
+        onProfileUpdate={handleProfileUpdate}
       />
     </div>
   );
