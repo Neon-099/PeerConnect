@@ -86,7 +86,6 @@ CREATE TABLE student_profiles (
     bio TEXT NULL,
     academic_level ENUM('high_school', 'undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior', 'graduate', 'phd') NULL,
     preferred_learning_style ENUM('visual', 'auditory', 'kinesthetic', 'reading_writing', 'mixed') NULL,
-    timezone VARCHAR(50) NULL,
     profile_completed BOOLEAN DEFAULT FALSE,
     profile_completed_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
