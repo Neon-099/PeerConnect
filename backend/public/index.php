@@ -130,6 +130,12 @@ switch(true) {
         error_log("DEBUG: Matched student profile PUT route");
         $student->updateProfile();
         break;
+
+    case $uri === '/api/student/profilePicture' && $method === 'POST':
+        error_log("DEBUG: Matched student profile picture POST route");
+        $student->updateProfilePicture();
+        break;
+
     case $uri === '/api/student/tutors' && $method === 'GET':
         error_log("DEBUG: Matched student tutors route");
         $student->findTutors();

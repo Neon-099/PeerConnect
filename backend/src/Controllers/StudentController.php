@@ -217,6 +217,40 @@ class StudentController {
         }
     }
 
+    //UPDATE PROFILE PICTURE
+    public function updateProfilePicture(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+
+            if(!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+                Response::error('No profile picture provided', 400);
+                return;
+            }
+
+            $profilePicture = $this->handleProfilePictureUpload($_FILES['profile_picture']);
+
+            //UPDATE USER TABLE WITH NEW PROFILE PICTURE USING DEDICATED METHOD
+            $this->authService->updateUserProfilePicture($user['user_id'], $profilePicture);
+
+            // Return both the path and full URL
+            Response::success([
+                'profile_picture' => $profilePicture,
+                'profile_picture_url' => $_SERVER['HTTP_HOST'] . '/' . $profilePicture], 
+                'Profile picture updated successfully');
+        }
+        catch (\Exception $err) {
+            Logger::error('Update profile picture error', [
+                'error' => $err->getMessage(),
+                'user_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to update profile picture');
+        }
+    }
+
     //FIND AVAILABLE TUTORS
        //GET /api/student/tutors
     public function findTutors(): void {

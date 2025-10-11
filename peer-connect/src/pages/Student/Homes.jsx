@@ -25,36 +25,62 @@ const Homes = () =>  {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-
   //PROFILE DATA
-  useEffect(() => {
-    const fetchProfileData = async() => {
-        try {
-          setIsLoading(true);
+  const fetchProfileData = async() => {
+    try {
+      setIsLoading(true);
 
-          //FETCH USER PROFILE
-          const userResponse = await apiClient.get('/api/user/profile');
-          setUserProfile(userResponse);
+      //FETCH USER PROFILE
+      const userResponse = await apiClient.get('/api/user/profile');
+      console.log('User profile received:', userResponse);
+      setUserProfile(userResponse);
 
-          //FETCH STUDENT DATA
-          const studentData = await apiClient.get('/api/student/profile');
-          setStudentProfile(studentData);
+      //FETCH STUDENT DATA
+      const studentData = await apiClient.get('/api/student/profile');
+      console.log('Student profile received:', studentData);
+      setStudentProfile(studentData);
 
-        }
-        catch (error) {
-          console.error(`Error fetching profile data:`, error);
-        }
-        finally {
-          setIsLoading(false);
-        }
     }
-    fetchProfileData();
-  }, []);
-
+    catch (error) {
+      console.error(`Error fetching profile data:`, error);
+    }
+    finally {
+      setIsLoading(false);
+    }
+  }
+  
   //PROFILE UPDATE 
   const handleProfileUpdate = (updatedProfile) => {
     setUserProfile(updatedProfile);
+    //REFRESH THE PROFILE DATA TO GET LATEST INFO
+    fetchProfileData();
   }
+
+  useEffect(() => {
+    if(!isEditProfileModalOpen){
+      fetchProfileData();
+    }
+  }, [isEditProfileModalOpen]);
+
+  const getProfilePictureUrl = (profilePicture) => {
+    console.log('Profile picture received:', profilePicture);
+  
+    if(!profilePicture) {
+      console.log('No profile picture, using default');
+      return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
+    }
+
+    if(profilePicture.startsWith('http')){
+      console.log('Profile picture is already a full URL:', profilePicture);
+      return profilePicture;
+    }
+
+    //OTHERWISE, CONSTRUCT THE FULL Url
+    const fullUrl = `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profilePicture}`;
+    console.log('Constructed profile picture URL:', fullUrl);
+    return fullUrl;
+  }
+
 
   const handleLogout = async () => {
     try {
@@ -418,8 +444,8 @@ const Homes = () =>  {
                 <Bell className="w-5 h-5 text-teal-600" />
               </button>
               <img 
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
-                alt="Profile" 
+                src={getProfilePictureUrl(studentProfile?.profile_picture)}
+                alt={userProfile?.first_name || 'Student'} 
                 className="w-10 h-10 rounded-lg object-cover"
               />
             </div>
@@ -448,7 +474,7 @@ const Homes = () =>  {
                   <div className="bg-white rounded-xl p-8 border border-gray-200">
                     <div className="flex flex-col items-center mb-6">
                       <img 
-                        src={userProfile?.profile_picture  || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"} 
+                        src={getProfilePictureUrl(studentProfile?.profile_picture)}
                         alt={userProfile?.first_name || 'Student'} 
                         className="w-24 h-24 rounded-full object-cover mb-4"
                       />

@@ -9,6 +9,7 @@ use App\Models\TutorProfile;
 use App\Models\Session;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\ValidationException;
+use App\middleware\RoleMiddleware;
 use App\Utils\Logger;
 use App\Services\JWTService;
 use App\Services\ValidationService;
@@ -404,47 +405,6 @@ class AuthService {
         }
 
         //GET USER PROFILE WITH ROLE-SPECIFIC DATA
-        // public function getUserProfile(int $userId): array {
-        //     try {
-        //         $user = $this->authUserModel->findById($userId);
-        //         if(!$user) {
-        //             throw new AuthenticationException('User not found');
-        //         }
-        //         $profile = $this->formatUserData($user);
-
-
-
-        //         //ADD TUTOR-SPECIFIC DATA IF USER IS A TUTOR
-        //         if($user['role'] === 'tutor') {
-        //             $tutorProfile = $this->tutorProfileModel->findByUserId($userId);
-        //             if ($tutorProfile) {
-        //                 $profile['tutor_profile'] = [
-        //                     'specialization' => $tutorProfile['specialization'],
-        //                     'bio' => $tutorProfile['bio'],
-        //                     'experience_years' => (int)$tutorProfile['experience_years'],
-        //                     'hourly_rate' => (float)$tutorProfile['hourly_rate'],
-        //                     'qualifications' => $tutorProfile['qualifications'],
-        //                     'is_verified_tutor' => (bool)$tutorProfile['is_verified_tutor'],
-        //                     'total_sessions' => (int)($tutorProfile['total_sessions'] ?? 0),
-        //                     'average_rating' => (float)($tutorProfile['average_rating'] ?? 0.0)
-        //                 ];
-        //             } 
-        //         }
-
-        //         return $profile;
-        //     }
-        //     catch (AuthenticationException $e) {
-        //         throw $e;
-        //     }
-        //     catch (\Exception $e) {
-        //         Logger::error('Get user profile error', [
-        //             'user_id' => $userId,
-        //             'error' => $e->getMessage()
-        //         ]);
-        //         throw new AuthenticationException('Failed to retrieve user profile');
-        //     }
-        // }
-
         public function getUserProfile(int $userId): array {
             try {
                 $user = $this->authUserModel->findById($userId);
@@ -541,6 +501,37 @@ class AuthService {
                 throw new AuthenticationException('Failed to update profile');
             }
         }   
+
+        //UPDATE STUDENT PROFILE PICTURE
+        public function updateUserProfilePicture(int $userId, string $profilePicturePath): array {
+            try {
+                $user = $this->authUserModel->findById($userId);
+                if(!$user){
+                    throw new AuthenticationException('User not found');
+                }
+
+                //UPDATE PROFILE PICTURE ONLY 
+                if(!$this->authUserModel->update($userId, ['profile_picture' => $profilePicturePath])){
+                    throw new AuthenticationException('Failed to update profile picture');
+                }
+
+                Logger::info('User profile picture updated', [
+                    'user_id' => $userId,
+                    'profilePicture' => $profilePicturePath
+                ]);
+
+                return $this->authUserModel->findById($userId);
+            }
+            catch (AuthenticationException $e) {
+                throw $e;
+            }
+            catch (\Exception $e) {
+                Logger::error('Update user profile picture error', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
 
         public function verifyEmail(string $email): ?array {
             try {

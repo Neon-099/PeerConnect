@@ -48,6 +48,9 @@ const [formData, setFormData] = useState({
       try {
         setLoading(true);
         const profileData = await apiClient.get('/api/student/profile');
+
+        console.log('Profile data received', profileData)  
+
         setFormData({
           firstName: profileData.first_name || '', 
           lastName: profileData.last_name || '',
@@ -56,12 +59,13 @@ const [formData, setFormData] = useState({
           preferred_learning_style: profileData.preferred_learning_style || '',
           academic_level: profileData.academic_level || '',
           bio: profileData.bio || '',
-          subjects_of_interest: profileData.subject_of_interest || []
+          subjects_of_interest: profileData.subjects_of_interest || []
         });
 
         //PROFILE PICTURE PREVIEW
         if(profileData.profile_picture) {
-          setProfilePicture(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
+
+          setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
         }
       }
       catch (error) {
@@ -111,6 +115,10 @@ const [formData, setFormData] = useState({
     if (!formData.academic_level.trim()) {
       newErrors.academic_level = 'Graduation year is required';
     }
+
+    if(!formData.subjects_of_interest.length) {
+      newErrors.subjects_of_interest = 'At least one subject of interest is required';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -148,15 +156,16 @@ const [formData, setFormData] = useState({
     }));
   };
 
-  const handleProfileChange = (e) => {
+  const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
     if(file){
       setProfilePicture(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfilePicturePreview(e.target.result);
+        console.log('Profile picture preview updated')
       };
-      reader.readAsDefault(file);
+      reader.readAsDataURL(file);
     }
   }
 
@@ -186,13 +195,26 @@ const [formData, setFormData] = useState({
 
     //HANDLE PROFILE PICTURE UPLOAD IF SELECTED
     if(profilePicture) {
-      const formData = new FormData();//INSTANTIATE FORM DATA OBJECT
-      formData.append('profile_picture', profilePicture);
+      try {
+        const formDataForUpload = new FormData();//INSTANTIATE FORM DATA OBJECT
+        formDataForUpload.append('profile_picture', profilePicture);
+        console.log('Uploading profile picture...', profilePicture);
 
-      // You might need to create a separate endpoint for profile picture updates
-      // For now, we'll include it in the main update
-      //await apiClient.post('/api/student/profilePicture', formData, { isFormData: true });
+        const result = await apiClient.post('/api/student/profilePicture', formDataForUpload, { isFormData: true });
+        console.log('Profile picture uploaded successfully', result);
+
+        if(result.profile_picture){
+          setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${result.profile_picture}`);
+        }
+      }
+      catch (err) {
+        console.error('Profile picture upload failed: ', err);
+        alert('Failed to upload profile picture. Please try again');
+      }
     }
+
+    //REFRESH PROFILE DATA TO GET LATEST INFO
+    await fetchProfileData();
 
     //NOTIFY PARENT COMPONENT FOR SUCCESSFUL UPDATE
     if(onProfileUpdate) {
@@ -219,6 +241,12 @@ const [formData, setFormData] = useState({
         </div>
 
         <div className="p-6">
+        {loading && !formData.firstName || !formData.lastName ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
+            <span className="ml-2 text-gray-600">Loading profile...</span>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Profile */}
             <div className="space-y-6">
@@ -228,20 +256,32 @@ const [formData, setFormData] = useState({
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <img 
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
+                    src={profilePicturePreview || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" }
                     alt="Profile" 
                     className="w-20 h-20 rounded-full object-cover"
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-2 px-4 py-2 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors">
-                    <Upload className="w-4 h-4" />
-                    Upload
-                  </button>
-                  <button className="flex items-center gap-2 px-4 py-2 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                    Remove
-                  </button>
+                  <label className="flex items-center gap-2 px-4 py-2 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      Upload
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePictureChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <button 
+                      onClick={() => {
+                        setProfilePicture(null);
+                        setProfilePicturePreview('');
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove
+                    </button>
                 </div>
               </div>
 
@@ -486,6 +526,7 @@ const [formData, setFormData] = useState({
 
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>
