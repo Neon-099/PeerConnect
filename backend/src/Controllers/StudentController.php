@@ -185,8 +185,19 @@ class StudentController {
                 'fields' => array_keys($input)
             ]);
 
-            $updated = $this->studentProfileModel->update($user['user_id'], $input);
+            //HANDLE USER DATA SEPARATELY
+            if(isset($input['first_name']) || isset($input['last_name']) || isset($input['email'])) {
+                $userData = [];
+                if(isset($input['first_name'])) $userData['first_name'] = $input['first_name'];
+                if(isset($input['last_name'])) $userData['last_name'] = $input['last_name'];
+                if(isset($input['email'])) $userData['email'] = $input['email'];
 
+                $this->authService->updateUserProfile($user['user_id'], $userData);
+            }
+
+            unset($input['first_name'], $input['last_name'], $input['email']);
+
+            $updated = $this->studentProfileModel->update($user['user_id'], $input); 
             if($updated) {
                 $profile = $this->studentProfileModel->findByUserId($user['user_id']);
                 Response::success($profile, 'Profile updated successfully');

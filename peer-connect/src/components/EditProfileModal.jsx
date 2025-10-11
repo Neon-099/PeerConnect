@@ -191,7 +191,7 @@ const [formData, setFormData] = useState({
 
       // You might need to create a separate endpoint for profile picture updates
       // For now, we'll include it in the main update
-      await apiClient.post('/api/student/profilePicture', formData, { isFormData: true });
+      //await apiClient.post('/api/student/profilePicture', formData, { isFormData: true });
     }
 
     //NOTIFY PARENT COMPONENT FOR SUCCESSFUL UPDATE

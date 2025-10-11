@@ -80,8 +80,8 @@ class StudentProfile {
         $params = [':user_id' => $userId];
         
         foreach($data as $key => $value){
-            if($key !== 'subject_of_interest'){
-                $fields[] = "{$key} = : {$key}";
+            if($key !== 'subjects_of_interest'){
+                $fields[] = "{$key} = :{$key}";
                 $params[":{$key}"] = $value;
             }
         }
