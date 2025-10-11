@@ -125,7 +125,8 @@ switch(true) {
         error_log("DEBUG: Matched student profile GET route");
         $student->getProfile();
         break;
-    case $uri === '/api/student/profile' && $method === 'PUT':
+        
+    case $uri === '/api/student/updateProfile' && $method === 'PUT':
         error_log("DEBUG: Matched student profile PUT route");
         $student->updateProfile();
         break;

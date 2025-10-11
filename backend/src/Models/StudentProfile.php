@@ -93,16 +93,15 @@ class StudentProfile {
             $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
             $stmt = $this->db->prepare($query);
 
-            if($stmt->execute($params)){
-                //UPDATE SUBJECT OF INTEREST
-                if(isset($data['subjects_of_interest'])){
-                    $profile = $this->findByUserId($userId);
-                    if($profile){
-                        $this->deleteSubjectsOfInterest($profile['id']);
-                        $this->insertSubjectsOfInterest($profile['id'], $data['subjects_of_interest']);
-                    }
+        if($stmt->execute($params)){
+            //UPDATE SUBJECT OF INTEREST
+            if(isset($data['subjects_of_interest'])){
+                $profile = $this->findByUserId($userId);
+                if($profile){
+                    $this->deleteSubjectsOfInterest($profile['id']);
+                    $this->insertSubjectsOfInterest($profile['id'], $data['subjects_of_interest']);
                 }
-
+            }
             return true;
         }
         return false;
