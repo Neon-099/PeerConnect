@@ -122,6 +122,9 @@ class AuthController {
                 'role' => $result['user']['role']
             ]);
 
+            // Response::success($result, 'Login successful');
+
+            Logger::info('Sending login response', ['result' => $result]);
             Response::success($result, 'Login successful');
         }
         catch (ValidationException $e) {

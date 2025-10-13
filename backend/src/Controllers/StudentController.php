@@ -80,10 +80,17 @@ class StudentController {
                 'user_id' => $user['user_id'],
                 'profile_data' => $profileData
             ]);
-    
+            
+            //CHECK IF PROFILE ALREADY EXISTS
+            $existingProfile = $this->studentProfileModel->findByUserId($user['user_id']);
+            if($existingProfile) {
+                Response::error('Profile already exists.', 409);
+                return;
+            }
+
             //CREATE STUDENT PROFILE USING THE NEW MODEL
             $profileId = $this->studentProfileModel->create($user['user_id'], $profileData);
-    
+            
             //UPDATE USER TABLE WITH PROFILE PICTURE
             if($profilePicture) {
                 $this->authService->updateUserProfile($user['user_id'], ['profile_picture' => $profilePicture]);
@@ -239,7 +246,7 @@ class StudentController {
             // Return both the path and full URL
             Response::success([
                 'profile_picture' => $profilePicture,
-                'profile_picture_url' => $_SERVER['HTTP_HOST'] . '/' . $profilePicture], 
+                'profile_picture_url' => 'http://' . $_SERVER['HTTP_HOST'] . '/' . $profilePicture], 
                 'Profile picture updated successfully');
         }
         catch (\Exception $err) {
