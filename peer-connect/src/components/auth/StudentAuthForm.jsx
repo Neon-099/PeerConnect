@@ -1,9 +1,9 @@
 import { auth, storeSession} from '../../utils/auth.js';
-import {apiClient} from '../../utils/api'
+import {apiClient} from '../../utils/api.js'
 import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
 import { useState } from 'react';
-import { User, GraduationCapIcon, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { User, GraduationCapIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import PasswordResetModal from '../PasswordResetModal.jsx';
 
 const StudentSignup = () => {
@@ -24,6 +24,11 @@ const StudentSignup = () => {
   const [isAccountLocked, setIsAccountLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState(5);
+  const [rateLimitInfo, setRateLimitInfo] = useState({
+    isRateLimited: false,
+    lockoutSeconds: 0,
+    lockoutMinutes: 0
+  });
   const [loginError, setLoginError] = useState('');
   const [showForgotPasswordSuggestion, setShowForgotPasswordSuggestion] = useState(false);
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
@@ -37,113 +42,148 @@ const StudentSignup = () => {
     });
   };
 
-  const checkUserProfile = async () => {
-    try {
+  const checkUserProfile = async() => {
+        try {
         const response = await apiClient.get('/api/student/profile');
-        return response;
-    }
-    catch (error) {
-        if(error.message.includes('Profile not exists!') || error.message.includes('404')){
+        console.log('Profile check response:', response);
+
+        // Check if response exists and has content
+        if(response && Object.keys(response).length > 0) {
+            console.log('Profile exists:', response);
+            return response;
+        }
+        else {
+            console.log('Profile response is empty');
             return null;
         }
-        throw error;
     }
+    catch (error) {
+        console.log('Profile check error:', error.message);
+        
+        // Handle different types of profile-related errors
+        if(error.message.includes('Profile not found') || 
+        error.message.includes('Please complete your profile setup') ||
+        error.message.includes('Profile not exists!')) {
+        console.log('Profile not found - user needs to complete setup');
+        navigate('/student/profileCreation');
+        return null;
+        }
+        
+        // Re-throw other errors (authentication, network, etc.)
+        console.error('Unexpected error checking profile:', error);
+        throw error;
+        }
   }
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    console.log('Login form submitted with data:', formData);
-    try {
-        const role = 'student';
-        console.log('Calling auth.login...');
-        const res = await auth.login(formData.email, formData.password, role);
-        console.log('Login response:', res);
-        storeSession(res);
+    const handleLoginSubmit = async (e) => {
+        e.preventDefault();
+        console.log('Login form submitted with data:', formData);
+        try {
+            const role = 'student';
+            console.log('Calling auth.login...');
+            const res = await auth.login(formData.email, formData.password, role);
+            console.log('Login response:', res);
+            storeSession(res);
+            
+            //CHECK USER PROFILE AFTER SUCCESSFUL LOGIN
+            const profile = await checkUserProfile();
+            console.log('Check if profile exists', profile)
+            if(profile) {
+                navigate('/student/home');
+            }
+            else {
+                navigate('/student/profileCreation'); 
+                console.log('Form submitted:', formData, );
+            
+            } 
+            alert('Account logged in successfully!');
+
+
+            //RESET ATTEMPT TRACKING ON SUCCESSFUL LOGIN
+            setLoginAttempts(0);
+            setIsAccountLocked(false);
+            setLockoutTime(0);
+            setLoginError('');
+        }   
+        catch (err) {
+            console.error('Login error:', err);
+            alert(err.message || 'login failed');
         
-        const profile = await checkUserProfile();
-        if(profile) {
-            navigate('/student/home');
-        }
-        else {
-            navigate('/student/profileCreation'); 
-            console.log('Form submitted:', formData, );
-           
-        } 
-        alert('Account logged in successfully!');
+            //HANDLE DIFFERENT TYPES OF LOGIN ERROR
 
+            // Add this function before handleLoginSubmit:
+            const parseAttemptsFromError = (errorMessage) => {
+            // Look for patterns like "X attempts remaining" or similar
+            const match = errorMessage.match(/(\d+)\s+attempts?\s+remaining/i);
+            return match ? parseInt(match[1]) : null;
+            };
 
-        //RESET ATTEMPT TRACKING ON SUCCESSFUL LOGIN
-        setLoginAttempts(0);
-        setIsAccountLocked(false);
-        setLockoutTime(0);
-        setLoginError('');
-    }   
-    catch (err) {
-        console.error('Login error:', err);
-        alert(err.message || 'login failed');
-    
-        //HANDLE DIFFERENT TYPES OF LOGIN ERROR
-        const errorMessage = err.message || 'Login failed';
-        const rateLimitInfo = setRateLimitInfo(errorMessage);
-        const attemptsLeft = setRemainingAttempts(errorMessage);
+            // To:
+            const attemptsLeft = parseAttemptsFromError(err.message);
 
-        if(rateLimitInfo.isRateLimited) {
-            //ACCOUNT IS LOCKED DUE TO RATE LIMITING 
-            setIsAccountLocked(true);
-            setLockoutTime(rateLimitInfo.lockoutSeconds);
-            setLoginError(`Account locked for ${rateLimitInfo.lockoutMinutes} minutes due to too many failed attempts.`);
-            setShowForgotPasswordSuggestion(true);
-
-            //START COUNTDOWN 
-            startLockoutCountdown(rateLimitInfo.lockoutSeconds);
-        }
-        else if (attemptsLeft !== null) {
-            //FAILED ATTEMPT BUT NOT LOCKED YET
-            setLoginAttempts(prev => prev + 1);
-            setRemainingAttempts(attemptsLeft);
-            setLoginError(`Invalid email or password. ${attemptsLeft} attempts remaining.`);
-
-            //SHOW IF FORGOT PASSWORD SUGGESTIONS AFTER 2 FAILED ATTEMPTS
-            if(!attemptsLeft <= 3){
+            if(rateLimitInfo.isRateLimited) {
+                //ACCOUNT IS LOCKED DUE TO RATE LIMITING 
+                setIsAccountLocked(true);
+                setLockoutTime(rateLimitInfo.lockoutSeconds);
+                setLoginError(`Account locked for ${rateLimitInfo.lockoutMinutes} minutes due to too many failed attempts.`);
                 setShowForgotPasswordSuggestion(true);
+
+                //START COUNTDOWN 
+                startLockoutCountdown(rateLimitInfo.lockoutSeconds);
+            }
+            else if (attemptsLeft !== null) {
+                //FAILED ATTEMPT BUT NOT LOCKED YET     
+                setLoginAttempts(prev => prev + 1);
+                setRemainingAttempts(attemptsLeft);
+                setLoginError(`Invalid email or password. ${attemptsLeft} attempts remaining.`);
+
+                //SHOW IF FORGOT PASSWORD SUGGESTIONS AFTER 2 FAILED ATTEMPTS
+                if(!attemptsLeft <= 3){
+                    setShowForgotPasswordSuggestion(true);
+                }
+            }
+            else if (err.message.toLowerCase().includes('Invalid email or password')){
+                //GENERIC INVALID CREDENTIALS ERROR
+                setLoginAttempts(prev => prev + 1);
+                setLoginError('Invalid email or password. Please check your credentials');
+
+                //SHOW FORGOT PASSWORD SUGGESTION 2 FAILED ATTEMPTS
+                if(loginAttempts >= 2) {
+                    setShowForgotPasswordSuggestion(true);
+                } 
+            }
+            else {
+                //OTHER ERRORS
+                setLoginError(err.message);
             }
         }
-        else if (errorMessage.toLowerCase().includes('Invalid email or password')){
-            //GENERIC INVALID CREDENTIALS ERROR
-            setLoginAttempts(prev => prev + 1);
-            setLoginError('Invalid email or password. Please check your credentials');
+    };
 
-            //SHOW FORGOT PASSWORD SUGGESTION 2 FAILED ATTEMPTS
-            if(loginAttempts >= 2) {
-                setShowForgotPasswordSuggestion(true);
-            } 
-        }
-        else {
-            //OTHER ERRORS
-            setLoginError(errorMessage);
-        }
+    const handleForgotPasswordClick  = () => {
+        setShowPasswordResetModal(true);
+        setShowForgotPasswordSuggestion(false);
     }
-  };
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     console.log('Signup form submitted with data:', formData);
     try {
+        console.log('Entering...')
         const payload = {
             first_name: formData.firstName,
             last_name: formData.lastName,
             email: formData.email,
             password: formData.password,
             role: 'student',
+            providers: 'local'
         };
         console.log('Calling auth.register with payload:', payload);
         const res = await auth.register(payload);
         console.log('Register response:', res);
         storeSession(res);
-
-        alert("Account created successfully!");
-        setActiveTab('login');
+        
         navigate('/student/profileCreation');
+        alert("Account created successfully!");
     }
     catch(err){
         console.error('Signup error:', err);
@@ -190,7 +230,7 @@ const StudentSignup = () => {
     setShowForgotPasswordSuggestion(false);
   }
 
-  const googleClientId = '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
+  const googleClientId =   '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
 
   const handleGoogleSuccess = async(credentialResponse) => {
     try {
