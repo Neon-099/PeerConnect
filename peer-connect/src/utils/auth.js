@@ -3,7 +3,7 @@ import { api, storeSessionTokens, getAccessToken } from './api';
 export const auth = {
 	async register(payload) {
 		// payload: { first_name, last_name, email, password, role: 'student' }
-		const data = await api('/api/auth/register', { method: 'POST', body: payload });
+		const data = await api('/auth/register', { method: 'POST', body: payload });
 		// data may or may not include tokens depending on backend; handle both cases safely
 		if (data.access_token || data.refresh_token) {
 			storeSessionTokens(data);
@@ -12,7 +12,7 @@ export const auth = {
 	},
 
 	async login(email, password, role = 'student') {
-		const data = await api('/api/auth/login', {
+		const data = await api('/auth/login', {
 			method: 'POST',
 			body: { email, password, role },
 		});
@@ -23,17 +23,17 @@ export const auth = {
 	},
 
 	async googleAuth(google_token, role = 'student') {
-		const data = await api('/api/auth/googleAuth', {
+		const data = await api('/auth/googleAuth', {
 			method: 'POST',
 			body: { google_token: google_token, role },
-		});
+		});	
 		storeSessionTokens(data);
 		return data ;
 	},
 
 	//REQUEST PASSWORD RESET
 	async requestPasswordReset (email) {
-		const data = await api('/api/auth/forgotPassword', {
+		const data = await api('/auth/forgotPassword', {
 			method: 'POST',
 			body: {email}
 		});
@@ -41,7 +41,7 @@ export const auth = {
 	},
 
 	async verifyResetCode (token, code) {
-		const data = await api('/api/auth/verifyResetCode', {
+		const data = await api('/auth/verifyResetCode', {
 			method: 'POST',
 			body: {token, code}
 		});
@@ -49,7 +49,7 @@ export const auth = {
 	},
 
 	async resetPassword (token, code, newPassword) {
-		const data = await api('/api/auth/resetPassword', {
+		const data = await api('/auth/resetPassword', {
 			method: 'POST',
 			body: {token, code, password: newPassword}
 		});
@@ -60,7 +60,7 @@ export const auth = {
 		try {
 			const refreshToken = localStorage.getItem('pc_refresh_token');
 			if(refreshToken) {
-				await api('/api/auth/logout', {
+				await api('/auth/logout', {
 					method: 'POST',
 					body: { refresh_token: refreshToken}
 				});
