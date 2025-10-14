@@ -109,22 +109,48 @@ const StudentProfileCreation = () => {
     
     switch (step) {
       case 1:
-        // if (!formData.student_id.trim()) newErrors.student_id = 'Student ID is required';
-        // if (!formData.major.trim()) newErrors.major = 'Major is required';
-        // if (!formData.graduation_year.trim()) newErrors.graduation_year = 'Graduation year is required';
-        if (!formData.school.trim()) newErrors.school = 'School is required';
-        //BIO IS OPTIONAL
+
+        if (!formData.school.trim()) {
+         newErrors.school = 'School is required';
+        }
+        else if (formData.school.trim().length < 5) {
+          newErrors.school = `School name must be at least 5 characters long`;
+        }
+
+        if(!formData.bio.trim()){
+          newErrors.bio = `Bio is required - tell use about yourself`;
+        }
+        else if (formData.bio.trim().length <= 5) {
+          newErrors.bio = 'Bio must be at least 5 characters long';
+        }
+        else if (formData.bio.trim().length > 500) {
+          newErrors.bio = 'Bio cannot exceed 500 characters';
+        }
         break;
       case 2:
-        if (formData.subjects_of_interest.length === 0) newErrors.subjects_of_interest = 'At least one subject of interest is required';
-        if (!formData.academic_level) newErrors.academic_level = 'Academic level is required';
+        if (formData.subjects_of_interest.length === 0) {
+          newErrors.subjects_of_interest = 'At least one subject of interest is required';
+        }
+        else if (formData.subjects_of_interest.length < 2) {
+          newErrors.subjects_of_interest = 'At least two subjects of interest are required';
+        }
+        else if (formData.subjects_of_interest.length > 10) {
+          newErrors.subjects_of_interest = 'Maximum of to 10 subjects of interest is allowed';
+        }
+
+        if (!formData.academic_level) {
+          newErrors.academic_level = 'Academic level is required';
+        }
         break;
       case 3:
-        if (!formData.preferred_learning_style) newErrors.preferred_learning_style = 'Learning style preference is required';
-        // if (formData.availability.length === 0) newErrors.availability = 'At least one availability slot is required';
+        if (!formData.preferred_learning_style) {
+          newErrors.preferred_learning_style = 'Learning style preference is required';
+        }
         break;
       case 4:
-        // Profile picture is optional
+        if(!formData.profile_picture) {
+          newErrors.profile_picture = 'Profile picture is required to complete your setup';
+        }
         break;
     }
     
@@ -132,12 +158,78 @@ const StudentProfileCreation = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
+   //COMPREHENSIVE VALIDATION FOR FINAL SUBMISSION
+  const validateAllSteps = () => {
+    const allErrors = {};
+    
+    // Validate all steps
+    for (let step = 1; step <= steps.length; step++) {
+      const stepErrors = {};
+      
+      switch (step) {
+        case 1:
+          if (!formData.school.trim()) {
+            stepErrors.school = 'School/University is required';
+          } else if (formData.school.trim().length < 3) {
+            stepErrors.school = 'School name must be at least 3 characters';
+          }
+          
+          if (!formData.bio.trim()) {
+            stepErrors.bio = 'Bio is required';
+          } else if (formData.bio.trim().length < 5) {
+            stepErrors.bio = 'Bio must be at least 5 characters';
+          } else if (formData.bio.trim().length > 500) {
+            stepErrors.bio = 'Bio must be less than 500 characters';
+          }
+          break;
+          
+        case 2:
+          if (formData.subjects_of_interest.length < 2) {
+            stepErrors.subjects_of_interest = 'At least 2 subjects of interest are required';
+          }
+          if (!formData.academic_level) {
+            stepErrors.academic_level = 'Academic level is required';
+          }
+          break;
+          
+        case 3:
+          if (!formData.preferred_learning_style) {
+            stepErrors.preferred_learning_style = 'Learning style preference is required';
+          }
+          break;
+          
+        case 4:
+          if (!formData.profile_picture) {
+            stepErrors.profile_picture = 'Profile picture is required';
+          }
+          break;
+      }
+      
+      Object.assign(allErrors, stepErrors);
+    }
+    
+    setErrors(allErrors);
+    return Object.keys(allErrors).length === 0;
+  };
+
+   const handleNext = () => {
     if (validateStep(currentStep)) {
       if (currentStep < steps.length) {
         setCurrentStep(currentStep + 1);
       } else {
-        handleSubmit();
+        // Final step - validate everything before submission
+        if (validateAllSteps()) {
+          handleSubmit();
+        } else {
+          // Show error message for incomplete profile
+          alert('Please complete all required fields before submitting your profile.');
+        }
+      }
+    } else {
+      // Show specific error message for current step
+      const errorFields = Object.keys(errors);
+      if (errorFields.length > 0) {
+        alert(`Please fix the following errors:\n• ${Object.values(errors).join('\n• ')}`);
       }
     }
   };
@@ -148,59 +240,50 @@ const StudentProfileCreation = () => {
     }
   };
 
+  const handleSubmit = async () => {
+    // Final validation before submission
+    if (!validateAllSteps()) {
+      alert('Profile setup incomplete. Please fill all required fields.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      console.log('Current formData', formData);
+      
+      // Create FormData for file upload
+      const submitData = new FormData();
 
+      // Add all form fields with validation
+      Object.keys(formData).forEach(key => {
+        if (key === 'subjects_of_interest') {
+          submitData.append(key, JSON.stringify(formData[key]));
+        } 
+        else if (key === 'profile_picture' && formData[key]) {
+          submitData.append('profile_picture', formData[key]);
+        } 
+        else if (formData[key]) {
+          submitData.append(key, formData[key]);
+        }
+      });
 
- const handleSubmit = async () => {
-  if (!validateStep(currentStep)) return;
-  
-  setIsLoading(true);
-  try {
-
-    console.log('Current formData', formData);
-    // Create FormData for file upload
-    const submitData = new FormData();
-
-    // Add all form fields
-    Object.keys(formData).forEach(key => {
-      if (key === 'subjects_of_interest') {
-        submitData.append(key, JSON.stringify(formData[key]));
-        console.log(`Added ${key}:`, JSON.stringify(formData[key]));
-      } 
-      else if (key === 'profile_picture' && formData[key]) {
-        submitData.append('profile_picture', formData[key]);
-        console.log(`Added ${key}:`, formData[key]);
-      } 
-      else if (formData[key]) {
-        submitData.append(key, formData[key]);
-        console.log(`Added ${key}:`, formData[key]);
+      const result = await apiClient.post('/api/student/profileCreation', submitData, {
+        isFormData: true
+      });
+      
+      if (result && result.profile_id) {
+        alert('Profile created successfully! You can now access all features.');
+        navigate('/student/home');
+      } else {
+        throw new Error('Failed to create profile');
       }
-    });
-
-    // Debug: Check FormData contents
-    console.log('FormData entries:');
-    for (let [key, value] of submitData.entries()) {
-      console.log(`${key}:`, value);
+    } catch (error) {
+      console.error('Profile setup error:', error);
+      alert('Failed to create profile. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-
-    // Use apiClient with FormData support
-    const result = await apiClient.post('/api/student/profileCreation', submitData, {
-      isFormData: true
-    });
-    
-    console.log('Full API Response:', result);
-    
-    if (result && result.profile_id) {
-      navigate('/student/home');
-    } else {
-      throw new Error('Failed to create profile');
-    }
-  } catch (error) {
-    console.error('Profile setup error:', error);
-    alert('Failed to create profile. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-  };  
+  }; 
 
   if(!isAuthenticated) {
     return (
@@ -218,7 +301,6 @@ const StudentProfileCreation = () => {
       case 1:
         return (
           <div className="space-y-6">
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">School or University *</label>
@@ -241,9 +323,17 @@ const StudentProfileCreation = () => {
                 value={formData.bio}
                 onChange={(e) => handleInputChange('bio', e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none
+                  ${errors.bio ? 'border-red-500' : 'border-gray-300'}
+                `}
                 placeholder="Tell us about yourself, your academic goals, and what you're looking for in a tutor..."
               />
+              <div className="flex justify-between items-center mt-1">
+                {errors.bio && <p className="text-sm text-red-600">{errors.bio}</p>}
+                <p className="text-xs text-gray-500 ml-auto">
+                  {formData.bio.length}/500 characters
+                </p>
+              </div>
             </div>
           </div>
         );
@@ -360,6 +450,7 @@ const StudentProfileCreation = () => {
                 {formData.profile_picture ? 'Change Photo' : 'Upload Photo'}
               </label>
               <p className="text-sm text-gray-500 mt-2">Optional: Add a profile picture to help tutors recognize you</p>
+                {errors.profile_picture && <p className="mt-1 text-sm text-red-600">{errors.profile_picture} </p>}
             </div>
           </div>
         );
