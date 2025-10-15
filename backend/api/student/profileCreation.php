@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Dotenv\Dotenv;
-use App\Controllers\AuthController;
+use App\Controllers\StudentController;
 use App\Utils\Response;
 
 // Load environment variables
@@ -40,15 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Only allow POST requests
+// ONLY ALLOW POST REQUEST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     Response::methodNotAllowed(['POST']);
 }
 
 try {
-    $auth = new AuthController();
-    $auth->register();
+    $student = new StudentController();
+    $student->createStudentProfile();
 } catch (Exception $e) {
-    error_log("Register endpoint error: " . $e->getMessage());
-    Response::serverError('Registration failed. Please try again later.');
+    error_log("Student profile creation endpoint error: " . $e->getMessage());
+    Response::serverError('Profile creation failed. Please try again later.');
 }

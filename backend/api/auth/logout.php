@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     $auth = new AuthController();
-    $auth->register();
+    $auth->logout();
 } catch (Exception $e) {
-    error_log("Register endpoint error: " . $e->getMessage());
-    Response::serverError('Registration failed. Please try again later.');
+    error_log("Logout endpoint error: " . $e->getMessage());
+    Response::serverError('Logout failed. Please try again later.');
 }
