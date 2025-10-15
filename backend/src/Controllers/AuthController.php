@@ -55,7 +55,10 @@ class AuthController {
             Logger::info('User registered successfully', [
                 'user_id' => $user['id'],
                 'email' => $user['email'],
-                'role' => $user['role']
+                'role' => $user['role'],
+                'has_access_tokens' => isset($user['access_token']),
+                'has_refresh_tokens' => isset($user['refresh_token']),
+                'response_keys' => array_keys($user)
             ]);
 
             Response::created(
@@ -121,8 +124,6 @@ class AuthController {
                 'email' => $result['user']['email'],
                 'role' => $result['user']['role']
             ]);
-
-            // Response::success($result, 'Login successful');
 
             Logger::info('Sending login response', ['result' => $result]);
             Response::success($result, 'Login successful');
@@ -450,8 +451,7 @@ class AuthController {
      * Verify password reset code
      * POST /api/auth/verifyResetCode
      */
-    public function verifyResetCode(): void
-    {
+    public function verifyResetCode(): void {
         try {
             $input = $this->getJsonInput();
 
@@ -463,7 +463,7 @@ class AuthController {
             $isValid = $this->authService->verifyPasswordResetCode($input['token'], $input['code']);
 
             if ($isValid) {
-                Response::success([], 'Verification code is valid');
+                Response::success(['verified' => true], 'Verification is valid');
             } else {
                 Response::error('Invalid verification code', 400);
             }
@@ -482,8 +482,7 @@ class AuthController {
      * Request password reset with email verification
      * POST /api/auth/forgotPassword
      */
-    public function forgotPassword(): void
-    {
+    public function forgotPassword(): void {
         try {
             $input = $this->getJsonInput();
 
@@ -523,8 +522,7 @@ class AuthController {
      * Reset password with code verification
      * POST /api/auth/resetPassword
      */
-    public function resetPassword(): void
-    {
+    public function resetPassword(): void {
         try {
             $input = $this->getJsonInput();
 
@@ -580,4 +578,3 @@ class AuthController {
         return $data;
     }
 }
-?>

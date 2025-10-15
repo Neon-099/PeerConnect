@@ -560,8 +560,7 @@ class AuthService {
             }
         }
 
-        public function changePassword(int $userId, array $input): bool
-        {
+        public function changePassword(int $userId, array $input): bool{
             try {
                 // 1. Fetch user from DB
                 $db = Database::getInstance()->getConnection();
@@ -615,7 +614,7 @@ class AuthService {
                 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
                 //CHECK RATE LIMITING
-                if($this->rateLimitingServices->isRateLimiting($email, 'password_reset', 3, 15)){
+                if($this->rateLimitingService->isRateLimited($email, 'password_reset', 3, 15)){
                     $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, 'password_reset');
                     throw new AuthenticationException("Too many request reset attempts. Please try again!", 
                     429, 
@@ -711,7 +710,7 @@ class AuthService {
                 $stmt = $db->prepare("
                 SELECT pr.*, u.email
                 FROM password_resets pr
-                JOIN user u ON pr.user_id = u.id
+                JOIN users u ON pr.user_id = u.id
                 WHERE pr.token = :token AND pr.is_used = FALSE
                 LIMIT 1
                 ");
@@ -721,8 +720,20 @@ class AuthService {
             
                 $reset = $stmt->fetch(PDO::FETCH_ASSOC);
                 if(!$reset) {
+                    Logger::error("Reset token not found", [
+                        'token' => substr($token, 0, 10) . '...',
+                        'code' => $code
+                    ]);
                     throw new AuthenticationException("Invalid or expired reset token");
                 }
+
+                // Add debug logging for code verification
+                Logger::info("Code verification attempt", [
+                    'token' => substr($token, 0, 10) . '...',
+                    'provided_code' => $code,
+                    'stored_code' => $reset['verification_code'],
+                    'codes_match' => $reset['verification_code'] === $code
+                ]);
 
                 //CHECK EXPIRY
                 if(strtotime($reset['expires_at']) < time()) {
@@ -730,12 +741,12 @@ class AuthService {
                 }
 
                 //CHECK ATTEMPTS 
-                if(!$reset['attempts'] >= $reset['max_attempts']){
+                if($reset['attempts'] >= $reset['max_attempts']){
                     throw new AuthenticationException("Too many verification attempts. Please request a new reset code");
                 }
 
-                //VERIFY CODE
-                if(!$reset['verification_code'] !== $code) {
+                //VERIFY CODE MATCHES
+                if($reset['verification_code'] !== $code) {
                     //INCREMENT ATTEMPTS
                     $stmt = $db->prepare("
                     UPDATE password_resets
@@ -748,9 +759,18 @@ class AuthService {
                     $remainingAttempts = $reset['max_attempts'] - ($reset['attempts'] + 1);
                     throw new AuthenticationException("Invalid verification code . {$remainingAttempts} attempts remaining");
                 }
-                
+
+                //CHECK IF CODE IS VALID ( TO RESET ATTEMPTS)
+                $stmt = $db->prepare("
+                UPDATE password_resets 
+                SET attempts = 0
+                WHERE token = :token
+                ");
+                $stmt->bindParam(':token', $token);
+                $stmt->execute();
+
                 Logger::info("Password reset code verified", [
-                    'user_id' => $reset['user_id'],
+                    'token' => substr($token, 0, 10), '...',
                     'email' => $reset['email']
                 ]);
 
@@ -862,7 +882,7 @@ class AuthService {
             try {
                 $accessToken = $this->jwtService->generateAccessToken($user);
                 $refreshToken = $this->jwtService->generateRefreshToken();
-
+        
                 //STORE REFRESH TOKEN IN DATABASE
                 $sessionData = [
                     'user_id' => $user['id'],
@@ -871,11 +891,11 @@ class AuthService {
                     'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
                     'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
                 ];
-
+        
                 if(!$this->sessionModel->create($sessionData)) {
                     throw new AuthenticationException('Failed to create session');
                 }
-
+        
                 return [
                     'access_token' => $accessToken,
                     'refresh_token' => $refreshToken,
@@ -883,20 +903,64 @@ class AuthService {
                     'expires_in' => config('jwt.access_expires'),
                     'user' => $this->formatUserData($user), 
                 ];
-
+        
             }
             catch (\Exception $e) {
                 Logger::error('create auth response error', [
                     'user_id' => $user['id'],
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
-                throw new AuthenticationException ('Failed to create authentication response');
+                
+                // Return user data without tokens as fallback
+                return [
+                    'user' => $this->formatUserData($user),
+                    'message' => 'User created successfully. Please login to continue.'
+                ];
             }
         }
+        // private function createAuthResponse(array $user): array {
+        //     try {
+        //         $accessToken = $this->jwtService->generateAccessToken($user);
+        //         $refreshToken = $this->jwtService->generateRefreshToken();
+
+        //         //STORE REFRESH TOKEN IN DATABASE
+        //         $sessionData = [
+        //             'user_id' => $user['id'],
+        //             'refresh_token' => $refreshToken,
+        //             'expires_at' => date('Y-m-d H:i:s', time() + config('jwt.refresh_expires')),
+        //             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        //             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+        //         ];
+
+        //         if(!$this->sessionModel->create($sessionData)) {
+        //             throw new AuthenticationException('Failed to create session');
+        //         }
+
+        //         return [
+        //             'access_token' => $accessToken,
+        //             'refresh_token' => $refreshToken,
+        //             'token_type' => 'Bearer',
+        //             'expires_in' => config('jwt.access_expires'),
+        //             'user' => $this->formatUserData($user), 
+        //         ];
+
+        //     }
+        //     catch (\Exception $e) {
+        //         Logger::error('create auth response error', [
+        //             'user_id' => $user['id'],
+        //             'error' => $e->getMessage(),
+        //             'trace' => $e->getTraceAsString()
+        //         ]);
+        //         throw new AuthenticationException ('Failed to create authentication response');
+        //     }
+        // }
 
 
         //FORMATE USER DATA FOR API RESPONSE
         private function formatUserData(array $user): array {
+            
+            
             return [
                 'id' => (int)$user['id'],
                 'email' => $user['email'],
