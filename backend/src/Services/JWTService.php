@@ -24,7 +24,7 @@ class JWTService {
         $this->issuer = config('app.app_name', 'Tutor-Student Platform');
         $this->audience = 'app-users';
 
-        if(!$this->secret || $this->secret === 'b9ffe076bd39063d15858a48eee1def8'){
+        if(!$this->secret || strlen($this->secret) < 32 || $this->secret === 'a8f5f167f44f4964e6c998dee827110c8b7e5c8c5e8c5e8c5e8c5e8c5e8c5e8c'){
             throw new \InvalidArgumentException('JWT secret not configured. Please set JWT_SECRET in your environment variables.');
         }
     }
