@@ -270,8 +270,10 @@ const StudentProfileCreation = () => {
       const result = await apiClient.post('/api/student/profileCreation', submitData, {
         isFormData: true
       });
+
+      console.log('profile created: ', result);
       
-      if (result && result.profile_id) {
+      if (result || (result.success && result.data.profile_id)) {
         alert('Profile created successfully! You can now access all features.');
         navigate('/student/home');
       } else {

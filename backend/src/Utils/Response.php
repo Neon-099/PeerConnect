@@ -60,13 +60,20 @@ class Response {
         
         echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-        //LOG SUCCESSFUL RESPONSE
-        Logger::info('API Success Response', [
-            'code' => $code,
-            'message' => $message,
-            'data_types' => gettype($data),
-            'request_id' => self::getRequestId()
+        //DEBUGING
+        Logger::info('JSON Response sent', [
+            'response' => $response,
+            'json_error' => json_last_error_msg(),
+            'json_error_code' => json_last_error()
         ]);
+
+        //LOG SUCCESSFUL RESPONSE
+        // Logger::info('API Success Response', [
+        //     'code' => $code,
+        //     'message' => $message,
+        //     'data_types' => gettype($data),
+        //     'request_id' => self::getRequestId()
+        // ]);
 
         exit;
      }

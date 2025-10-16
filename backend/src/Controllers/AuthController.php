@@ -29,8 +29,15 @@ class AuthController {
 
     //REGISTER NEW USER
         //POST/api/auth/register
-    
     public function register(): void {
+        //debugging
+        error_log("REGISTER ENDPOINT CALLED");
+        Logger::info('Register endpoint hit', [
+            'method' => $_SERVER['REQUEST_METHOD'],
+            'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not_set',
+            'raw_input' => file_get_contents('php://input')
+        ]);
+        
         try {
             //GET AND VALIDATE INPUT
             $input = $this->getJsonInput();
@@ -53,18 +60,24 @@ class AuthController {
             $user = $this->authService->register($input);
 
             Logger::info('User registered successfully', [
-                'user_id' => $user['id'],
-                'email' => $user['email'],
-                'role' => $user['role'],
+                'user_id' => $user['user']['id'] ?? null,  //TO ACCESS NESTED USER DATA
+                'email' => $user['user']['email'] ?? null,
+                'role' => $user['user']['role'] ?? null,
                 'has_access_tokens' => isset($user['access_token']),
                 'has_refresh_tokens' => isset($user['refresh_token']),
                 'response_keys' => array_keys($user)
             ]);
 
+             //DEBUGGING BEFORE SENDING RESPONSE
+            Logger::info('About to send response', [
+                'user_data' => $user,
+                'has_tokens' => isset($user['access_token']) && isset($user['refresh_token'])
+            ]);
+
             Response::created(
                 $user,
                 'Registration successful. Please check your email to verify your account.',
-                "/api/users/{$user['id']}"
+                "/api/users/{$user['user']['id']}"
             );
 
         } 

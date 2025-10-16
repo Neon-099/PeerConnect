@@ -1,9 +1,10 @@
-import { auth, storeSession} from '../../utils/auth.js';
+import { auth, storeSession, } from '../../utils/auth.js';
 import {apiClient} from '../../utils/api.js'
 import {useNavigate, Link} from 'react-router-dom';
 import {GoogleLogin} from '@react-oauth/google';
 import { useState } from 'react';
 import { User, GraduationCapIcon, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import PasswordResetModal from '../PasswordResetModal.jsx';
 
 const StudentSignup = () => {
@@ -159,11 +160,6 @@ const StudentSignup = () => {
         }
     };
 
-    const handleForgotPasswordClick  = () => {
-        setShowPasswordResetModal(true);
-        setShowForgotPasswordSuggestion(false);
-    }
-
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
     console.log('Signup form submitted with data:', formData);
@@ -180,10 +176,19 @@ const StudentSignup = () => {
         console.log('Calling auth.register with payload:', payload);
         const res = await auth.register(payload);
         console.log('Register response:', res);
-        storeSession(res);
+
+        //CHECK TOKENS IF SUCCESSFULLY STORED
+        const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
+        if(!hasTokens){
+            throw new Error('Failed to store tokens');
+        }
         
+        // navigate('/student/profileCreation');
+        // alert("Account created successfully!");
+
+        // Simple success handling - let auth.register handle token storage
         navigate('/student/profileCreation');
-        alert("Account created successfully!");
+        toast.success('Account created successfully!');
     }
     catch(err){
         console.error('Signup error:', err);
@@ -191,82 +196,92 @@ const StudentSignup = () => {
     }
   }
 
-  const startLockoutCountdown = (seconds) => {
-    setLockoutTime(seconds);
-    const timer = setInterval(() => {
-        setLockoutTime(prev => {
-            if(prev <= 1) {
-                clearInterval(timer);
-                setIsAccountLocked(false);
-                setLockoutTime(0);
-                setRemainingAttempts(5);
-                return 0;
+    const startLockoutCountdown = (seconds) => {
+        setLockoutTime(seconds);
+        const timer = setInterval(() => {
+            setLockoutTime(prev => {
+                if(prev <= 1) {
+                    clearInterval(timer);
+                    setIsAccountLocked(false);
+                    setLockoutTime(0);
+                    setRemainingAttempts(5);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    }
+
+    const formatLockoutTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+  const handleForgotPasswordClick  = () => {
+        setShowPasswordResetModal(true);
+        setShowForgotPasswordSuggestion(false);
+    }
+
+    const handlePasswordResetSuccess = () => {
+        alert('Password reset successful! Please login with your new password');
+        setActiveTab('login');
+
+        setLoginAttempts(0);
+        setRemainingAttempts(5);
+        setIsAccountLocked(false);
+        setLoginError('');
+        setShowForgotPasswordSuggestion(false);
+    }
+
+    const handleForgotPassword = () => {
+        setShowPasswordResetModal(true);
+        setShowForgotPasswordSuggestion(false);
+    }
+
+    const googleClientId =   '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
+
+    const handleGoogleSuccess = async(credentialResponse) => {
+        try {
+            console.log('Google authentication response:', credentialResponse);
+
+            if(!credentialResponse.credential) {
+                throw new Error('No credential received form Google');
             }
-            return prev - 1;
-        });
-    }, 1000);
-  }
-
-  const formatLockoutTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-
-  const handlePasswordResetSuccess = () => {
-    alert('Password reset successful! Please login with your new password');
-    setActiveTab('login');
-
-    setLoginAttempts(0);
-    setRemainingAttempts(5);
-    setIsAccountLocked(false);
-    setLoginError('');
-    setShowForgotPasswordSuggestion(false);
-  }
-
-  const handleForgotPassword = () => {
-    setShowPasswordResetModal(true);
-    setShowForgotPasswordSuggestion(false);
-  }
-
-  const googleClientId =   '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com';
-
-  const handleGoogleSuccess = async(credentialResponse) => {
-    try {
-        console.log('Google authentication response:', credentialResponse);
-
-        if(!credentialResponse.credential) {
-            throw new Error('No credential received form Google');
-        }
-        const google_token = credentialResponse.credential;
-        console.log('Calling backend with google token...');
+            const google_token = credentialResponse.credential;
+            console.log('Calling backend with google token...');
 
         const res = await auth.googleAuth(google_token, 'student');
         console.log('Google auth response', res);
-        storeSession(res);
+
+        //CHECK TOKENS IF SUCCESSFULLY STORED
+        const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
+        if(!hasTokens){
+            throw new Error('Failed to store tokens');
+        }
+
         alert('Google authentication successful');
 
-        const profile = checkUserProfile();
-        if(profile) {
-            navigate('/student/home');
-        }
-        else{
-            navigate('/student/profileCreation');
-        }
+            const profile = checkUserProfile();
+            if(profile) {
+                navigate('/student/home');
+            }
+            else{
+                navigate('/student/profileCreation');
+            }
 
-        
+            
+        }
+        catch(err) {
+            console.error('Google authentication error', err);
+            alert(err.message || 'Google authentication failed');
+        }
     }
-    catch(err) {
-        console.error('Google authentication error', err);
-        alert(err.message || 'Google authentication failed');
-    }
-  }
 
-  const handleGoogleError = (err) => {
-    console.error('Google authentication error:', err);
-    alert('Google authentication failed. Please try again!');
-  }
+    const handleGoogleError = (err) => {
+        console.error('Google authentication error:', err);
+        alert('Google authentication failed. Please try again!');
+    }
 
     return (
         <div>

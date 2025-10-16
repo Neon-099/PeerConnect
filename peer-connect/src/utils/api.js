@@ -112,6 +112,9 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 	 
 		return json;
 	}
+	else if(path.includes('/auth/register')){
+		return json ;
+	}
 	else {
 		return json?.data !== undefined ? json.data : json;
 	}

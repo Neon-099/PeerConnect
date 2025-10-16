@@ -16,7 +16,7 @@ export const auth = {
 	},
 
 	async login(email, password, role = 'student') {
-		const data = await api('/auth/login', {
+		const data = await api('/api/auth/login', {
 			method: 'POST',
 			body: { email, password, role },
 		});
@@ -27,7 +27,7 @@ export const auth = {
 	},
 
 	async googleAuth(google_token, role = 'student') {
-		const data = await api('/auth/googleAuth', {
+		const data = await api('/api/auth/googleAuth', {
 			method: 'POST',
 			body: { google_token: google_token, role },
 		});	
@@ -37,7 +37,7 @@ export const auth = {
 
 	//REQUEST PASSWORD RESET
 	async requestPasswordReset (email) {
-		const data = await api('/auth/forgotPassword', {
+		const data = await api('/api/auth/forgotPassword', {
 			method: 'POST',
 			body: {email}
 		});
@@ -45,7 +45,7 @@ export const auth = {
 	},
 
 	async verifyResetCode (token, code) {
-		const data = await api('/auth/verifyResetCode', {
+		const data = await api('/api/auth/verifyResetCode', {
 			method: 'POST',
 			body: {token, code}
 		});
@@ -53,7 +53,7 @@ export const auth = {
 	},
 
 	async resetPassword (token, code, newPassword) {
-		const data = await api('/auth/resetPassword', {
+		const data = await api('/api/auth/resetPassword', {
 			method: 'POST',
 			body: {token, code, password: newPassword}
 		});
@@ -64,7 +64,7 @@ export const auth = {
 		try {
 			const refreshToken = localStorage.getItem('pc_refresh_token');
 			if(refreshToken) {
-				await api('/auth/logout', {
+				await api('/api/auth/logout', {
 					method: 'POST',
 					body: { refresh_token: refreshToken}
 				});

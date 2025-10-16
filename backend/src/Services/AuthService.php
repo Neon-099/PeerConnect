@@ -912,11 +912,31 @@ class AuthService {
                     'trace' => $e->getTraceAsString()
                 ]);
                 
-                // Return user data without tokens as fallback
-                return [
-                    'user' => $this->formatUserData($user),
-                    'message' => 'User created successfully. Please login to continue.'
-                ];
+                // Try to generate tokens anyway as fallback
+                try {
+                    $accessToken = $this->jwtService->generateAccessToken($user);
+                    $refreshToken = $this->jwtService->generateRefreshToken();
+                    
+                    return [
+                        'access_token' => $accessToken,
+                        'refresh_token' => $refreshToken,
+                        'token_type' => 'Bearer',
+                        'expires_in' => config('jwt.access_expires'),
+                        'user' => $this->formatUserData($user),
+                        'warning' => 'Session not stored - please login again if you experience issues'
+                    ];
+                } catch (\Exception $fallbackError) {
+                    Logger::error('Fallback token generation also failed', [
+                        'user_id' => $user['id'],
+                        'error' => $fallbackError->getMessage()
+                    ]);
+                    
+                    // Last resort - return user data without tokens
+                    return [
+                        'user' => $this->formatUserData($user),
+                        'message' => 'User created successfully. Please login to continue.'
+                    ];
+                }
             }
         }
         // private function createAuthResponse(array $user): array {
