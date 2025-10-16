@@ -11,7 +11,7 @@
         ],
     
         'jwt' => [
-            'secret' => $_ENV['JWT_SECRET'] ?? 'b9ffe076bd39063d15858a48eee1def8',
+            'secret' => $_ENV['JWT_SECRET'] ?? '',
             'access_expires' => $_ENV['JWT_ACCESS_EXPIRES'] ?? 3600, //1 HOUR
             'refresh_expires' => $_ENV['JWT_REFRESH_EXPIRES'] ?? 604800, //1 WEEK
             'algorithm' => 'HS256',
@@ -25,8 +25,8 @@
         ],
 
         'google' => [
-            'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? '1005670572674-7vq1k5ndj4lt4pon7ojp1spvamikfmiu.apps.googleusercontent.com',
-            'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? 'GOCSPXc5ZqO7V13TlfNahvH2HvaFZxWigG',
+            'client_id' => $_ENV['GOOGLE_CLIENT_ID'] ?? '',
+            'client_secret' => $_ENV['GOOGLE_CLIENT_SECRET'] ?? '',
             'redirect_uri' => $_ENV['GOOGLE_REDIRECT_URI'] ?? '',
             'allowed_domains' => explode(',', $_ENV['GOOGLE_ALLOWED_DOMAINS'] ?? ''),
         ],
