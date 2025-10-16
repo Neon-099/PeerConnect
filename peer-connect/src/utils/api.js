@@ -4,9 +4,59 @@ export function getAccessToken() {
 	return localStorage.getItem('pc_access_token') || '';
 }
 
-export function storeSessionTokens({ access_token, refresh_token }) {
-	if (access_token) localStorage.setItem('pc_access_token', access_token);
-	if (refresh_token) localStorage.setItem('pc_refresh_token', refresh_token);
+export function storeSessionTokens(response) {
+	//HANDLE DIFF RESPONSE STRUCTURES FROM BACKEND
+	let accessToken = null;
+	let refreshToken = null;
+	let user = null;
+
+	//EXTRACT TOKES FROM DIFF POSSIBLE LOCATION
+	if(response.access_token ) {
+		accessToken = response.access_token;
+	}
+	else if (response.data && response.data.access_token) {
+		accessToken = response.data.access_token;
+	}
+
+	if(response.refresh_token) {
+		refreshToken = response.refresh_token;
+	}
+	else if (response.data && response.data.refresh_token) {
+		refreshToken = response.data.refresh_token;
+	}
+
+	if(response.user) {
+		user = response.user;
+	}
+	else if (response.data && response.data.user) {
+		user = response.data.user;
+	}
+
+	//STORE TOKENS 
+	if(accessToken) {
+		localStorage.setItem('pc_access_token', accessToken);
+		console.log('Access token stored: ', accessToken);
+	}
+	if(refreshToken) {
+		localStorage.setItem('pc_refresh_token', refreshToken);
+		console.log('Refresh token stored: ', refreshToken);
+	} 
+	if(user) {
+		localStorage.setItem('pc_user', JSON.stringify(user));
+		console.log('User stored: ', user);
+	}
+
+	console.log('Token storage', {
+		accessToken: accessToken ? 'Stored' : 'Not found',
+		refreshToken: refreshToken ? 'Stored' : 'Not found',
+		user: user ? 'Stored' : 'Not found',
+		responseStructure: {
+			hasAccessToken: !!response.access_token,
+			hasDataAccessToken: !!(response.data && response.data.access_token),
+			hasUser: !!response.user,
+			hasDataUser: !!(response.data && response.data.user)
+		}
+	});
 }
 
 export async function api(path, { method = 'GET', body, token, isFormData = false } = {}) {
@@ -32,7 +82,21 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 
 	console.log('API Response:', { status: res.status, statusText: res.statusText });
 
-	const json = await res.json().catch(() => ({}));
+	// Add detailed response logging
+	const responseText = await res.text();
+	console.log('Raw response text:', responseText);
+	console.log('Response text length:', responseText.length);
+
+	let json;
+	try {
+		json = JSON.parse(responseText);
+		console.log('Parsed JSON successfully:', json);
+	} catch (parseError) {
+		console.error('JSON parse error:', parseError);
+		console.log('Response text that failed to parse:', responseText);
+		json = {};
+	}
+
 	console.log('API Response JSON:', json);
 
 	// Backend Response::success returns { success, message, data }
@@ -40,7 +104,18 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 		const msg = json?.message || `Request failed (${res.status})`;
 		throw new Error(msg);
 	}
-	return json?.data ?? json;
+
+	//HANDLING BASED ON ENDPOINTS (since theyre both different)
+	if(path.includes('/auth/forgotPassword') ||
+		path.includes('/auth/verifyResetCode') ||
+		path.includes('/auth/resetPassword')){
+	 
+		return json;
+	}
+	else {
+		return json?.data !== undefined ? json.data : json;
+	}
+	
 }
 
 // Add convenience methods

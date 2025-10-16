@@ -3,11 +3,15 @@ import { api, storeSessionTokens, getAccessToken } from './api';
 export const auth = {
 	async register(payload) {
 		// payload: { first_name, last_name, email, password, role: 'student' }
-		const data = await api('/auth/register', { method: 'POST', body: payload });
-		// data may or may not include tokens depending on backend; handle both cases safely
-		if (data.access_token || data.refresh_token) {
-			storeSessionTokens(data);
-		}
+		const data = await api('/api/auth/register', { method: 'POST', body: payload });
+
+
+		// // data may or may not include tokens depending on backend; handle both cases safely
+		// if (data.access_token || data.refresh_token) {
+		// 	storeSessionTokens(data);
+		// }
+
+		storeSessionTokens(data);
 		return data;
 	},
 
