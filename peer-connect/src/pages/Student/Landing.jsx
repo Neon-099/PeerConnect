@@ -32,8 +32,8 @@ const Landing = () => {
                         <Link>How it works</Link>
                     </div>
                     <div className='flex items-center  gap-4 pr-9'>
-                        <Link to="/signup">Signin</Link>
-                        <Link to='/signup' className='bg-orange-400 p-3 text-white rounded-full'>Get Started</Link>
+                        <Link to="/student/signup">Signin</Link>
+                        <Link to='/student/signup' className='bg-orange-400 p-3 text-white rounded-full'>Get Started</Link>
                     </div>
             </header>
 

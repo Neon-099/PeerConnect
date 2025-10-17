@@ -635,7 +635,9 @@ const Homes = () =>  {
             </div>
           </div>
             {isLoading ? (
-                <LoadingSpinner />
+                <div className='h-270 overflow-auto'>
+                  <LoadingSpinner />
+                </div>
               ) : (
             <div className="flex gap-30 overflow-auto p-20 mt" style={{ maxWidth: '1800px' }}>
               {/* Left Column */}
@@ -784,7 +786,7 @@ const Homes = () =>  {
         
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto p-8">    
           {isLoading ? (
           <LoadingSpinner />
         ) : (
