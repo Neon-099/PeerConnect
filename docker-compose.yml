@@ -12,7 +12,7 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql  # Add this line
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
 
   backend:
     build: ./backend
@@ -29,19 +29,6 @@ services:
       - "8000:80"
     volumes:
       - ./backend:/var/www/html
-
-  frontend:
-    build: ./peer-connect
-    container_name: peerconnect-frontend
-    restart: always
-    ports:
-      - "5173:5173"
-    stdin_open: true
-    tty: true
-    volumes:
-      - ./peer-connect:/usr/src/app
-    depends_on:
-      - backend
 
 volumes:
   db_data:
