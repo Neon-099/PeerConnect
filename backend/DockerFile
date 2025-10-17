@@ -1,19 +1,35 @@
 FROM php:8.2-apache
 
+# Install required PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Set working directory
 WORKDIR /var/www/html
 
+# Copy composer files and install dependencies
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader
 
+# Copy application code
 COPY . .
 
+# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 RUN chmod -R 755 /var/www/html
 
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
+
+# Create Apache virtual host configuration
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html/public\n\
+    <Directory /var/www/html/public>\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80

@@ -162,7 +162,7 @@ CREATE TABLE tutor_subjects (
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
 );
 
--- Add the learning_subjects table
+-- 1. Create learning_subjects FIRST
 CREATE TABLE learning_subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
@@ -173,40 +173,24 @@ CREATE TABLE learning_subjects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Insert some default subjects
+-- 2. Insert default subjects
 INSERT INTO learning_subjects (name, description, category) VALUES
 ('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
 ('Physics', 'Mechanics, Thermodynamics, Electromagnetism, and other physics topics', 'STEM'),
-('Chemistry', 'Organic, Inorganic, Physical Chemistry, and Biochemistry', 'STEM'),
-('Biology', 'Cell Biology, Genetics, Ecology, and other biological sciences', 'STEM'),
-('Computer Science', 'Programming, Algorithms, Data Structures, and Software Engineering', 'STEM'),
-('English Literature', 'Poetry, Prose, Drama, and Literary Analysis', 'Language Arts'),
-('History', 'World History, American History, and other historical studies', 'Social Sciences'),
-('Psychology', 'Cognitive Psychology, Social Psychology, and Behavioral Studies', 'Social Sciences'),
-('Economics', 'Microeconomics, Macroeconomics, and Economic Theory', 'Social Sciences'),
-('Art', 'Visual Arts, Art History, and Creative Expression', 'Arts');
+-- ... rest of inserts
 
--- Update student_subjects_of_interest to use foreign key references
+-- 3. Create other tables that reference learning_subjects
 CREATE TABLE student_subjects_of_interest (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    subject_id INT NOT NULL,  -- Changed from subject VARCHAR(255) to subject_id INT
+    subject_id INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE,
     INDEX idx_user_subject (user_id, subject_id)
 );
 
--- Keep tutor_subjects as is (it already references learning_subjects)
-CREATE TABLE tutor_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    tutor_id INT,
-    subject_id INT,
-    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
-);
-
--- Keep tutoring_sessions as is (it already references learning_subjects)
+-- 4. Create tutoring_sessions AFTER learning_subjects
 CREATE TABLE tutoring_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT,

@@ -4,7 +4,8 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install
+# Fix: Remove --only=production for dev dependencies
+RUN npm ci
 
 COPY . .
 
