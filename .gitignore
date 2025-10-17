@@ -1,0 +1,20 @@
+# Root level files to ignore
+package.json
+package-lock.json
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
