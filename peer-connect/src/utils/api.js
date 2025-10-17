@@ -124,8 +124,15 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 // Add convenience methods
 export const apiClient = {
 	async post(path, data, options = {}) {
-		return api(path, { method: 'POST', body: data, ...options });
-	},
+		const result = await api(path, { method: 'POST', body: data, ...options });
+		
+		// If response contains profile_picture, ensure it's a full URL
+		if (result && result.profile_picture && !result.profile_picture.startsWith('http')) {
+		  result.profile_picture_url = `${API_BASE}/${result.profile_picture}`;
+		}
+		
+		return result;
+	  },
 	
 	async get(path, options = {}) {
 		return api(path, { method: 'GET', ...options });
@@ -139,3 +146,26 @@ export const apiClient = {
 		return api(path, { method: 'DELETE', ...options });
 	}
 };
+
+export function getOptimizedImageUrl(url, options = {}) {
+	if (!url) return null;
+	
+	const {
+	  width = 300,
+	  height = 300,
+	  crop = 'fill',
+	  gravity = 'face',
+	  quality = 'auto',
+	  format = 'auto'
+	} = options;
+  
+	// If it's a Cloudinary URL, optimize it
+	if (url.includes('cloudinary.com')) {
+	  return url.replace(
+		'/upload/',
+		`/upload/w_${width},h_${height},c_${crop},g_${gravity},q_${quality},f_${format}/`
+	  );
+	}
+  
+	return url;
+  }

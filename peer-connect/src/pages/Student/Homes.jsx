@@ -7,6 +7,10 @@ import EditProfileModal from '../../components/EditProfileModal';
 import { auth } from '../../utils/auth';
 import {apiClient} from '../../utils/api';
 
+import Header from './Header.jsx';
+import Footer from './Footer.jsx';
+import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
+
 const Homes = () =>  {
   const [activeTab, setActiveTab] = useState('home');
   const [isProfile, setIsProfile] = useState(false);
@@ -60,21 +64,24 @@ const Homes = () =>  {
     if(!isEditProfileModalOpen){
       fetchProfileData();
     }
-  }, [isEditProfileModalOpen]);
+  }, [isEditProfileModalOpen, activeNav ]);
+
 
   const getProfilePictureUrl = (profilePicture) => {
     console.log('Profile picture received:', profilePicture);
-  
+    console.log('Profile picture type:', typeof profilePicture);
+    console.log('Profile picture length:', profilePicture?.length);
+    
     if(!profilePicture) {
       console.log('No profile picture, using default');
       return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
     }
-
+  
     if(profilePicture.startsWith('http')){
       console.log('Profile picture is already a full URL:', profilePicture);
       return profilePicture;
     }
-
+  
     //OTHERWISE, CONSTRUCT THE FULL Url
     const fullUrl = `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profilePicture}`;
     console.log('Constructed profile picture URL:', fullUrl);
@@ -437,16 +444,9 @@ const Homes = () =>  {
           <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div></div>
             <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <MessageSquare className="w-5 h-5 text-teal-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Bell className="w-5 h-5 text-teal-600" />
-              </button>
-              <img 
-                src={getProfilePictureUrl(studentProfile?.profile_picture)}
-                alt={userProfile?.first_name || 'Student'} 
-                className="w-10 h-10 rounded-lg object-cover"
+              <Header 
+                userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+                userProfile={studentProfile?.first_name} 
               />
             </div>
           </div>
@@ -461,13 +461,8 @@ const Homes = () =>  {
               </div>
 
               {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
-                </div>
+                <LoadingSpinner />
               ) : (
-
-              
-
               <div className="flex gap-30">
                 {/* Left Column - Profile Card */}
                 <div className="w-96 ml-[-140px]">
@@ -615,45 +610,34 @@ const Homes = () =>  {
                   </div>
                 </div>
               </div>
-
               )}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="h-12 bg-white border-t border-gray-200 flex items-center justify-end px-8">
-            <div className="flex gap-6 text-sm text-gray-600">
-              <a href="#" className="hover:text-gray-800">Help Center</a>
-              <a href="#" className="hover:text-gray-800">Contact</a>
-              <a href="#" className="hover:text-gray-800">Privacy Policy</a>
-            </div>
+          <div className="h-[49px] bg-white border-t border-gray-200 flex items-center justify-end px-8">
+              <Footer/>
           </div>
         </div>
       )}
 
       {/* Home Section */}
       {activeTab === 'home' && (
-        
-        <div className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 flex flex-col">
           {/* Header */}
           <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div></div>
             <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <MessageSquare className="w-5 h-5 text-teal-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Bell className="w-5 h-5 text-teal-600" />
-              </button>
-              <img 
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
-                alt="Profile" 
-                className="w-10 h-10 rounded-lg object-cover"
+              <Header 
+                userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+                userProfile={studentProfile?.first_name} 
               />
             </div>
           </div>
-
-            <div className="flex gap-25" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+            <div className="flex gap-30 overflow-auto p-20 mt" style={{ maxWidth: '1800px' }}>
               {/* Left Column */}
               <div className="flex-1 ">
                 {/* Welcome Header */}
@@ -696,7 +680,7 @@ const Homes = () =>  {
                 </div>
 
                 {/* Upcoming Sessions */}
-                <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <div className="bg-white rounded-xl p-6 border border-gray-200 h-120 w-250">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Upcoming Sessions</h2>
                   
                   <div className="space-y-4">
@@ -734,28 +718,7 @@ const Homes = () =>  {
               </div>
 
               {/* Right Column */}
-              <div className="w-80 my-29">
-                {/* Progress Card
-                <div className="bg-white rounded-xl p-6 border border-gray-200 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-800">Progress & Insights</h2>
-                    <TrendingUp className="w-5 h-5 text-teal-600" />
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">Monthly study goal completion</p>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                    <div className="bg-orange-500 h-3 rounded-full" style={{ width: '62%' }}></div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-4">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-lg">🎯</span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Goal:</p>
-                      <p className="font-semibold text-gray-800">12/20 hrs</p>
-                    </div>
-                  </div>
-                </div> */}
-
+              <div className="my-29">
                 {/* Quick Actions */}
                 <div className="bg-white rounded-xl p-6 border border-gray-200 mb-7 w-90">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
@@ -796,6 +759,12 @@ const Homes = () =>  {
                 </div>
               </div>
             </div>
+            )}
+            
+            <div className="h-[63px] bg-white border-t border-gray-200 flex items-center justify-end px-8">
+              <Footer/>
+            </div>
+
         </div>
       )}
 
@@ -803,21 +772,23 @@ const Homes = () =>  {
       {activeTab === 'session' && (
         <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-end gap-4">
-          <button className="p-2 hover:bg-gray-100 rounded-lg">
-            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg relative">
-            <Bell className="w-6 h-6 text-gray-600" />
-          </button>
-          <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-orange-400 rounded-full"></div>
-        </header>
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+          <div></div>
+          <div className="flex items-center gap-4">
+            <Header 
+              userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+              userProfile={studentProfile?.first_name} 
+            />
+          </div>
+        </div>
+        
 
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-8">
-          <div className="max-w-6xl">
+          {isLoading ? (
+          <LoadingSpinner />
+        ) : (
+          <div className="max-w-6xl h-129">
             {/* Page Title and Actions */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold text-gray-900">My Sessions</h1>
@@ -982,16 +953,13 @@ const Homes = () =>  {
               </>
             )}
           </div>
-
-          {/* Footer */}
-          <footer className="mt-12 pt-6 border-t border-gray-200 flex items-center justify-between text-sm text-gray-600">
-            <span>© 2025 PeerConnect</span>
-            <div className="flex gap-6">
-              <a href="#" className="hover:text-teal-600">Help Center</a>
-              <a href="#" className="hover:text-teal-600">Contact</a>
-              <a href="#" className="hover:text-teal-600">Privacy Policy</a>
-            </div>
-          </footer>
+      )}
+          
+        </div>  
+        
+        {/* Footer */}
+        <div className="h-[49px] bg-white border-t border-gray-200 flex items-center justify-end px-8">
+          <Footer/>
         </div>
       </div>
       )}
@@ -1000,19 +968,12 @@ const Homes = () =>  {
       {activeTab === 'notification' && (
          <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+       <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
           <div></div>
           <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <MessageSquare className="w-5 h-5 text-teal-600" />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <Bell className="w-5 h-5 text-teal-600" />
-            </button>
-            <img 
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
-              alt="Profile" 
-              className="w-10 h-10 rounded-lg object-cover"
+            <Header 
+              userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+              userProfile={studentProfile?.first_name} 
             />
           </div>
         </div>
@@ -1135,20 +1096,13 @@ const Homes = () =>  {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-          <div></div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <MessageSquare className="w-5 h-5 text-teal-600" />
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <Bell className="w-5 h-5 text-teal-600" />
-            </button>
-            <img 
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" 
-              alt="Profile" 
-              className="w-10 h-10 rounded-lg object-cover"
-            />
-          </div>
+            <div></div>
+            <div className="flex items-center gap-4">
+              <Header 
+                userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+                userProfile={studentProfile?.first_name} 
+              />
+            </div>
         </div>
 
         {/* Content Area */}

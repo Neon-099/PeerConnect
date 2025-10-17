@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { User, GraduationCap, BookOpen, MapPin, Calendar, Upload, ArrowRight, CheckCircle } from 'lucide-react';
 import { apiClient, getAccessToken } from '../utils/api.js';
 
+import CloudinaryImage from './CloudinaryImage.jsx';
+import ImageUploadProgress from './ImageUploadProgress.jsx';
+
 const StudentProfileCreation = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +25,9 @@ const StudentProfileCreation = () => {
   const [errors, setErrors] = useState({});
   const [newSubject, setNewSubject] = useState('');
   const [isAuthenticated, setIsAuthentication] = useState(false);
+
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -97,6 +103,19 @@ const StudentProfileCreation = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        return;
+      }
+      
+      // Validate file size (6MB limit)
+      if (file.size > 6 * 1024 * 1024) {
+        alert('File size must be less than 6MB');
+        return;
+      }
+      
       setFormData(prev => ({
         ...prev,
         profile_picture: file
@@ -241,19 +260,21 @@ const StudentProfileCreation = () => {
   };
 
   const handleSubmit = async () => {
-    // Final validation before submission
     if (!validateAllSteps()) {
       alert('Profile setup incomplete. Please fill all required fields.');
       return;
     }
     
     setIsLoading(true);
+    setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
       console.log('Current formData', formData);
       
       // Create FormData for file upload
       const submitData = new FormData();
-
+  
       // Add all form fields with validation
       Object.keys(formData).forEach(key => {
         if (key === 'subjects_of_interest') {
@@ -266,16 +287,27 @@ const StudentProfileCreation = () => {
           submitData.append(key, formData[key]);
         }
       });
-
+  
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+  
       const result = await apiClient.post('/api/student/profileCreation', submitData, {
         isFormData: true
       });
-
+  
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+  
       console.log('profile created: ', result);
+      console.log('Profile picture:', result.profile_picture);
       
       if (result || (result.success && result.data.profile_id)) {
-        alert('Profile created successfully! You can now access all features.');
-        navigate('/student/home');
+        setTimeout(() => {
+          alert('Profile created successfully! You can now access all features.');
+          navigate('/student/home');
+        }, 500);
       } else {
         throw new Error('Failed to create profile');
       }
@@ -284,8 +316,10 @@ const StudentProfileCreation = () => {
       alert('Failed to create profile. Please try again.');
     } finally {
       setIsLoading(false);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
-  }; 
+  };
 
   if(!isAuthenticated) {
     return (
@@ -426,7 +460,7 @@ const StudentProfileCreation = () => {
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="mx-auto w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-4 overflow-hidden">
                 {formData.profile_picture ? (
                   <img
                     src={URL.createObjectURL(formData.profile_picture)}
@@ -440,19 +474,23 @@ const StudentProfileCreation = () => {
               <input
                 type="file"
                 id="profile-picture"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 onChange={handleFileUpload}
                 className="hidden"
               />
               <label
                 htmlFor="profile-picture"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 cursor-pointer transition-colors"
               >
                 <Upload className="w-5 h-5" />
                 {formData.profile_picture ? 'Change Photo' : 'Upload Photo'}
               </label>
-              <p className="text-sm text-gray-500 mt-2">Optional: Add a profile picture to help tutors recognize you</p>
-                {errors.profile_picture && <p className="mt-1 text-sm text-red-600">{errors.profile_picture} </p>}
+              <p className="text-sm text-gray-500 mt-2">
+                Upload a profile picture (JPEG, PNG, GIF, or WebP - Max 6MB)
+              </p>
+              {errors.profile_picture && (
+                <p className="mt-1 text-sm text-red-600">{errors.profile_picture}</p>
+              )}
             </div>
           </div>
         );
@@ -567,6 +605,9 @@ const StudentProfileCreation = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Upload Progress */}
+      <ImageUploadProgress progress={uploadProgress} isUploading={isUploading} />
     </div>
   );
 };

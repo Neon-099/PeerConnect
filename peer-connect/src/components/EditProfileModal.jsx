@@ -17,7 +17,7 @@ const [formData, setFormData] = useState({
 
   const [newSubject, setNewSubject] = useState('');
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
 
@@ -46,7 +46,7 @@ const [formData, setFormData] = useState({
 
   const fetchProfileData = async() => {
       try {
-        setLoading(true);
+        setIsLoading(true);
         const profileData = await apiClient.get('/api/student/profile');
 
         console.log('Profile data received', profileData)  
@@ -64,8 +64,13 @@ const [formData, setFormData] = useState({
 
         //PROFILE PICTURE PREVIEW
         if(profileData.profile_picture) {
-
-          setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
+          //CHECK IF PROFILE PICTURE IS A FULL URL
+          if(profileData.profile_picture.startsWith('http')){
+            setProfilePicturePreview(profileData.profile_picture);
+          }
+          else {
+            setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
+          }
         }
       }
       catch (error) {
@@ -83,7 +88,7 @@ const [formData, setFormData] = useState({
         });
       }
       finally  {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -176,7 +181,7 @@ const [formData, setFormData] = useState({
     }
 
     try {
-      setLoading(true);
+      setIsLoading(true);
 
     //PREPARE DATA FOR API
     const updateData = {
@@ -227,7 +232,7 @@ const [formData, setFormData] = useState({
     alert('Failed to save profile. Please try again');
   }
   finally {
-    setLoading(false);
+    setIsLoading(false);
   }
 }
   if (!isOpen) return null;
@@ -241,7 +246,7 @@ const [formData, setFormData] = useState({
         </div>
 
         <div className="p-6">
-        {loading && !formData.firstName || !formData.lastName ? (
+        {isLoading && !formData.firstName || !formData.lastName ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-700"></div>
             <span className="ml-2 text-gray-600">Loading profile...</span>
