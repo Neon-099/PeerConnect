@@ -7,7 +7,7 @@ import { User, GraduationCapIcon, AlertTriangle, Eye, EyeOff } from 'lucide-reac
 import { toast } from 'react-hot-toast';
 import PasswordResetModal from '../PasswordResetModal.jsx';
 
-const StudentSignup = () => {
+const StudentAuthForm = () => {
 
   const [activeTab, setActiveTab] = useState('signup');
   const [showPassword, setShowPassword] = useState(false);
@@ -603,4 +603,4 @@ const StudentSignup = () => {
     )
 }
 
-export default StudentSignup;
+export default StudentAuthForm;
