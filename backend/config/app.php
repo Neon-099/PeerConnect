@@ -48,4 +48,12 @@
             'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',
             'port' => $_ENV['DB_PORT'] ?? 3306,
         ],
+
+        'cloudinary' => [
+            'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'] ?? '',
+            'api_key' => $_ENV['CLOUDINARY_API_KEY'] ?? '',
+            'api_secret' => $_ENV['CLOUDINARY_API_SECRET'] ?? '',
+            'cloudinary_url' => $_ENV['CLOUDINARY_URL'] ?? '',
+            'folder' => $_ENV['CLOUDINARY_FOLDER'] ?? 'peerconnect/profiles',
+        ],
     ];

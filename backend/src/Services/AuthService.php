@@ -452,7 +452,7 @@ class AuthService {
                 $userUpdateData = [];
                 $tutorUpdateData = [];
 
-                $allowedUserFields = ['first_name', 'last_name', 'student_id'];
+                $allowedUserFields = ['first_name', 'last_name', 'student_id', 'profile_picture'];
                 $allowedTutorFields = ['specialization', 'bio', 'experience_years', 'hourly_rate', 'qualifications'];
 
                 foreach($updateData as $key => $value) {

@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use Dotenv\Dotenv;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Models\TutorProfile;
@@ -11,6 +12,8 @@ use App\Utils\Response;
 use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
 
+use Cloudinary\Cloudinary;
+use Cloudinary\Configuration\Configuration;
 
 use Google\Service\ServiceConsumerManagement\Authentication;
 
@@ -89,15 +92,39 @@ class StudentController {
                 return;
             }
 
+            //SAVE PROFILE PICTURE TO DATABASE FIRST
+            if($profilePicture) {
+                Logger::info('Saving profile picture to database', [
+                    'user_id' => $user['user_id'],
+                    'profile_picture' => $profilePicture
+                ]);
+                
+                try {
+                    $this->authService->updateUserProfilePicture($user['user_id'], $profilePicture);
+                    Logger::info('Profile picture saved successfully', [
+                        'user_id' => $user['user_id']
+                    ]);
+                } catch (\Exception $e) {
+                    Logger::error('Failed to save profile picture', [
+                        'user_id' => $user['user_id'],
+                        'profile_picture' => $profilePicture,
+                        'error' => $e->getMessage()
+                    ]);
+                    throw new \Exception('Failed to save profile picture: ' . $e->getMessage());
+                }
+            }
+
             //CREATE STUDENT PROFILE USING THE NEW MODEL
             $profileId = $this->studentProfileModel->create($user['user_id'], $profileData);
-            
-            //UPDATE USER TABLE WITH PROFILE PICTURE
-            if($profilePicture) {
-                $this->authService->updateUserProfile($user['user_id'], ['profile_picture' => $profilePicture]);
-            }
     
-            Response::success(['profile_id' => $profileId], 'Profile created successfully');
+            //GET UPDATED PROFILE TO RETURN COMPLETE DATA
+            $updatedProfile = $this->authService->getUserProfile($user['user_id']);
+
+            Response::success([
+                'profile_id' => $profileId,
+                'profile_picture' => $updatedProfile['profile_picture'] ?? null,
+                'profile' => $updatedProfile
+            ], 'Profile created successfully');
     
         }
         catch (\Exception $e){
@@ -112,33 +139,82 @@ class StudentController {
         }
     }
 
-    private function handleProfilePictureUpload($file):? string {
-        //DEFINE WHERE THE FILE WILL BE SAVED
-        $uploadDir = __DIR__ . '/../../storage/uploads/profiles';
-        if(!is_dir($uploadDir)){
-            mkdir($uploadDir, 0755, true);   //this auto create if the folder dont exists
+    private function handleProfilePictureUpload($file): ?string {
+        try {
+            // Load environment variables
+            $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+            $dotenv->load();
+    
+            // Configure Cloudinary using the working constructor method
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
+                    'api_key'    => $_ENV['CLOUDINARY_API_KEY'],
+                    'api_secret' => $_ENV['CLOUDINARY_API_SECRET'],
+                ]
+            ]);
+    
+            // Validate file
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $maxSize = 6 * 1024 * 1024; // 6MB
+    
+            if (!in_array($file['type'], $allowedTypes)) {
+                throw new \Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
+            }
+            
+            if ($file['size'] > $maxSize) {
+                throw new \Exception('File too large. Maximum size is 6MB.');
+            }
+    
+            // Generate unique public ID
+            $publicId = 'peerconnect/profile_' . uniqid() . '_' . time();
+    
+            // Upload with transformations
+            $result = $cloudinary->uploadApi()->upload(
+                $file['tmp_name'],
+                [
+                    'public_id' => $publicId,
+                    'folder' => $_ENV['CLOUDINARY_FOLDER'] ?? 'peerconnect/profiles',
+                    'transformation' => [
+                        [
+                            'width' => 300,
+                            'height' => 300,
+                            'crop' => 'fill',
+                            'gravity' => 'face',
+                            'quality' => 'auto',
+                            'format' => 'auto'
+                        ]
+                    ],
+                    'tags' => ['profile', 'peerconnect'],
+                    'resource_type' => 'image'
+                ]
+            );
+    
+            Logger::info('Image uploaded to Cloudinary', [
+                'public_id' => $result['public_id'],
+                'url' => $result['secure_url'],
+                'size' => $result['bytes'],
+                'format' => $result['format']
+            ]);
+    
+            // Return the secure URL
+            return $result['secure_url'];
+    
+        } catch (\Cloudinary\Api\Exception\ApiError $e) {
+            Logger::error('Cloudinary API error', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode()
+            ]);
+            throw new \Exception('Failed to upload image to cloud storage: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('Image upload error', [
+                'error' => $e->getMessage(),
+                'file_type' => $file['type'] ?? 'unknown',
+                'file_size' => $file['size'] ?? 'unknown'
+            ]);
+            throw $e;
         }
-
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        $maxSize = 6 * 1024 * 1024; //6MB
-
-        if(!in_array($file['type'], $allowedTypes)){
-            throw new \Exception('Invalid file types...');
-        }
-        if($file['size'] > $maxSize){
-            throw new \Exception('File too large!');
-        }
-
-        $extension = pathInfo($file['name'], PATHINFO_EXTENSION);
-        $filename = uniqid() . '_' . time() . '.' . $extension;
-        $filepath = $uploadDir . $filename;
-
-        if(move_uploaded_file($file['tmp_name'], $filepath)){
-            return 'uploads/profiles/' . $filename;
-        }
-        throw new \Exception('Failed to upload profile picture');
     }
-
 
     //GET STUDENT PROFILE
         //GET/api/student/profile
@@ -229,33 +305,92 @@ class StudentController {
     public function updateProfilePicture(): void {
         try {
             $user = $this->authMiddleware->requireAuth();
-
-            if(!RoleMiddleware::studentOnly($user)){
+    
+            if (!RoleMiddleware::studentOnly($user)) {
                 return;
             }
-
-            if(!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+    
+            if (!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
                 Response::error('No profile picture provided', 400);
                 return;
             }
-
-            $profilePicture = $this->handleProfilePictureUpload($_FILES['profile_picture']);
-
-            //UPDATE USER TABLE WITH NEW PROFILE PICTURE USING DEDICATED METHOD
-            $this->authService->updateUserProfilePicture($user['user_id'], $profilePicture);
-
-            // Return both the path and full URL
+    
+            // Get current profile picture URL for deletion
+            $currentUser = $this->authService->getUserProfile($user['user_id']);
+            $oldImageUrl = $currentUser['profile_picture'] ?? null;
+    
+            // Upload new image
+            $newImageUrl = $this->handleProfilePictureUpload($_FILES['profile_picture']);
+    
+            // Update user profile with new image URL
+            $this->authService->updateUserProfilePicture($user['user_id'], $newImageUrl);
+    
+            // Delete old image from Cloudinary (if it exists)
+            if ($oldImageUrl) {
+                $this->deleteCloudinaryImage($oldImageUrl);
+            }
+    
             Response::success([
-                'profile_picture' => $profilePicture,
-                'profile_picture_url' => 'http://' . $_SERVER['HTTP_HOST'] . '/' . $profilePicture], 
-                'Profile picture updated successfully');
-        }
-        catch (\Exception $err) {
+                'profile_picture' => $newImageUrl,
+                'profile_picture_url' => $newImageUrl // Same as profile_picture since it's already a full URL
+            ], 'Profile picture updated successfully');
+    
+        } catch (\Exception $err) {
             Logger::error('Update profile picture error', [
                 'error' => $err->getMessage(),
                 'user_id' => $user['user_id'] ?? 'unknown'
             ]);
-            Response::serverError('Failed to update profile picture');
+            Response::serverError('Failed to update profile picture: ' . $err->getMessage());
+        }
+    }
+
+    private function deleteCloudinaryImage($imageUrl): bool {
+        try {
+            if (empty($imageUrl) || !str_contains($imageUrl, 'cloudinary.com')) {
+                return true; // Not a Cloudinary image or empty URL
+            }
+    
+            // Load environment variables
+            $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+            $dotenv->load();
+    
+            // Extract public_id from URL
+            $urlParts = parse_url($imageUrl);
+            $pathParts = explode('/', trim($urlParts['path'], '/'));
+            
+            // Find the public_id (usually the last part before the file extension)
+            $filename = end($pathParts);
+            $publicId = pathinfo($filename, PATHINFO_FILENAME);
+            
+            // Remove folder prefix if present
+            if (count($pathParts) > 1) {
+                $folder = $pathParts[count($pathParts) - 2];
+                $publicId = $folder . '/' . $publicId;
+            }
+    
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
+                    'api_key'    => $_ENV['CLOUDINARY_API_KEY'],
+                    'api_secret' => $_ENV['CLOUDINARY_API_SECRET'],
+                ]
+            ]);
+    
+            $result = $cloudinary->uploadApi()->destroy($publicId);
+    
+            Logger::info('Cloudinary image deleted', [
+                'public_id' => $publicId,
+                'result' => $result['result']
+            ]);
+    
+            return $result['result'] === 'ok';
+    
+        } catch (\Exception $e) {
+            Logger::error('Failed to delete Cloudinary image', [
+                'error' => $e->getMessage(),
+                'url' => $imageUrl
+            ]);
+            return false;
         }
     }
 
