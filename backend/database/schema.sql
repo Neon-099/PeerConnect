@@ -108,30 +108,23 @@ CREATE TABLE student_subjects_of_interest (
 CREATE TABLE tutor_profiles (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL UNIQUE,
-  specialization VARCHAR(255) DEFAULT '',
+  gender ENUM('male', 'female', 'prefer_not_to_say') NULL,
+  campus_location ENUM('main_campus', 'pucu') NULL,
   bio TEXT,
-  experience_years INT DEFAULT 0,
+  highest_education ENUM('high_school', 'associates', 'bachelors', 'masters', 'phd', 'other') NULL,
+  years_experience INT DEFAULT 0,
   hourly_rate DECIMAL(8,2) DEFAULT 0.00,
-  qualifications TEXT,
+  teaching_styles JSON NULL,
+  preferred_student_level ENUM('shs', 'college') NULL,
+  profile_picture VARCHAR(500) NULL,
+  profile_completed BOOLEAN DEFAULT FALSE,
+  profile_completed_at DATETIME NULL,
   is_verified_tutor TINYINT(1) DEFAULT 0,
   total_sessions INT DEFAULT 0,
   average_rating DECIMAL(3,2) DEFAULT 0.00,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE tutoring_sessions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    tutor_id INT,
-    student_id INT,
-    subject_id INT,  
-    session_date DATETIME,
-    notes TEXT,
-    status ENUM('pending','confirmed','completed','cancelled') DEFAULT 'pending',
-    FOREIGN KEY (tutor_id) REFERENCES users(id),
-    FOREIGN KEY (student_id) REFERENCES users(id),
-    FOREIGN KEY (subject_id) REFERENCES learning_subjects(id)
 );
 
 CREATE TABLE tutor_availability (
@@ -143,17 +136,6 @@ CREATE TABLE tutor_availability (
     FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE  -- Fixed: was "REFERENCE"
 );
 
-CREATE TABLE session_feedback (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    session_id INT,
-    student_id INT,
-    rating TINYINT CHECK (rating BETWEEN 1 AND 5),  -- Fixed: was "TINYIT"
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  -- Fixed: was "sessions(id)"
-    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
 CREATE TABLE tutor_subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,  -- Fixed: was "PRIMARY_KEY"
     tutor_id INT,
@@ -162,7 +144,6 @@ CREATE TABLE tutor_subjects (
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
 );
 
--- 1. Create learning_subjects FIRST
 CREATE TABLE learning_subjects (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
@@ -173,24 +154,22 @@ CREATE TABLE learning_subjects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- 2. Insert default subjects
 INSERT INTO learning_subjects (name, description, category) VALUES
 ('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
 ('Physics', 'Mechanics, Thermodynamics, Electromagnetism, and other physics topics', 'STEM'),
--- ... rest of inserts
 
--- 3. Create other tables that reference learning_subjects
-CREATE TABLE student_subjects_of_interest (
+CREATE TABLE tutor_specializations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    subject_id INT NOT NULL,
+    tutor_id INT NOT NULL,
+    subject VARCHAR(255) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE,
-    INDEX idx_user_subject (user_id, subject_id)
+    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_tutor_subject (tutor_id, subject)
 );
 
--- 4. Create tutoring_sessions AFTER learning_subjects
+
+
+
 CREATE TABLE tutoring_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT,
@@ -202,4 +181,15 @@ CREATE TABLE tutoring_sessions (
     FOREIGN KEY (tutor_id) REFERENCES users(id),
     FOREIGN KEY (student_id) REFERENCES users(id),
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id)
+);
+
+CREATE TABLE session_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    session_id INT,
+    student_id INT,
+    rating TINYINT CHECK (rating BETWEEN 1 AND 5),  -- Fixed: was "TINYIT"
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  -- Fixed: was "sessions(id)"
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 );
