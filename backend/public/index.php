@@ -4,6 +4,7 @@ require __DIR__ . '/../vendor/autoload.php';
 use Dotenv\Dotenv;
 use App\Controllers\AuthController;
 use App\Controllers\StudentController;
+use App\Controllers\TutorController;  // Add this
 use App\Utils\Response;
 
 // Load environment variables
@@ -49,9 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $method = $_SERVER['REQUEST_METHOD'];
 
-// $auth = new AuthController();
-// $student = new StudentController();
-
 // Add comprehensive debugging
 error_log("=== REQUEST DEBUG ===");
 error_log("URI: " . $uri);
@@ -62,6 +60,7 @@ error_log("Raw PATH_INFO: " . ($_SERVER['PATH_INFO'] ?? 'not set'));
 try {
     $auth = new AuthController();
     $student = new StudentController();
+    $tutor = new TutorController();  // Add this line
     error_log("DEBUG: Controllers created successfully");
 } catch (Exception $e) {
     error_log("ERROR: Failed to create controllers: " . $e->getMessage());
@@ -107,21 +106,18 @@ switch(true) {
         $auth->resetPassword();
         break;
 
-   
+   //USER PROFILE (BOTH STUDENT & TUTOR)
+    case $uri === '/api/user/profile' && $method === 'GET':
+        error_log("DEBUG: Matched user profile GET route");
+        $auth->me();
+        break;
         
     //STUDENT
     case $uri === '/api/student/profileCreation' && $method === 'POST':
         error_log("DEBUG: Matched student profile creation POST route");
         $student->createStudentProfile();
         break;
-    
-    //USER PROFILE
-    case $uri === '/api/user/profile' && $method === 'GET':
-        error_log("DEBUG: Matched user profile GET route");
-        $auth->me();
-        break;
-
-        case $uri === '/api/student/profile' && $method === 'GET':
+    case $uri === '/api/student/profile' && $method === 'GET':
         error_log("DEBUG: Matched student profile GET route");
         $student->getProfile();
         break;
@@ -143,6 +139,20 @@ switch(true) {
     case preg_match('#^/api/student/tutors/(\d+)$#', $uri, $m) && $method === 'GET':
         error_log("DEBUG: Matched student tutor details route");
         $student->getTutorDetails((int)$m[1]);
+        break;
+
+    //TUTOR 
+    case $uri === '/api/tutor/profile' && $method === 'GET': 
+        error_log("DEBUG: Matched tutor profile GET route");
+        $tutor->getProfile();
+        break;
+    case $uri === '/api/tutor/profile' && $method === 'POST':
+        error_log("DEBUG: Matched tutor profile creation POST route");
+        $tutor->createProfile();
+        break;
+    case $uri === '/api/tutor/profile' && $method === 'PUT':
+        error_log("DEBUG: Matched tutor profile update PUT route");
+        $tutor->updateProfile();
         break;
 
     case $uri === '/debug/users' && $method === 'GET':
@@ -168,6 +178,9 @@ switch(true) {
         error_log("  PUT /api/student/profile");
         error_log("  GET /api/student/tutors");
         error_log("  GET /api/student/tutors/{id}");
+        error_log("  POST /api/tutor/profile");  // Add this
+        error_log("  GET /api/tutor/profile");   // Add this
+        error_log("  PUT /api/tutor/profile");   // Add this
         error_log("  GET /debug/users");
         http_response_code(404);
         echo json_encode([

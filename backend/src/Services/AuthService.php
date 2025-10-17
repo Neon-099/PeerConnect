@@ -74,22 +74,9 @@ class AuthService {
 
                 //IF TUTOR, CREATE TUTOR PROFILE
                 if($userData['role'] === 'tutor') {
-                        $tutorProfileData = [
-                            'user_id' => $userId,
-                            'specialization' => $userData['specialization'] ?? '',
-                            'bio' => $userData['bio'] ?? '',
-                            'experience_years' => (int)($userData['experience_years'] ?? 0),
-                            'hourly_rate' => (float)($userData['hourly_rate'] ?? 0),
-                            'qualifications' => $userData['qualifications'] ?? '',
-                            'is_verified_tutor' => false
-                        ];
-
-                        $profileId = $this->tutorProfileModel->create($userId, $tutorProfileData);
-                        if(!$profileId) {
-                            //ROLEBACK USER CREATION IF TUTOR PROFILE FAILED
-                            $this->authUserModel->delete($userId);
-                            throw new AuthenticationException('Failed to create tutor profile');
-                        }
+                        Logger::info('Tutor user created, profile creation required', [
+                            'user_id' => $userId
+                        ]);
                     }
 
                     // //GET COMPLETE USER DATA
@@ -505,14 +492,12 @@ class AuthService {
         //UPDATE STUDENT PROFILE PICTURE
         public function updateUserProfilePicture(int $userId, string $profilePicturePath): array {
             try {
-                $user = $this->authUserModel->findById($userId);
-                if(!$user){
-                    throw new AuthenticationException('User not found');
-                }
-
-                //UPDATE PROFILE PICTURE ONLY 
-                if(!$this->authUserModel->update($userId, ['profile_picture' => $profilePicturePath])){
-                    throw new AuthenticationException('Failed to update profile picture');
+                // Update user table
+                if (!$this->authUserModel->update($userId, ['profile_picture' => $profilePicturePath])) {
+                    return [
+                        'success' => false,
+                        'error' => 'Failed to update profile picture'
+                    ];
                 }
 
                 Logger::info('User profile picture updated', [
@@ -520,18 +505,53 @@ class AuthService {
                     'profilePicture' => $profilePicturePath
                 ]);
 
-                return $this->authUserModel->findById($userId);
-            }
-            catch (AuthenticationException $e) {
-                throw $e;
+                return [
+                    'success' => true,
+                    'user' => $this->authUserModel->findById($userId),
+                    'message' => 'Profile picture updated successfully'
+                ];
             }
             catch (\Exception $e) {
                 Logger::error('Update user profile picture error', [
                     'user_id' => $userId,
                     'error' => $e->getMessage()
                 ]);
+                
+                return [
+                    'success' => false,
+                    'error' => 'An unexpected error occurred'
+                ];
             }
         }
+        // public function updateUserProfilePicture(int $userId, string $profilePicturePath): array {
+        //     try {
+        //         $user = $this->authUserModel->findById($userId);
+        //         if(!$user){
+        //             throw new AuthenticationException('User not found');
+        //         }
+
+        //         //UPDATE PROFILE PICTURE ONLY 
+        //         if(!$this->authUserModel->update($userId, ['profile_picture' => $profilePicturePath])){
+        //             throw new AuthenticationException('Failed to update profile picture');
+        //         }
+                
+        //         Logger::info('User profile picture updated', [
+        //             'user_id' => $userId,
+        //             'profilePicture' => $profilePicturePath
+        //         ]);
+
+        //         return $this->authUserModel->findById($userId);
+        //     }
+        //     catch (AuthenticationException $e) {
+        //         throw $e;
+        //     }
+        //     catch (\Exception $e) {
+        //         Logger::error('Update user profile picture error', [
+        //             'user_id' => $userId,
+        //             'error' => $e->getMessage()
+        //         ]);
+        //     }
+        // }
 
         public function verifyEmail(string $email): ?array {
             try {

@@ -9,89 +9,237 @@ use Exception;
 class TutorProfile {
     private $db;
     private $table = 'tutor_profiles';
+    private $specializationsTable = 'tutor_specializations';
+    private $teachingStylesTable = 'tutor_teaching_styles';
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection(); //SINGLE TON
+        $this->db = Database::getInstance()->getConnection();
     }
 
-    //CREATE TUTOR PROFILE TABLE
+    //CREATE TUTOR PROFILE
     public function create(int $userId, array $data): int {
         $query = "INSERT INTO {$this->table} (
-                user_id, bio, qualifications, hourly_rate, avg_rating, total_sessions, is_verified_tutor, is_available
+                user_id, gender, campus_location, bio, highest_education, 
+                years_experience, hourly_rate, teaching_styles, 
+                preferred_student_level, profile_picture, profile_completed, profile_completed_at
             ) VALUES (
-                :user_id, :bio, :qualifications, :hourly_rate, :avg_rating, :total_sessions, :is_verified_tutor, :is_available
+                :user_id, :gender, :campus_location, :bio, :highest_education,
+                :years_experience, :hourly_rate, :teaching_styles,
+                :preferred_student_level, :profile_picture, :profile_completed, :profile_completed_at
             )";
 
-    $stmt = $this->db->prepare($query);
-
-    $params = [
-        ':user_id' => $userId,
-        ':specialization' => $data['specialization'] ?? null,
-        ':bio' => $data['bio'] ?? null,
-        ':qualifications' => $data['qualifications'] ?? null,
-        ':hourly_rate' => $data['hourly_rate'] ?? null,
-        ':avg_rating' => $data['avg_rating'] ?? 0.00,
-        ':total_sessions' => $data['total_sessions'] ?? 0,
-        ':is_verified_tutor' => (int)($data['is_verified_tutor'] ?? 0),
-        ':is_available' => (int)($data['is_available'] ?? 1), 
-    ];
-
-    if($stmt->execute($params)) {
-        return (int) $this->db->lastInsertId();
-    }
-
-    throw new Exception("Failed to create tutor profile");
-   } 
-
-   public function findByUserId(int $userId): ? array {
-        $query = "SELECT * FROM {$this->table} WHERE user_id = :user_id LIMIT 1";
         $stmt = $this->db->prepare($query);
-        $stmt -> execute([':user_id' => $userId]);
 
-        $profile = $stmt ->fetch(PDO::FETCH_ASSOC);
-        return $profile ?: null;
+        $params = [
+            ':user_id' => $userId,
+            ':gender' => $data['gender'] ?? null,
+            ':campus_location' => $data['campus_location'] ?? null,
+            ':bio' => $data['bio'] ?? null,
+            ':highest_education' => $data['highest_education'] ?? null,
+            ':years_experience' => (int)($data['years_experience'] ?? 0),
+            ':hourly_rate' => (float)($data['hourly_rate'] ?? 0.00),
+            ':teaching_styles' => json_encode($data['teaching_styles'] ?? []),
+            ':preferred_student_level' => $data['preferred_student_level'] ?? null,
+            ':profile_picture' => $data['profile_picture'] ?? null,
+            ':profile_completed' => 1,
+            ':profile_completed_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($stmt->execute($params)) {
+            $profileId = (int) $this->db->lastInsertId();
+            
+            // Insert specializations
+            if (!empty($data['specializations'])) {
+                $this->insertSpecializations($userId, $data['specializations']);
+            }
+            
+            // Insert teaching styles
+            if (!empty($data['teaching_styles'])) {
+                $this->insertTeachingStyles($userId, $data['teaching_styles']);
+            }
+            
+            return $profileId;
+        }
+
+        throw new Exception("Failed to create tutor profile");
     }
 
+    // INSERT SPECIALIZATIONS
+    private function insertSpecializations(int $userId, array $specializations): void {
+        $query = "INSERT INTO {$this->specializationsTable} (tutor_id, subject) VALUES (:tutor_id, :subject)";
+        $stmt = $this->db->prepare($query);
+        
+        foreach ($specializations as $subject) {
+            $stmt->execute([
+                ':tutor_id' => $userId,
+                ':subject' => $subject
+            ]);
+        }
+    }
+
+    // INSERT TEACHING STYLES
+    private function insertTeachingStyles(int $userId, array $teachingStyles): void {
+        $query = "INSERT INTO {$this->teachingStylesTable} (tutor_id, teaching_style) VALUES (:tutor_id, :teaching_style)";
+        $stmt = $this->db->prepare($query);
+        
+        foreach ($teachingStyles as $style) {
+            $stmt->execute([
+                ':tutor_id' => $userId,
+                ':teaching_style' => $style
+            ]);
+        }
+    }
+
+   // FIND BY USER ID WITH RELATIONSHIPS
+    public function findByUserId(int $userId): ?array {
+        $query = "SELECT tp.*, u.first_name, u.last_name, u.email, u.profile_picture as user_profile_picture
+                FROM {$this->table} tp
+                JOIN users u ON tp.user_id = u.id
+                WHERE tp.user_id = :user_id LIMIT 1";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':user_id' => $userId]);
+        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$profile) {
+            return null;
+        }
+
+        // Get specializations
+        $profile['specializations'] = $this->getSpecializations($userId);
+        
+        // Get teaching styles from relationship table (this returns an array)
+        $teachingStylesFromTable = $this->getTeachingStyles($userId);
+        
+        // Use teaching styles from relationship table if available, otherwise decode JSON
+        if (!empty($teachingStylesFromTable)) {
+            $profile['teaching_styles'] = $teachingStylesFromTable;
+        } else if (isset($profile['teaching_styles']) && is_string($profile['teaching_styles'])) {
+            $profile['teaching_styles'] = json_decode($profile['teaching_styles'], true) ?: [];
+        } else {
+            $profile['teaching_styles'] = [];
+        }
+
+        return $profile;
+    }
+
+    // GET SPECIALIZATIONS
+    private function getSpecializations(int $userId): array {
+        $query = "SELECT subject FROM {$this->specializationsTable} WHERE tutor_id = :tutor_id";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':tutor_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // GET TEACHING STYLES
+    private function getTeachingStyles(int $userId): array {
+        $query = "SELECT teaching_style FROM {$this->teachingStylesTable} WHERE tutor_id = :tutor_id";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute([':tutor_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    // UPDATE PROFILE
     public function update(int $userId, array $data): bool {
         $fields = [];
         $params = [':user_id' => $userId];
 
-        foreach($data as $key => $value) {
-            $fields[] = "{$key} = :{$key}";
-            $params[":{$key}"] = $value;
+        // Handle regular fields
+        $allowedFields = ['gender', 'campus_location', 'bio', 'highest_education', 
+                         'years_experience', 'hourly_rate', 'preferred_student_level', 'profile_picture'];
+        
+        foreach ($data as $key => $value) {
+            if (in_array($key, $allowedFields)) {
+                $fields[] = "{$key} = :{$key}";
+                $params[":{$key}"] = $value;
+            }
+        }
+
+        // Handle teaching_styles JSON field
+        if (isset($data['teaching_styles'])) {
+            $fields[] = "teaching_styles = :teaching_styles";
+            $params[":teaching_styles"] = json_encode($data['teaching_styles']);
         }
 
         if (empty($fields)) {
             return true;
         }
-        $query = "UPDATE {$this->table} SET " . implode(', ', $fields). " WHERE user_id = :user_id";
+
+        $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
         $stmt = $this->db->prepare($query);
         
-        return $stmt->execute($params);
+        $result = $stmt->execute($params);
+
+        // Update specializations if provided
+        if (isset($data['specializations'])) {
+            $this->updateSpecializations($userId, $data['specializations']);
+        }
+
+        // Update teaching styles if provided
+        if (isset($data['teaching_styles'])) {
+            $this->updateTeachingStyles($userId, $data['teaching_styles']);
+        }
+
+        return $result;
     }
 
-    // FIND TUTORS WITH BASIC FILTERS AND PAGINATION
+    // UPDATE SPECIALIZATIONS
+    private function updateSpecializations(int $userId, array $specializations): void {
+        // Delete existing specializations
+        $deleteQuery = "DELETE FROM {$this->specializationsTable} WHERE tutor_id = :tutor_id";
+        $stmt = $this->db->prepare($deleteQuery);
+        $stmt->execute([':tutor_id' => $userId]);
+
+        // Insert new specializations
+        $this->insertSpecializations($userId, $specializations);
+    }
+
+    // UPDATE TEACHING STYLES
+    private function updateTeachingStyles(int $userId, array $teachingStyles): void {
+        // Delete existing teaching styles
+        $deleteQuery = "DELETE FROM {$this->teachingStylesTable} WHERE tutor_id = :tutor_id";
+        $stmt = $this->db->prepare($deleteQuery);
+        $stmt->execute([':tutor_id' => $userId]);
+
+        // Insert new teaching styles
+        $this->insertTeachingStyles($userId, $teachingStyles);
+    }
+
+    // FIND TUTORS WITH FILTERS
     public function findTutors(array $filters, int $page = 1, int $perPage = 20): array {
         $where = [];
         $params = [];
 
         if (isset($filters['min_rate'])) {
-            $where[] = 'hourly_rate >= :min_rate';
+            $where[] = 'tp.hourly_rate >= :min_rate';
             $params[':min_rate'] = (float)$filters['min_rate'];
         }
         if (isset($filters['max_rate'])) {
-            $where[] = 'hourly_rate <= :max_rate';
+            $where[] = 'tp.hourly_rate <= :max_rate';
             $params[':max_rate'] = (float)$filters['max_rate'];
         }
         if (!empty($filters['verified_only'])) {
-            $where[] = 'is_verified_tutor = 1';
+            $where[] = 'tp.is_verified_tutor = 1';
         }
-        // specialization/experience_years are not in current schema; ignored safely
+        if (!empty($filters['campus_location'])) {
+            $where[] = 'tp.campus_location = :campus_location';
+            $params[':campus_location'] = $filters['campus_location'];
+        }
+        if (!empty($filters['preferred_student_level'])) {
+            $where[] = 'tp.preferred_student_level = :preferred_student_level';
+            $params[':preferred_student_level'] = $filters['preferred_student_level'];
+        }
 
         $whereSql = empty($where) ? '' : ('WHERE ' . implode(' AND ', $where));
         $offset = max(0, ($page - 1) * max(1, $perPage));
 
-        $query = "SELECT * FROM {$this->table} {$whereSql} ORDER BY avg_rating DESC, total_sessions DESC LIMIT :limit OFFSET :offset";
+        $query = "SELECT tp.*, u.first_name, u.last_name, u.email, u.profile_picture
+                  FROM {$this->table} tp
+                  JOIN users u ON tp.user_id = u.id
+                  {$whereSql}
+                  ORDER BY tp.average_rating DESC, tp.total_sessions DESC
+                  LIMIT :limit OFFSET :offset";
+        
         $stmt = $this->db->prepare($query);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
@@ -100,28 +248,47 @@ class TutorProfile {
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $tutors = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Add specializations and teaching styles to each tutor
+        foreach ($tutors as &$tutor) {
+            $tutor['specializations'] = $this->getSpecializations($tutor['user_id']);
+            $tutor['teaching_styles'] = $this->getTeachingStyles($tutor['user_id']);
+            if ($tutor['teaching_styles']) {
+                $tutor['teaching_styles'] = json_decode($tutor['teaching_styles'], true) ?: [];
+            }
+        }
+
+        return $tutors;
     }
 
-    // COUNT TUTORS FOR THE SAME FILTERS
+    // COUNT TUTORS
     public function countTutors(array $filters): int {
         $where = [];
         $params = [];
 
         if (isset($filters['min_rate'])) {
-            $where[] = 'hourly_rate >= :min_rate';
+            $where[] = 'tp.hourly_rate >= :min_rate';
             $params[':min_rate'] = (float)$filters['min_rate'];
         }
         if (isset($filters['max_rate'])) {
-            $where[] = 'hourly_rate <= :max_rate';
+            $where[] = 'tp.hourly_rate <= :max_rate';
             $params[':max_rate'] = (float)$filters['max_rate'];
         }
         if (!empty($filters['verified_only'])) {
-            $where[] = 'is_verified_tutor = 1';
+            $where[] = 'tp.is_verified_tutor = 1';
+        }
+        if (!empty($filters['campus_location'])) {
+            $where[] = 'tp.campus_location = :campus_location';
+            $params[':campus_location'] = $filters['campus_location'];
+        }
+        if (!empty($filters['preferred_student_level'])) {
+            $where[] = 'tp.preferred_student_level = :preferred_student_level';
+            $params[':preferred_student_level'] = $filters['preferred_student_level'];
         }
 
         $whereSql = empty($where) ? '' : ('WHERE ' . implode(' AND ', $where));
-        $query = "SELECT COUNT(*) as total FROM {$this->table} {$whereSql}";
+        $query = "SELECT COUNT(*) as total FROM {$this->table} tp {$whereSql}";
         $stmt = $this->db->prepare($query);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
@@ -131,5 +298,3 @@ class TutorProfile {
         return (int)($row['total'] ?? 0);
     }
 }
-
-?>
