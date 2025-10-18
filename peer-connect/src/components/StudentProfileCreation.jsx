@@ -13,6 +13,7 @@ const StudentProfileCreation = () => {
     // Basic Info
     school: '',
     bio: '',
+    campus_location: '',
     // Academic Info
     subjects_of_interest: [],
     academic_level: '',
@@ -53,11 +54,11 @@ const StudentProfileCreation = () => {
 
   const academicLevels = [
     { label: 'High School', value: 'high_school' },
+    { label: 'SHS (Senior High School)', value: 'shs'},
     { label: 'Undergraduate (Freshman)', value: 'undergraduate_freshman' },
     { label: 'Undergraduate (Sophomore)', value: 'undergraduate_sophomore' },
     { label: 'Undergraduate (Junior)', value: 'undergraduate_junior' },
     { label: 'Undergraduate (Senior)', value: 'undergraduate_senior' },
-    { label: 'Graduate Student', value: 'graduate' },
   ];
 
   const learningStyles = [
@@ -67,6 +68,11 @@ const StudentProfileCreation = () => {
     { label: 'Reading/Writing Learner', value: 'reading_writing' },
     { label: 'Mixed Learning Style', value: 'mixed' }
   ];
+
+  const campusOptions = [
+    {label: 'Main Campus', value: 'main_campus'},
+    {label: 'PUCU', value: 'pucu'},
+  ]
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -144,6 +150,10 @@ const StudentProfileCreation = () => {
         }
         else if (formData.bio.trim().length > 500) {
           newErrors.bio = 'Bio cannot exceed 500 characters';
+        }
+
+        if (!formData.campus_location) {
+          newErrors.campus_location = 'Campus location is required';
         }
         break;
       case 2:
@@ -370,6 +380,23 @@ const StudentProfileCreation = () => {
                   {formData.bio.length}/500 characters
                 </p>
               </div>
+            </div>
+
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Campus Location *</label>
+              <select
+                value={formData.campus_location}
+                onChange={(e) => handleInputChange('campus_location', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.campus_location ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select your campus</option>
+                {campusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              {errors.campus_location && <p className="mt-1 text-sm text-red-600">{errors.campus_location}</p>}
             </div>
           </div>
         );
