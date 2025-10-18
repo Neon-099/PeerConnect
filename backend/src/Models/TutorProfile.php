@@ -11,6 +11,7 @@ class TutorProfile {
     private $table = 'tutor_profiles';
     private $specializationsTable = 'tutor_specializations';
     private $teachingStylesTable = 'tutor_teaching_styles';
+    private $availabilityTable = 'tutor_availability';
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
@@ -46,7 +47,7 @@ class TutorProfile {
         ];
 
         if ($stmt->execute($params)) {
-            $profileId = (int) $this->db->lastInsertId();
+            $profileId = (int) $this->db->lastInsertId(); // ADD THIS LINE
             
             // Insert specializations
             if (!empty($data['specializations'])) {
@@ -56,6 +57,11 @@ class TutorProfile {
             // Insert teaching styles
             if (!empty($data['teaching_styles'])) {
                 $this->insertTeachingStyles($userId, $data['teaching_styles']);
+            }
+
+            // Insert availability
+            if(isset($data['availability']) && !empty($data['availability'])) {
+                $this->createAvailability($userId, $data['availability']);
             }
             
             return $profileId;
@@ -90,38 +96,85 @@ class TutorProfile {
         }
     }
 
-   // FIND BY USER ID WITH RELATIONSHIPS
-    public function findByUserId(int $userId): ?array {
-        $query = "SELECT tp.*, u.first_name, u.last_name, u.email, u.profile_picture as user_profile_picture
-                FROM {$this->table} tp
-                JOIN users u ON tp.user_id = u.id
-                WHERE tp.user_id = :user_id LIMIT 1";
-        
+    // GET AVAILABILITY
+    private function getAvailability(int $userId): array {
+        $query = "SELECT available_day as day_of_week, start_time, end_time 
+                  FROM {$this->availabilityTable} 
+                  WHERE tutor_id = :tutor_id 
+                  ORDER BY available_day, start_time";
         $stmt = $this->db->prepare($query);
-        $stmt->execute([':user_id' => $userId]);
-        $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$profile) {
-            return null;
-        }
-
-        // Get specializations
-        $profile['specializations'] = $this->getSpecializations($userId);
-        
-        // Get teaching styles from relationship table (this returns an array)
-        $teachingStylesFromTable = $this->getTeachingStyles($userId);
-        
-        // Use teaching styles from relationship table if available, otherwise decode JSON
-        if (!empty($teachingStylesFromTable)) {
-            $profile['teaching_styles'] = $teachingStylesFromTable;
-        } else if (isset($profile['teaching_styles']) && is_string($profile['teaching_styles'])) {
-            $profile['teaching_styles'] = json_decode($profile['teaching_styles'], true) ?: [];
-        } else {
-            $profile['teaching_styles'] = [];
-        }
-
-        return $profile;
+        $stmt->execute([':tutor_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // CREATE AVAILABILITY
+    public function createAvailability(int $tutorId, array $availabilityData): bool {
+        try {
+            // Delete existing availability first
+            $deleteQuery = "DELETE FROM {$this->availabilityTable} WHERE tutor_id = :tutor_id";
+            $deleteStmt = $this->db->prepare($deleteQuery);
+            $deleteStmt->execute([':tutor_id' => $tutorId]);
+    
+            // Insert new availability
+            $insertQuery = "INSERT INTO {$this->availabilityTable} 
+                           (tutor_id, available_day, start_time, end_time) 
+                           VALUES (:tutor_id, :available_day, :start_time, :end_time)";
+            
+            $insertStmt = $this->db->prepare($insertQuery);
+            
+            foreach ($availabilityData as $slot) {
+                $insertStmt->execute([
+                    ':tutor_id' => $tutorId,
+                    ':available_day' => $slot['day_of_week'],  // ✅ Use correct field name
+                    ':start_time' => $slot['start_time'],
+                    ':end_time' => $slot['end_time']
+                ]);
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Logger::error('Create availability error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $tutorId
+            ]);
+            return false;
+        }
+    }
+   // FIND BY USER ID WITH RELATIONSHIPS
+   public function findByUserId(int $userId): ?array {
+    $query = "SELECT tp.*, u.first_name, u.last_name, u.email, u.profile_picture as user_profile_picture
+            FROM {$this->table} tp
+            JOIN users u ON tp.user_id = u.id
+            WHERE tp.user_id = :user_id LIMIT 1";
+    
+    $stmt = $this->db->prepare($query);
+    $stmt->execute([':user_id' => $userId]);
+    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$profile) {
+        return null;
+    }
+
+    // Get specializations
+    $profile['specializations'] = $this->getSpecializations($userId);
+    
+    // Get teaching styles from relationship table (this returns an array)
+    $teachingStylesFromTable = $this->getTeachingStyles($userId);
+    
+    // Use teaching styles from relationship table if available, otherwise decode JSON
+    if (!empty($teachingStylesFromTable)) {
+        $profile['teaching_styles'] = $teachingStylesFromTable;
+    } else if (isset($profile['teaching_styles']) && is_string($profile['teaching_styles'])) {
+        $profile['teaching_styles'] = json_decode($profile['teaching_styles'], true) ?: [];
+    } else {
+        $profile['teaching_styles'] = [];
+    }
+
+    // ADD THIS: Get availability data
+    $profile['availability'] = $this->getAvailability($userId);
+
+    return $profile;
+}
 
     // GET SPECIALIZATIONS
     private function getSpecializations(int $userId): array {
