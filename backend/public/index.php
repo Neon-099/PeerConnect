@@ -4,7 +4,8 @@ require __DIR__ . '/../vendor/autoload.php';
 use Dotenv\Dotenv;
 use App\Controllers\AuthController;
 use App\Controllers\StudentController;
-use App\Controllers\TutorController;  // Add this
+use App\Controllers\TutorController;  
+use App\Controllers\MatchingController;
 use App\Utils\Response;
 
 // Load environment variables
@@ -60,7 +61,8 @@ error_log("Raw PATH_INFO: " . ($_SERVER['PATH_INFO'] ?? 'not set'));
 try {
     $auth = new AuthController();
     $student = new StudentController();
-    $tutor = new TutorController();  // Add this line
+    $tutor = new TutorController();  
+    $matching = new MatchingController();
     error_log("DEBUG: Controllers created successfully");
 } catch (Exception $e) {
     error_log("ERROR: Failed to create controllers: " . $e->getMessage());
@@ -76,19 +78,19 @@ switch(true) {
     case $uri === '/api/auth/register' && $method === 'POST':
         error_log("DEBUG: Matched register route");
         $auth->register();
-        break;
+            break;
     case $uri === '/api/auth/login' && $method === 'POST':
         error_log("DEBUG: Matched login route");
         $auth->login();
-        break;
+            break;
     case $uri === '/api/auth/refresh' && $method === 'POST':
         error_log("DEBUG: Matched refresh route");
         $auth->refresh();
-        break;
+            break;
     case $uri === '/api/auth/googleAuth' && $method === 'POST':
         error_log("DEBUG: Matched googleAuth route");
         $auth->googleAuth();
-        break;
+            break;
 
     case $uri === '/api/auth/logout' && $method === 'POST': 
         error_log("DEBUG: Matched logout route");
@@ -155,6 +157,17 @@ switch(true) {
         $tutor->updateProfile();
         break;
 
+    //MATCHING
+    case $uri === '/api/matching/findStudents' && $method === 'GET':
+        error_log("DEBUG: Matched matching students route");
+        $matching->findStudentsForTutor();
+        break;
+    case $uri === '/api/matching/findTutors' && $method === 'GET':
+        error_log("DEBUG: Matched matching tutors route");
+        $matching->findTutorsForStudent();
+        break;
+
+    //DEBUG
     case $uri === '/debug/users' && $method === 'GET':
         error_log("DEBUG: Matched debug users route");
         try {

@@ -59,7 +59,8 @@ class TutorController {
                 'hourly_rate' => (float)($input['hourly_rate'] ?? 0.00),
                 'teaching_styles' => $input['teaching_styles'] ?? [],
                 'preferred_student_level' => $input['preferred_student_level'] ?? null,
-                'specializations' => $input['specializations'] ?? []
+                'specializations' => $input['specializations'] ?? [],
+                'availability' => $input['availability'] ?? []
             ];
     
             // Handle profile picture upload if provided
@@ -110,6 +111,10 @@ class TutorController {
             }
             if (isset($data['teaching_styles']) && is_string($data['teaching_styles'])) {
                 $data['teaching_styles'] = json_decode($data['teaching_styles'], true) ?: [];
+            }
+            // ADD THIS: Handle availability JSON
+            if (isset($data['availability']) && is_string($data['availability'])) {
+                $data['availability'] = json_decode($data['availability'], true) ?: [];
             }
             
             return $data;
