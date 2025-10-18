@@ -10,6 +10,7 @@ import {apiClient} from '../../utils/api';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
+import FindTutorModal from '../../components/FindTutorModal.jsx';
 
 const Homes = () =>  {
   const [activeTab, setActiveTab] = useState('home');
@@ -27,6 +28,8 @@ const Homes = () =>  {
   const [userProfile, setUserProfile] = useState(null);
   const [studentProfile, setStudentProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [isFindTutorModalOpen, setIsFindTutorModalOpen] = useState(false);
 
   const navigate = useNavigate();
   //PROFILE DATA
@@ -670,14 +673,49 @@ const Homes = () =>  {
                   </div>
 
                   <div className="flex gap-3">
-                    <button className="px-6 py-3 bg-teal-700 text-white rounded-lg font-medium hover:bg-teal-800 flex items-center gap-2">
+                    <button
+                      onClick={() => setIsFindTutorModalOpen(true)}
+                      className="px-6 py-3 bg-teal-700 text-white rounded-lg font-medium hover:bg-teal-800 flex items-center gap-2">
                       <Users className="w-5 h-5" />
                       Find a Tutor
                     </button>
-                    <button className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5" />
-                      Get Matched
-                    </button>
+                  </div>
+                </div>
+
+                {/*AVAILABLE TUTORS*/}
+                <div className="bg-white rounded-xl p-6 border border-gray-200 h-120 w-250">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4">availabilE TUTORS</h2>
+                  
+                  <div className="space-y-4">
+                    {sessions.map((session) => (
+                      <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <span className="text-lg font-semibold text-gray-600">{session.initials}</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold text-gray-800">{session.tutor}</h3>
+                              <span className="text-gray-400">•</span>
+                            </div>
+                            <p className="text-sm text-gray-600">{session.subject}</p>
+                            <p className="text-sm text-gray-500">{session.date} • {session.time}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                            session.status === 'Confirmed' 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-orange-500 text-white'
+                          }`}>
+                            {session.status}
+                          </span>
+                          <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1282,6 +1320,12 @@ const Homes = () =>  {
         isOpen={isEditProfileModalOpen} 
         onClose={() => setIsEditProfileModalOpen(false)} 
         onProfileUpdate={handleProfileUpdate}
+      />
+
+      {/* Find Tutor Modal */}
+      <FindTutorModal 
+        isOpen={isFindTutorModalOpen} 
+        onClose={() => setIsFindTutorModalOpen(false)}
       />
     </div>
   );

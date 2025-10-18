@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 import {useNavigate } from 'react-router-dom';
-import {User, GraduationCap, DollarSign, Upload, ArrowRight, CheckCircle, ArrowLeft, Camera} from 'lucide-react';
+import {User, GraduationCap, DollarSign, Upload, ArrowRight, CheckCircle, ArrowLeft, Camera, Clock, Calendar}  from 'lucide-react';
 import {apiClient, getAccessToken } from '../../utils/api.js';
 
 import ImageUploadProgress from '../ImageUploadProgress.jsx';
@@ -24,14 +24,21 @@ const TutorProfileCreation = () => {
       // Rate and Teaching Preferences
       hourly_rate: '',
       teaching_styles: [],
-      preferred_student_level: ''
+      preferred_student_level: '',
+      
+      // Availability
+      availability: [],
     });
   
     const [errors, setErrors] = useState({});
     const [isAuthenticated, setIsAuthentication] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
-  
+    
+    const [selectedDay, setSelectedDay] = useState('');
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
+
     const navigate = useNavigate();
   
     // Authentication check
@@ -47,7 +54,8 @@ const TutorProfileCreation = () => {
     const steps = [
       { number: 1, title: 'Personal Info', icon: User },
       { number: 2, title: 'Academic Qualifications', icon: GraduationCap },
-      { number: 3, title: 'Rate & Preferences', icon: DollarSign }
+      { number: 3, title: 'Rate & Preferences', icon: DollarSign },
+      { number: 4, title: 'Availability', icon: Calendar }
     ];
   
     const genderOptions = [
@@ -89,7 +97,25 @@ const TutorProfileCreation = () => {
       { value: 'shs', label: 'Senior High School' },
       { value: 'college', label: 'College' }
     ];
-  
+    
+    const daysOfWeek = [
+      { value: 'monday', label: 'Monday' },
+      { value: 'tuesday', label: 'Tuesday' },
+      { value: 'wednesday', label: 'Wednesday' },
+      { value: 'thursday', label: 'Thursday' },
+      { value: 'friday', label: 'Friday' },
+      { value: 'saturday', label: 'Saturday' },
+      { value: 'sunday', label: 'Sunday' }
+    ];
+
+    const timeSlots = [
+      '06:00', '06:30', '07:00', '07:30', '08:00', '08:30', '09:00', '09:30',
+      '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+      '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+      '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30',
+      '22:00', '22:30', '23:00', '23:30'
+    ];
+    
     const handleInputChange = (e) => {
       const { name, value } = e.target;
       setFormData(prev => ({
@@ -137,7 +163,52 @@ const TutorProfileCreation = () => {
         }));
       }
     };
-  
+    
+    const handleAddAvailability = () => {
+      if (selectedDay && startTime && endTime) {
+        // Validate time range
+        if (startTime >= endTime) {
+          setErrors(prev => ({ ...prev, availability: 'End time must be after start time' }));
+          return;
+        }
+
+        // Check for overlapping times on the same day
+        const existingSlot = formData.availability.find(slot => slot.day === selectedDay);
+        if (existingSlot) {
+          const hasOverlap = (startTime < existingSlot.end_time && endTime > existingSlot.start_time);
+          if (hasOverlap) {
+            setErrors(prev => ({ ...prev, availability: 'Time slots cannot overlap on the same day' }));
+            return;
+          }
+        }
+
+        const newSlot = {
+          day_of_week: selectedDay,
+          start_time: startTime,
+          end_time: endTime,
+          is_available: 1
+        };
+
+        setFormData(prev => ({
+          ...prev,
+          availability: [...prev.availability, newSlot]
+        }));
+
+        // Clear form
+        setSelectedDay('');
+        setStartTime('');
+        setEndTime('');
+        setErrors(prev => ({ ...prev, availability: '' }));
+      }
+    };
+
+    const handleRemoveAvailability = (index) => {
+      setFormData(prev => ({
+        ...prev,
+        availability: prev.availability.filter((_, i) => i !== index)
+      }));
+    };
+    
     const validateStep = (step) => {
       const newErrors = {};
   
@@ -168,6 +239,12 @@ const TutorProfileCreation = () => {
         }
       }
   
+      if (step === 4) {
+        if (!formData.availability.length) {
+          newErrors.availability = 'Please select at least one availability';
+        }
+      }
+
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     };
@@ -183,7 +260,7 @@ const TutorProfileCreation = () => {
     };
   
     const handleSubmit = async () => {
-      if (!validateStep(3)) return;
+      if (!validateStep(4)) return;
     
       setIsLoading(true);
       setIsUploading(true);
@@ -222,7 +299,7 @@ const TutorProfileCreation = () => {
     
         console.log('Tutor profile created: ', result);
         
-        if (result || (result.success && result.data.profile_id)) {
+        if (result  || (result.success && result.data.profile_id)) {
           setTimeout(() => {
             alert('Tutor profile created successfully! You can now access all features.');
             navigate('/tutor/home');
@@ -552,6 +629,145 @@ const TutorProfileCreation = () => {
               </div>
             )}
   
+            {/* Step 4: Availability */}
+            {currentStep === 4 && (
+              <div className="space-y-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2">Set Your Availability</h2>
+                  <p className="text-gray-400">When are you available to tutor? Add your time slots</p>
+                </div>
+
+                {/* Add Availability Form */}
+                <div className="bg-gray-700 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">Add Time Slot</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* Day Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Day</label>
+                      <select
+                        value={selectedDay}
+                        onChange={(e) => setSelectedDay(e.target.value)}
+                        className="w-full px-3 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select day</option>
+                        {daysOfWeek.map((day) => (
+                          <option key={day.value} value={day.value}>
+                            {day.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Start Time */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
+                      <select
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full px-3 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Start time</option>
+                        {timeSlots.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* End Time */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
+                      <select
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full px-3 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">End time</option>
+                        {timeSlots.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Add Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={handleAddAvailability}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Add Slot
+                      </button>
+                    </div>
+                  </div>
+
+                  {errors.availability && (
+                    <p className="text-red-400 text-sm mt-2">{errors.availability}</p>
+                  )}
+                </div>
+
+                {/* Current Availability */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Your Availability</h3>
+                  
+                  {formData.availability.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-700 rounded-xl">
+                      <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-400">No availability slots added yet</p>
+                      <p className="text-sm text-gray-500 mt-1">Add at least 3 time slots to continue</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.availability.map((slot, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-700 rounded-lg p-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                              <Calendar className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-white">
+                                {daysOfWeek.find(d => d.value === slot.day)?.label}
+                              </h4>
+                              <p className="text-sm text-gray-300">
+                                {slot.start_time} - {slot.end_time}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveAvailability(index)}
+                            className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 text-sm text-gray-400">
+                    Total slots: {formData.availability.length} (Minimum: 3 required)
+                  </div>
+                </div>
+
+                {/* Availability Tips */}
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
+                  <h4 className="font-medium text-blue-400 mb-2">💡 Tips for Setting Availability</h4>
+                  <ul className="text-sm text-blue-300 space-y-1">
+                    <li>• Add multiple time slots per day if you're available at different times</li>
+                    <li>• Consider your peak productivity hours for tutoring</li>
+                    <li>• You can always update your availability later</li>
+                    <li>• Students will only see slots when you're actually available</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Navigation Buttons */}
             <div className="flex justify-between mt-12">
               <button

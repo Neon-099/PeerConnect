@@ -14,7 +14,6 @@ export const auth = {
 		storeSessionTokens(data);
 		return data;
 	},
-
 	async login(email, password, role = 'student') {
 		const data = await api('/api/auth/login', {
 			method: 'POST',

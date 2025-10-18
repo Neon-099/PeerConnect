@@ -169,7 +169,7 @@ const TutorAuthForm = () => {
     console.log('Signup form submitted with data:', formData);
     try {
         console.log('Entering...')
-        const payload = {
+        const tutorPayload = {
             first_name: formData.firstName,
             last_name: formData.lastName,
             email: formData.email,
@@ -177,8 +177,8 @@ const TutorAuthForm = () => {
             role: 'tutor',
             providers: 'local'
         };
-        console.log('Calling auth.register with payload:', payload);
-        const res = await auth.register(payload);
+        console.log('Calling auth.register with payload:', tutorPayload);
+        const res = await auth.register(tutorPayload);
         console.log('Register response:', res);
 
         //CHECK TOKENS IF SUCCESSFULLY STORED
@@ -186,9 +186,6 @@ const TutorAuthForm = () => {
         if(!hasTokens){
             throw new Error('Failed to store tokens');
         }
-        
-        // navigate('/student/profileCreation');
-        // alert("Account created successfully!");
 
         // Simple success handling - let auth.register handle token storage
         navigate('/tutor/profileCreation');

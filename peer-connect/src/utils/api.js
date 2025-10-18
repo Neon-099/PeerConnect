@@ -112,10 +112,9 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 	 
 		return json;
 	}
-	else if(path.includes('/auth/register')){
+	else if(path.includes('/auth/register')){ //FOR STUDENT
 		return json ;
 	}
-
 	else {
 		return json?.data !== undefined ? json.data : json;
 	}
@@ -145,7 +144,33 @@ export const apiClient = {
 	
 	async delete(path, options = {}) {
 		return api(path, { method: 'DELETE', ...options });
-	}
+	},
+
+	
+	 // Add matching endpoints
+	 async findMatchingTutors(filters = {}) {
+		const queryParams = new URLSearchParams();
+		Object.entries(filters).forEach(([key, value]) => {
+		  if (value !== null && value !== undefined) {
+			queryParams.append(key, value);
+		  }
+		});
+		
+		const path = `/api/matching/findTutors${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+		return this.get(path);
+	  },
+	  
+	  async findMatchingStudents(filters = {}) {
+		const queryParams = new URLSearchParams();
+		Object.entries(filters).forEach(([key, value]) => {
+		  if (value !== null && value !== undefined) {
+			queryParams.append(key, value);
+		  }
+		});
+		
+		const path = `/api/matching/findStudents${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+		return this.get(path);
+	  }
 };
 
 export function getOptimizedImageUrl(url, options = {}) {
