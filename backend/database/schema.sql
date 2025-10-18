@@ -103,6 +103,18 @@ CREATE TABLE student_subjects_of_interest (
     INDEX idx_user_subject (user_id, subject)
 );
 
+-- Create student availability table (similar to tutor_availability)
+CREATE TABLE student_availability (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    available_day VARCHAR(20) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_student_day (student_id, available_day)
+);
 
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
@@ -145,7 +157,7 @@ CREATE TABLE tutor_subjects (
 );
 
 CREATE TABLE learning_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,  -- ADD THIS LINE
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     category VARCHAR(100),
@@ -157,7 +169,24 @@ CREATE TABLE learning_subjects (
 INSERT INTO learning_subjects (name, description, category) VALUES
 ('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
 ('Physics', 'Mechanics, Thermodynamics, Electromagnetism, and other physics topics', 'STEM'),
+('Chemistry', 'Organic, Inorganic, Physical Chemistry and Laboratory work', 'STEM'),
+('Biology', 'Cell Biology, Genetics, Ecology, and Human Anatomy', 'STEM'),
+('Computer Science', 'Programming, Data Structures, Algorithms, and Software Engineering', 'STEM'),
+('English', 'Literature, Grammar, Writing, and Communication Skills', 'Language'),
+('History', 'World History, American History, and Historical Analysis', 'Social Sciences'),
+('Psychology', 'Cognitive Psychology, Behavioral Studies, and Mental Health', 'Social Sciences'),
+('Economics', 'Microeconomics, Macroeconomics, and Economic Theory', 'Social Sciences'),
+('Philosophy', 'Ethics, Logic, and Critical Thinking', 'Humanities');
 
+CREATE TABLE tutor_teaching_styles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tutor_id INT NOT NULL,
+    teaching_style ENUM('visual', 'auditory', 'kinesthetic', 'reading_writing', 'mixed') NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_tutor_style (tutor_id, teaching_style)
+);
+    
 CREATE TABLE tutor_specializations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT NOT NULL,
