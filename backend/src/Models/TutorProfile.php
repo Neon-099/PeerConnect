@@ -6,6 +6,7 @@ use Config\Database;
 use PDO;
 use Exception;
 use App\Utils\Logger;
+use DateTime;
 
 class TutorProfile {
     private $db;
@@ -62,7 +63,7 @@ class TutorProfile {
 
             // Insert availability
             if(isset($data['availability']) && !empty($data['availability'])) {
-                $this->createAvailability($userId, $data['availability']);
+                $this->insertAvailability($userId, $data['availability']);
             }
             
             return $profileId;
@@ -97,35 +98,29 @@ class TutorProfile {
         }
     }
 
-    // GET AVAILABILITY
+    // GET AVAILABILITY - Only return date-based availability
     public function getAvailability(int $tutorId): array {
         try {
-            // First try to get date-based availability
-            $query = "SELECT availability_date, start_time, end_time, is_available, day_of_week 
+            Logger::info('Getting availability', ['tutor_id' => $tutorId]);
+
+            // Only get date-based availability - no more day-based fallback
+            $query = "SELECT availability_date, is_available, day_of_week 
                       FROM {$this->availabilityTable} 
                       WHERE tutor_id = :tutor_id 
                       AND availability_date IS NOT NULL
-                      ORDER BY availability_date, start_time";
+                      ORDER BY availability_date";
             
             $stmt = $this->db->prepare($query);
             $stmt->execute([':tutor_id' => $tutorId]);
             $dateBasedAvailability = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            if (!empty($dateBasedAvailability)) {
-                return $dateBasedAvailability;
-            }
+            Logger::info('Date-based availability query result', [
+                'tutor_id' => $tutorId,
+                'count' => count($dateBasedAvailability),
+                'data' => $dateBasedAvailability
+            ]);
             
-            // Fallback to day-based availability for backward compatibility
-            $query = "SELECT day_of_week, start_time, end_time, is_available 
-                      FROM {$this->availabilityTable} 
-                      WHERE tutor_id = :tutor_id 
-                      AND day_of_week IS NOT NULL
-                      ORDER BY day_of_week, start_time";
-            
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':tutor_id' => $tutorId]);
-            
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $dateBasedAvailability;
         } catch (Exception $e) {
             Logger::error('Get availability error', [
                 'error' => $e->getMessage(),
@@ -134,72 +129,50 @@ class TutorProfile {
             return [];
         }
     }
-    public function getAvailabilityByDateRange(int $tutorId, string $startDate, string $endDate): array {
-        try {
-            $query = "SELECT availability_date, start_time, end_time, is_available 
-                      FROM {$this->availabilityTable} 
-                      WHERE tutor_id = :tutor_id 
-                      AND availability_date BETWEEN :start_date AND :end_date
-                      ORDER BY availability_date, start_time";
-            
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':tutor_id' => $tutorId,
-                ':start_date' => $startDate,
-                ':end_date' => $endDate
-            ]);
-            
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {
-            Logger::error('Get availability by date range error', [
-                'error' => $e->getMessage(),
-                'tutor_id' => $tutorId
-            ]);
-            return [];
-        }
-    }
-    // CREATE AVAILABILITY
-    private function createAvailability(int $tutorId, array $availabilityData): bool {
+   
+    // INSERT AVAILABILITY
+    private function insertAvailability(int $tutorId, array $availabilityData): bool {
         try {
             // Clear existing availability for this tutor
             $deleteQuery = "DELETE FROM {$this->availabilityTable} WHERE tutor_id = :tutor_id";
             $deleteStmt = $this->db->prepare($deleteQuery);
             $deleteStmt->execute([':tutor_id' => $tutorId]);
-    
+
             if (empty($availabilityData)) {
                 return true;
             }
-    
+
             // Check if the data is in the new date-based format
-            $isDateBased = isset($availabilityData[0]['date']) && !isset($availabilityData[0]['day_of_week']);
+            $isDateBased = isset($availabilityData[0]['availability_date']) || isset($availabilityData[0]['date']);
             
             if ($isDateBased) {
                 // Handle date-based format (new format from frontend)
                 $insertQuery = "INSERT INTO {$this->availabilityTable} 
-                               (tutor_id, availability_date, start_time, end_time, is_available, day_of_week) 
-                               VALUES (:tutor_id, :availability_date, :start_time, :end_time, :is_available, :day_of_week)";
+                               (tutor_id, availability_date, is_available, day_of_week) 
+                               VALUES (:tutor_id, :availability_date, :is_available, :day_of_week)";
                 
                 $insertStmt = $this->db->prepare($insertQuery);
                 
                 foreach ($availabilityData as $slot) {
+                    // Use availability_date if available, otherwise use date
+                    $date = $slot['availability_date'] ?? $slot['date'];
+                    
                     // Convert date to day of week for backward compatibility
-                    $date = new DateTime($slot['date']);
-                    $dayOfWeek = strtolower($date->format('l')); // Monday, Tuesday, etc.
+                    $dateObj = new DateTime($date);
+                    $dayOfWeek = strtolower($dateObj->format('l')); // Monday, Tuesday, etc.
                     
                     $insertStmt->execute([
                         ':tutor_id' => $tutorId,
-                        ':availability_date' => $slot['date'],
-                        ':start_time' => $slot['start_time'],
-                        ':end_time' => $slot['end_time'],
-                        ':is_available' => $slot['is_available'],
+                        ':availability_date' => $date,
+                        ':is_available' => (bool)$slot['is_available'], // Use boolean
                         ':day_of_week' => $dayOfWeek
                     ]);
                 }
             } else {
                 // Handle day-based format (legacy format)
                 $insertQuery = "INSERT INTO {$this->availabilityTable} 
-                               (tutor_id, day_of_week, start_time, end_time, is_available) 
-                               VALUES (:tutor_id, :day_of_week, :start_time, :end_time, :is_available)";
+                               (tutor_id, day_of_week, is_available) 
+                               VALUES (:tutor_id, :day_of_week, :is_available)";
                 
                 $insertStmt = $this->db->prepare($insertQuery);
                 
@@ -207,9 +180,7 @@ class TutorProfile {
                     $insertStmt->execute([
                         ':tutor_id' => $tutorId,
                         ':day_of_week' => $slot['day_of_week'],
-                        ':start_time' => $slot['start_time'],
-                        ':end_time' => $slot['end_time'],
-                        ':is_available' => $slot['is_available'],
+                        ':is_available' => (bool)$slot['is_available'] // Use boolean
                     ]);
                 }
             }
@@ -224,7 +195,7 @@ class TutorProfile {
         }
     }
    // FIND BY USER ID WITH RELATIONSHIPS
-   public function findByUserId(int $userId): ?array {
+    public function findByUserId(int $userId): ?array {
     $query = "SELECT tp.*, u.first_name, u.last_name, u.email, u.profile_picture as user_profile_picture
             FROM {$this->table} tp
             JOIN users u ON tp.user_id = u.id
@@ -257,7 +228,7 @@ class TutorProfile {
     $profile['availability'] = $this->getAvailability($userId);
 
     return $profile;
-}
+    }
 
     // GET SPECIALIZATIONS
     private function getSpecializations(int $userId): array {
@@ -297,14 +268,22 @@ class TutorProfile {
             $params[":teaching_styles"] = json_encode($data['teaching_styles']);
         }
 
-        if (empty($fields)) {
-            return true;
-        }
+        $result = true;
 
-        $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
-        $stmt = $this->db->prepare($query);
-        
-        $result = $stmt->execute($params);
+        // Update the main profile table if there are fields to update
+        if (!empty($fields)) {
+            $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
+            $stmt = $this->db->prepare($query);
+            $result = $stmt->execute($params);
+            
+            if (!$result) {
+                Logger::error('Failed to update profile fields', [
+                    'user_id' => $userId,
+                    'fields' => $fields
+                ]);
+                return false;
+            }
+        }
 
         // Update specializations if provided
         if (isset($data['specializations'])) {
@@ -314,6 +293,23 @@ class TutorProfile {
         // Update teaching styles if provided
         if (isset($data['teaching_styles'])) {
             $this->updateTeachingStyles($userId, $data['teaching_styles']);
+        }
+
+        // Update availability if provided - THIS IS THE KEY FIX
+        if (isset($data['availability'])) {
+            Logger::info('Updating availability in update method', [
+                'user_id' => $userId,
+                'availability_data' => $data['availability']
+            ]);
+            
+            $availabilityResult = $this->updateAvailability($userId, $data['availability']);
+            if (!$availabilityResult) {
+                Logger::error('Failed to update availability', [
+                    'user_id' => $userId,
+                    'availability_data' => $data['availability']
+                ]);
+                return false;
+            }
         }
 
         return $result;
@@ -341,6 +337,97 @@ class TutorProfile {
         $this->insertTeachingStyles($userId, $teachingStyles);
     }
 
+    // UPDATE AVAILABILITY - Only handle date-based availability
+    private function updateAvailability(int $tutorId, array $availabilityData): bool {
+        try {
+            Logger::info('Updating availability', [
+                'tutor_id' => $tutorId,
+                'availability_data' => $availabilityData,
+                'count' => count($availabilityData)
+            ]);
+
+            // Clear existing availability for this tutor
+            $deleteQuery = "DELETE FROM {$this->availabilityTable} WHERE tutor_id = :tutor_id";
+            $deleteStmt = $this->db->prepare($deleteQuery);
+            $deleteResult = $deleteStmt->execute([':tutor_id' => $tutorId]);
+            
+            if (!$deleteResult) {
+                Logger::error('Failed to delete existing availability', [
+                    'tutor_id' => $tutorId,
+                    'error' => $deleteStmt->errorInfo()
+                ]);
+                return false;
+            }
+
+            if (empty($availabilityData)) {
+                Logger::info('No availability data to insert after clearing');
+                return true;
+            }
+
+            // Only handle date-based format
+            $insertQuery = "INSERT INTO {$this->availabilityTable} 
+                           (tutor_id, availability_date, is_available, day_of_week) 
+                           VALUES (:tutor_id, :availability_date, :is_available, :day_of_week)";
+            
+            $insertStmt = $this->db->prepare($insertQuery);
+            
+            foreach ($availabilityData as $index => $slot) {
+                try {
+                    // Convert date to day of week for backward compatibility
+                    $date = new DateTime($slot['date']);
+                    $dayOfWeek = strtolower($date->format('l')); // Monday, Tuesday, etc.
+                    
+                    $insertResult = $insertStmt->execute([
+                        ':tutor_id' => $tutorId,
+                        ':availability_date' => $slot['date'], // This is the actual date
+                        ':is_available' => (bool)$slot['is_available'],
+                        ':day_of_week' => $dayOfWeek // This is just for reference
+                    ]);
+                    
+                    if (!$insertResult) {
+                        Logger::error('Failed to insert availability slot', [
+                            'tutor_id' => $tutorId,
+                            'slot_index' => $index,
+                            'slot_data' => $slot,
+                            'error' => $insertStmt->errorInfo()
+                        ]);
+                        return false;
+                    }
+                    
+                    Logger::info('Successfully inserted availability slot', [
+                        'tutor_id' => $tutorId,
+                        'slot_index' => $index,
+                        'date' => $slot['date'],
+                        'day_of_week' => $dayOfWeek,
+                        'is_available' => (bool)$slot['is_available']
+                    ]);
+                } catch (Exception $e) {
+                    Logger::error('Error inserting availability slot', [
+                        'tutor_id' => $tutorId,
+                        'slot_index' => $index,
+                        'slot_data' => $slot,
+                        'error' => $e->getMessage()
+                    ]);
+                    return false;
+                }
+            }
+
+            Logger::info('Availability updated successfully', [
+                'tutor_id' => $tutorId,
+                'total_slots' => count($availabilityData)
+            ]);
+            return true;
+        } catch (Exception $e) {
+            Logger::error('Update availability error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $tutorId,
+                'availability_data' => $availabilityData
+            ]);
+            return false;
+        }
+    }
+
+    
     // FIND TUTORS WITH FILTERS
     public function findTutors(array $filters, int $page = 1, int $perPage = 20): array {
         $where = [];
@@ -397,6 +484,7 @@ class TutorProfile {
 
         return $tutors;
     }
+
 
     // COUNT TUTORS
     public function countTutors(array $filters): int {

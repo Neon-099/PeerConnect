@@ -4,7 +4,7 @@ import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle,
     Mail, Bell, Star, Edit, TrendingUp, Shield, Key, LogOut, MessageSquare,
     ChevronUp, ChevronDown, Book, RotateCcw, DollarSign, Clock, MapPin, 
     Video, UserCheck, BarChart3, Settings, Plus, GraduationCap, Eye, 
-    Target, Zap, Award, BookOpen, Timer} from 'lucide-react';
+    Target, Zap, Award, BookOpen, Timer, ChevronLeft, ChevronRight} from 'lucide-react';
 
 import TutorProfilePage from './TutorProfilePage.jsx';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal.jsx';
@@ -15,10 +15,10 @@ import {apiClient} from '../../../utils/api';
 import Header from '../Header.jsx';
 import Footer from '../Footer.jsx';
 import { LoadingSpinner } from '../../../components/LoadingSpinner.jsx';
+import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
 
 const Homes = () => {
   const [activeTab, setActiveTab] = useState('home');
-  const [isProfile, setIsProfile] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [sessions, setSessions] = useState([]);
   const [filterTab, setFilterTab] = useState('all');
@@ -36,6 +36,10 @@ const Homes = () => {
   // New state for matching functionality
   const [matchingStudents, setMatchingStudents] = useState([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [availability, setAvailability] = useState([]);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const navigate = useNavigate();
 
@@ -79,6 +83,13 @@ const Homes = () => {
     fetchMatchingStudents();
   }, []);
 
+  // Add this useEffect to initialize availability from profile data
+  useEffect(() => {
+    if (tutorProfile && tutorProfile.availability) {
+      setAvailability(tutorProfile.availability);
+    }
+  }, [tutorProfile]);
+
   const getProfilePictureUrl = (profilePicture) => {
     if (!profilePicture) return '/default-avatar.png';
     if (profilePicture.startsWith('http')) return profilePicture;
@@ -99,20 +110,138 @@ const Homes = () => {
     }
   }
 
+  // Function to generate week data with real dates
+  const generateWeekData = (startDate) => {
+    try {
+      const week = [];
+      
+      // Validate startDate
+      if (!startDate || isNaN(new Date(startDate).getTime())) {
+        console.error('Invalid startDate provided to generateWeekData');
+        return [];
+      }
+      
+      const start = new Date(startDate);
+      if (isNaN(start.getTime())) {
+        console.error('Invalid start date');
+        return [];
+      }
+      
+      start.setDate(start.getDate() - start.getDay()); // Start from Sunday
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        
+        // Validate the date before using toISOString
+        if (isNaN(date.getTime())) {
+          console.error(`Invalid date generated at index ${i}`);
+          continue;
+        }
+        
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Check availability - handle both date-based and day-based formats
+        const isAvailable = availability && Array.isArray(availability) ? availability.some(slot => {
+          try {
+            // If slot has availability_date, compare dates directly
+            if (slot.availability_date) {
+              return slot.availability_date === dateStr && slot.is_available;
+            }
+            
+            // If slot has day_of_week, check if it matches the current day
+            if (slot.day_of_week) {
+              const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+              return slot.day_of_week.toLowerCase() === dayOfWeek && slot.is_available;
+            }
+            
+            return false;
+          } catch (error) {
+            console.error('Error checking availability for slot:', slot, error);
+            return false;
+          }
+        }) : false;
+        
+        week.push({
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          date: date.getDate(),
+          fullDate: date,
+          isAvailable: isAvailable,
+          sessions: Math.floor(Math.random() * 3) // Mock data - replace with real session count
+        });
+      }
+      
+      return week;
+    } catch (error) {
+      console.error('Error in generateWeekData:', error);
+      return [];
+    }
+  };
+
+  // Function to get week range string
+  const getWeekRangeString = (startDate) => {
+    const start = new Date(startDate);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  };
+
+  // Function to navigate weeks
+  const navigateWeek = (direction) => {
+    const newWeek = new Date(currentWeek);
+    newWeek.setDate(newWeek.getDate() + (direction * 7));
+    setCurrentWeek(newWeek);
+  };
+
+  // Function to handle availability save
+  const handleAvailabilitySave = async (newAvailability) => {
+    try {
+      console.log('Saving availability:', newAvailability);
+      
+      // Ensure we have valid availability data
+      if (!Array.isArray(newAvailability)) {
+        console.error('Invalid availability data format');
+        return;
+      }
+      
+      // Save to backend
+      const response = await apiClient.put('/api/tutor/profile', { 
+        availability: newAvailability 
+      });
+      
+      console.log('Availability saved successfully:', response);
+      
+      // Update local state
+      setAvailability(newAvailability);
+      
+      // Refresh profile data
+      await fetchProfileData();
+      
+      // Close the modal
+      setShowAvailabilityModal(false);
+      
+    } catch (error) {
+      console.error('Failed to save availability:', error);
+      // You might want to show a user-friendly error message here
+    }
+  };
+
   // Format availability for display
   const formatAvailability = (availability) => {
     if (!availability || availability.length === 0) return 'Not set';
     
     const groupedByDay = availability.reduce((acc, slot) => {
-      if (!acc[slot.day]) acc[slot.day] = [];
-      acc[slot.day].push(`${slot.start_time}-${slot.end_time}`);
+      if (!acc[slot.day_of_week]) acc[slot.day_of_week] = [];
+      acc[slot.day_of_week].push(`${slot.start_time}-${slot.end_time}`);
       return acc;
     }, {});
 
     return Object.entries(groupedByDay).map(([day, times]) => 
       `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.join(', ')}`
     ).join(' | ');
-  };
+};
 
   // Mock data for demonstration
   const mockSessions = [
@@ -268,8 +397,8 @@ const Homes = () => {
           </div>
         </div>
 
-         {/* Profile Section */}
-         {activeTab === 'profile' && (
+        {/* Profile Section */}
+        {activeTab === 'profile' && (
           <TutorProfilePage 
             tutorProfile={tutorProfile}
             userProfile={userProfile}
@@ -277,7 +406,7 @@ const Homes = () => {
             onProfileUpdate={fetchProfileData}
           />
         )}
-        
+
         {/* Home Section */}
         {activeTab === 'home' && (
           <div className="flex-1 flex flex-col">
@@ -356,27 +485,71 @@ const Homes = () => {
                   {/* Weekly Overview */}
                   <div className="bg-white rounded-2xl p-6 border border-slate-200 mb-8">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-xl font-semibold text-slate-800">Week of Mar 10 - Mar 16</h3>
                       <div className="flex items-center gap-4">
-                        <p className="text-sm text-slate-500">All times in your timezone</p>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors">
+                        <button 
+                          onClick={() => navigateWeek(-1)}
+                          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-slate-600" />
+                        </button>
+                        <h3 className="text-xl font-semibold text-slate-800">
+                          Week of {getWeekRangeString(currentWeek)}
+                        </h3>
+                        <button 
+                          onClick={() => navigateWeek(1)}
+                          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                          <ChevronRight className="w-5 h-5 text-slate-600" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => setShowAvailabilityModal(true)} 
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors">
                           <Calendar className="w-4 h-4" />
                           Set Availability
                         </button>
                       </div>
                     </div>
                     <div className="grid grid-cols-7 gap-4">
-                      {weeklyData.map((day, index) => (
-                        <div key={index} className="text-center">
-                          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                            <p className="text-sm font-medium text-slate-600">{day.day}</p>
-                            <p className="text-lg font-semibold text-slate-800 mt-1">{day.date}</p>
-                            <p className="text-xs text-slate-500 mt-2">
-                              {day.sessions === 0 ? 'No sessions' : `${day.sessions} session${day.sessions > 1 ? 's' : ''}`}
-                            </p>
+                      {(() => {
+                        const weekData = generateWeekData(currentWeek);
+                        if (weekData.length === 0) {
+                          return (
+                            <div className="col-span-7 text-center py-8 text-gray-500">
+                              Unable to load week data. Please try again.
+                            </div>
+                          );
+                        }
+                        
+                        return weekData.map((day, index) => (
+                          <div key={index} className="text-center">
+                            <div className={`rounded-xl p-4 border transition-colors ${
+                              day.isAvailable 
+                                ? 'bg-green-50 border-green-200' 
+                                : 'bg-slate-50 border-slate-200'
+                            }`}>
+                              <p className="text-sm font-medium text-slate-600">{day.day}</p>
+                              <p className="text-lg font-semibold text-slate-800 mt-1">{day.date}</p>
+                              <div className="mt-2">
+                                {day.isAvailable ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <p className="text-xs text-green-600 font-medium">Available</p>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                    <p className="text-xs text-gray-500">Not Available</p>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {day.sessions === 0 ? 'No sessions' : `${day.sessions} session${day.sessions > 1 ? 's' : ''}`}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
 
@@ -521,6 +694,15 @@ const Homes = () => {
           isOpen={isEditProfileModalOpen}
           onClose={() => setIsEditProfileModalOpen(false)}
           onProfileUpdate={fetchProfileData}
+        />
+      )}
+
+      {showAvailabilityModal && (
+        <AvailabilityCalendarModal
+          isOpen={showAvailabilityModal}
+          onClose={() => setShowAvailabilityModal(false)}
+          onSave={handleAvailabilitySave}
+          initialAvailability={availability}
         />
       )}
     </div>

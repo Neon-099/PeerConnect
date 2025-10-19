@@ -258,10 +258,10 @@ try {
     foreach ($users as $user) {
         if ($user['role'] === 'tutor' && $user['tutor_profile_id']) {
             $stmt = $db->prepare("
-                SELECT day_of_week, start_time, end_time, is_available 
+                SELECT day_of_week, is_available 
                 FROM tutor_availability 
                 WHERE tutor_id = ? 
-                ORDER BY day_of_week, start_time
+                ORDER BY day_of_week, 
             ");
             $stmt->execute([$user['id']]);
             $tutorAvailability[$user['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -516,8 +516,7 @@ try {
                                                 <?php foreach ($tutorAvailability[$user['id']] as $slot): ?>
                                                     <div class="availability-slot">
                                                         <?php echo ucfirst($slot['day_of_week']); ?><br>
-                                                        <?php echo date('g:i A', strtotime($slot['start_time'])); ?> - 
-                                                        <?php echo date('g:i A', strtotime($slot['end_time'])); ?>
+                                                        <?php echo $slot['date'] ? date('M j, Y', strtotime($slot['date'])) : 'N/A'; ?>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>

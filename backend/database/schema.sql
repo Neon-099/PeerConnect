@@ -130,12 +130,21 @@ CREATE TABLE tutor_profiles (
 
 CREATE TABLE tutor_availability (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tutor_id INT,
-    day_of_week VARCHAR(20),
-    start_time TIME,
-    end_time TIME, 
-    is_available DEFAULT 1,
-    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE  -- Fixed: was "REFERENCE"
+    tutor_id INT NOT NULL,
+    availability_date DATE NULL,  -- New: specific date for availability
+    day_of_week VARCHAR(20) NULL, -- Legacy: day of week (monday, tuesday, etc.)
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    is_available TINYINT(1) DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Indexes for better performance
+    INDEX idx_tutor_date (tutor_id, availability_date),
+    INDEX idx_tutor_day (tutor_id, day_of_week),
+    INDEX idx_availability_date (availability_date),
+    INDEX idx_tutor_available (tutor_id, is_available)
 );
 
 CREATE TABLE tutor_subjects (
