@@ -4,6 +4,14 @@ import { X, Check, XCircle, Calendar as CalendarIcon } from 'lucide-react';
 import 'react-calendar/dist/Calendar.css';
 import './CalendarProfile.css';
 
+// Helper function to get local date string without timezone conversion
+const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailability }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [availability, setAvailability] = useState({});
@@ -17,9 +25,9 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
             const convertedAvailability = {};
             
             initialAvailability.forEach(slot => {
-                // Only handle date-based format - no more day-based fallback
+                // Only handle date-based format
                 if (slot.availability_date) {
-                    const dateStr = slot.availability_date;
+                    const dateStr = slot.availability_date; // This should already be in YYYY-MM-DD format
                     if (!convertedAvailability[dateStr]) {
                         convertedAvailability[dateStr] = {
                             isAvailable: Boolean(slot.is_available),
@@ -34,15 +42,15 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
                         });
                     }
                 }
-                // Remove the day_of_week fallback completely
             });
             
+            console.log('Converted availability from backend:', convertedAvailability);
             setAvailability(convertedAvailability);
         }
     }, [initialAvailability]);
 
     const getTileClassName = ({ date, view }) => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date); // Use local date instead of UTC
         const dayAvailability = availability[dateStr];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -61,7 +69,7 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
     };
 
     const handleDateClick = (date) => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date); // Use local date instead of UTC
         setSelectedDate(date);
         
         // Only allow current and future dates
@@ -108,15 +116,15 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
             if (data.isAvailable) {
                 // Parse the date string to get the day of week for backward compatibility
                 const [year, month, day] = dateStr.split('-').map(Number);
-                const date = new Date(year, month - 1, day);
+                const date = new Date(year, month - 1, day); // Create date in local timezone
                 const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
                 
                 // Add time slots for this date
                 if (data.timeSlots && data.timeSlots.length > 0) {
                     data.timeSlots.forEach(slot => {
                         backendFormat.push({
-                            date: dateStr,  // This is the actual date
-                            day_of_week: dayOfWeek, // This is just for backward compatibility
+                            date: dateStr,  // This is the local date string
+                            day_of_week: dayOfWeek,
                             start_time: slot.start_time + ':00',
                             end_time: slot.end_time + ':00',
                             is_available: true
@@ -125,8 +133,8 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
                 } else {
                     // Default time slot
                     backendFormat.push({
-                        date: dateStr,  // This is the actual date
-                        day_of_week: dayOfWeek, // This is just for backward compatibility
+                        date: dateStr,  // This is the local date string
+                        day_of_week: dayOfWeek,
                         start_time: '09:00:00',
                         end_time: '17:00:00',
                         is_available: true
@@ -143,7 +151,7 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
     };
 
     const renderTileContent = ({ date }) => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(date); // Use local date instead of UTC
         const dayAvailability = availability[dateStr];
         const today = new Date();
         today.setHours(0, 0, 0, 0);

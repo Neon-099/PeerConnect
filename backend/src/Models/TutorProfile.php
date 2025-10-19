@@ -7,6 +7,7 @@ use PDO;
 use Exception;
 use App\Utils\Logger;
 use DateTime;
+use DateTimeZone;
 
 class TutorProfile {
     private $db;
@@ -62,8 +63,16 @@ class TutorProfile {
             }
 
             // Insert availability
-            if(isset($data['availability']) && !empty($data['availability'])) {
-                $this->insertAvailability($userId, $data['availability']);
+            // Insert availability - with proper error handling
+            if(!empty($data['availability'])) {
+                $availabilityResult = $this->insertAvailability($userId, $data['availability']);
+                if (!$availabilityResult) {
+                    Logger::error('Failed to insert availability during profile creation', [
+                        'user_id' => $userId,
+                        'availability_data' => $data['availability']
+                    ]);
+                    throw new Exception("Failed to create availability");
+                }
             }
             
             return $profileId;
@@ -337,7 +346,7 @@ class TutorProfile {
         $this->insertTeachingStyles($userId, $teachingStyles);
     }
 
-    // UPDATE AVAILABILITY - Only handle date-based availability
+    // UPDATE AVAILABILITY - Ensure dates are stored correctly
     private function updateAvailability(int $tutorId, array $availabilityData): bool {
         try {
             Logger::info('Updating availability', [
@@ -373,15 +382,27 @@ class TutorProfile {
             
             foreach ($availabilityData as $index => $slot) {
                 try {
+                    // Validate and format the date
+                    $dateStr = $slot['date'];
+                    
+                    // Validate date format (YYYY-MM-DD)
+                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr)) {
+                        Logger::error('Invalid date format', [
+                            'tutor_id' => $tutorId,
+                            'date' => $dateStr
+                        ]);
+                        continue;
+                    }
+                    
                     // Convert date to day of week for backward compatibility
-                    $date = new DateTime($slot['date']);
+                    $date = new DateTime($dateStr . ' 00:00:00', new DateTimeZone('Asia/Manila')); // Use Philippine timezone
                     $dayOfWeek = strtolower($date->format('l')); // Monday, Tuesday, etc.
                     
                     $insertResult = $insertStmt->execute([
                         ':tutor_id' => $tutorId,
-                        ':availability_date' => $slot['date'], // This is the actual date
+                        ':availability_date' => $dateStr, // Store as-is (YYYY-MM-DD)
                         ':is_available' => (bool)$slot['is_available'],
-                        ':day_of_week' => $dayOfWeek // This is just for reference
+                        ':day_of_week' => $dayOfWeek
                     ]);
                     
                     if (!$insertResult) {
@@ -397,7 +418,7 @@ class TutorProfile {
                     Logger::info('Successfully inserted availability slot', [
                         'tutor_id' => $tutorId,
                         'slot_index' => $index,
-                        'date' => $slot['date'],
+                        'date' => $dateStr,
                         'day_of_week' => $dayOfWeek,
                         'is_available' => (bool)$slot['is_available']
                     ]);

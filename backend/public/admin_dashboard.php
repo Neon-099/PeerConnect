@@ -258,10 +258,12 @@ try {
     foreach ($users as $user) {
         if ($user['role'] === 'tutor' && $user['tutor_profile_id']) {
             $stmt = $db->prepare("
-                SELECT day_of_week, is_available 
+                SELECT availability_date, is_available, day_of_week 
                 FROM tutor_availability 
                 WHERE tutor_id = ? 
-                ORDER BY day_of_week, 
+                AND availability_date IS NOT NULL
+                ORDER BY availability_date DESC
+                LIMIT 10
             ");
             $stmt->execute([$user['id']]);
             $tutorAvailability[$user['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -291,13 +293,17 @@ try {
     $stmt = $db->query("SELECT COUNT(*) as total FROM users u LEFT JOIN student_profiles sp ON u.id = sp.user_id LEFT JOIN tutor_profiles tp ON u.id = tp.user_id WHERE sp.id IS NOT NULL OR tp.id IS NOT NULL");
     $stats['users_with_profiles'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     
-    // Tutors with availability
-    $stmt = $db->query("SELECT COUNT(DISTINCT tutor_id) as total FROM tutor_availability");
+    // Tutors with availability (date-based)
+    $stmt = $db->query("SELECT COUNT(DISTINCT tutor_id) as total FROM tutor_availability WHERE availability_date IS NOT NULL");
     $stats['tutors_with_availability'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
-    // Total availability slots
-    $stmt = $db->query("SELECT COUNT(*) as total FROM tutor_availability");
+
+    // Total availability slots (date-based)
+    $stmt = $db->query("SELECT COUNT(*) as total FROM tutor_availability WHERE availability_date IS NOT NULL");
     $stats['total_availability_slots'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+    // Add new statistics
+    $stmt = $db->query("SELECT COUNT(DISTINCT DATE(availability_date)) as total FROM tutor_availability WHERE availability_date IS NOT NULL");
+    $stats['unique_available_dates'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     
 } catch (Exception $e) {
     $users = [];
@@ -309,7 +315,8 @@ try {
         'verified_users' => 0,
         'users_with_profiles' => 0,
         'tutors_with_availability' => 0,
-        'total_availability_slots' => 0
+        'total_availability_slots' => 0,
+        'unique_available_dates' => 0
     ];
     $error = $e->getMessage();
 }
@@ -515,8 +522,11 @@ try {
                                             <div class="max-w-xs">
                                                 <?php foreach ($tutorAvailability[$user['id']] as $slot): ?>
                                                     <div class="availability-slot">
-                                                        <?php echo ucfirst($slot['day_of_week']); ?><br>
-                                                        <?php echo $slot['date'] ? date('M j, Y', strtotime($slot['date'])) : 'N/A'; ?>
+                                                        <div class="font-semibold"><?php echo ucfirst($slot['day_of_week']); ?></div>
+                                                        <div class="text-xs"><?php echo date('M j, Y', strtotime($slot['availability_date'])); ?></div>
+                                                        <div class="text-xs <?php echo $slot['is_available'] ? 'text-green-600' : 'text-red-600'; ?>">
+                                                            <?php echo $slot['is_available'] ? 'Available' : 'Unavailable'; ?>
+                                                        </div>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>

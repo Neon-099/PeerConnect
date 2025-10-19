@@ -133,8 +133,6 @@ CREATE TABLE tutor_availability (
     tutor_id INT NOT NULL,
     availability_date DATE NULL,  -- New: specific date for availability
     day_of_week VARCHAR(20) NULL, -- Legacy: day of week (monday, tuesday, etc.)
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
     is_available TINYINT(1) DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

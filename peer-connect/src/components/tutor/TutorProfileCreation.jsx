@@ -331,20 +331,17 @@ const TutorProfileCreation = () => {
         // Convert availability format for backend (convert date-based to day-based with time slots)
         const availabilityForBackend = [];
         Object.entries(formData.availability).forEach(([dateStr, data]) => {
-          if (data.isAvailable && data.timeSlots) {
+          if (data.isAvailable) {
             // Parse the date string to get the day of week
             const [year, month, day] = dateStr.split('-').map(Number);
             const date = new Date(year, month - 1, day);
             const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
             
-            // Add each time slot for the day
-            data.timeSlots.forEach(slot => {
-              availabilityForBackend.push({
-                day_of_week: dayOfWeek,
-                start_time: slot.start_time + ':00', // Add seconds
-                end_time: slot.end_time + ':00',     // Add seconds
-                is_available: 1
-              });
+            // Send in the new date-based format
+            availabilityForBackend.push({
+              date: dateStr,  // This is the actual date
+              day_of_week: dayOfWeek, // For backward compatibility
+              is_available: true
             });
           }
         });
