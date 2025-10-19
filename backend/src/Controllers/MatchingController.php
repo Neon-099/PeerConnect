@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\middleware\AuthMiddleware;
 use App\Services\MatchingService;
 use App\Utils\Response;
 use App\Utils\Logger;
@@ -9,9 +10,11 @@ use Exception;
 
 class MatchingController {
     private $matchingService;
+    private $authMiddleware;
 
     public function __construct() {
         $this->matchingService = new MatchingService();
+        $this->authMiddleware = new AuthMiddleware();
     }
 
     /**
@@ -19,7 +22,8 @@ class MatchingController {
      */
     public function findTutorsForStudent() {
         try {
-            $userId = $_SESSION['user_id'] ?? null;
+            $user = $this->authMiddleware->requireAuth(); //USE 
+            $userId = $user['user_id'];
             if (!$userId) {
                 return Response::error('Authentication required', 401);
             }
@@ -53,7 +57,8 @@ class MatchingController {
      */
     public function findStudentsForTutor() {
         try {
-            $userId = $_SESSION['user_id'] ?? null;
+            $user = $this->authMiddleware->requireAuth();  //USE AUTH MIDDLEWARE TO GET USER ID
+            $userId = $user['user_id'];      //GET FROM AUTH MIDDLEWARE (stored the validated user id)
             if (!$userId) {
                 return Response::error('Authentication required', 401);
             }

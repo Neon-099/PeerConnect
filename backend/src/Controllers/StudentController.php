@@ -259,6 +259,12 @@ class StudentController {
 
             $input = $this->getJsonInput();
 
+            Logger::info('Raw JSON input received', [
+                'raw_input' => file_get_contents('php://input'),
+                'parsed_input' => $input,
+                'user_id' => $user['user_id']
+            ]);
+
             if(!$input) {
                 Response::error('No data provided', 400);
                 return;
@@ -441,7 +447,7 @@ class StudentController {
        //GET /api/student/tutors/{id}
     public function getTutorDetails(int $tutorId): void {
         try {
-            $user = $this -> authMiddleware->requireAuth();
+            $user =  $this->authMiddleware->requireAuth();
 
             if(!RoleMiddleware::studentOnly($user)){
                 return;

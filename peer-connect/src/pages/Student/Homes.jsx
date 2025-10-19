@@ -71,17 +71,12 @@ const Homes = () =>  {
 
 
   const getProfilePictureUrl = (profilePicture) => {
-    console.log('Profile picture received:', profilePicture);
-    console.log('Profile picture type:', typeof profilePicture);
-    console.log('Profile picture length:', profilePicture?.length);
-    
     if(!profilePicture) {
       console.log('No profile picture, using default');
       return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
     }
   
     if(profilePicture.startsWith('http')){
-      console.log('Profile picture is already a full URL:', profilePicture);
       return profilePicture;
     }
   

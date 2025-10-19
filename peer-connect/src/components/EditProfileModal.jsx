@@ -8,7 +8,6 @@ const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    school: '',
     preferred_learning_style: '',
     academic_level: '',
     bio: '',
@@ -60,7 +59,6 @@ const [formData, setFormData] = useState({
           firstName: profileData.first_name || '', 
           lastName: profileData.last_name || '',
           email: profileData.email || '',
-          school: profileData.school || '',
           campus_location: profileData.campus_location || '',
           preferred_learning_style: profileData.preferred_learning_style || '',
           academic_level: profileData.academic_level || '',
@@ -86,7 +84,6 @@ const [formData, setFormData] = useState({
           firstName: '',
           lastName: '',
           email: '',
-          school: '',
           campus_location: '',
           academic_level: '',
           preferred_learning_style: '',
@@ -103,11 +100,11 @@ const [formData, setFormData] = useState({
     const newErrors = {};
     
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'Full name is required';
+      newErrors.firstName = 'First name is required';
     }
     
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Full name is required';
+      newErrors.lastName = 'Last name is required';
     }
     
     if (!formData.email.trim()) {
@@ -116,16 +113,12 @@ const [formData, setFormData] = useState({
       newErrors.email = 'Email is invalid';
     }
     
-    if (!formData.school.trim()) {
-      newErrors.school = 'school is required';
-    }
-
     if(!formData.preferred_learning_style){
       newErrors.preferred_learning_style = 'Preferred learning style is required';
     }
     
     if (!formData.academic_level.trim()) {
-      newErrors.academic_level = 'Graduation year is required';
+      newErrors.academic_level = 'Academic level is required';
     }
 
     if(!formData.subjects_of_interest.length) {
@@ -183,7 +176,7 @@ const [formData, setFormData] = useState({
 
   const handleSave = async() => {
     if (!validateForm()) {
-      console.log('Saving profile:', formData);
+      console.log('Validation failed:', errors);
       return;
     }
 
@@ -195,7 +188,6 @@ const [formData, setFormData] = useState({
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
-      school: formData.school,
       campus_location: formData.campus_location,
       academic_level: formData.academic_level,
       preferred_learning_style: formData.preferred_learning_style,
@@ -203,13 +195,16 @@ const [formData, setFormData] = useState({
       subjects_of_interest: formData.subjects_of_interest
     };
 
+    console.log('Sending update data:', updateData);
+
     //UPDATE PROFILE 
     const updatedProfile = await apiClient.put('/api/student/updateProfile', updateData);
+    console.log('Profile updated successfully:', updatedProfile);
 
-    //HANDLE PROFILE PICTURE UPLOAD IF SELECTED
+    // Handle profile picture upload if selected
     if(profilePicture) {
       try {
-        const formDataForUpload = new FormData();//INSTANTIATE FORM DATA OBJECT
+        const formDataForUpload = new FormData();
         formDataForUpload.append('profile_picture', profilePicture);
         console.log('Uploading profile picture...', profilePicture);
 
@@ -233,11 +228,13 @@ const [formData, setFormData] = useState({
     if(onProfileUpdate) {
       onProfileUpdate(updatedProfile);
     }
+    
+    alert('Profile updated successfully!');
     onClose();
   }
   catch(error) {
     console.error('Error saving profile', error);
-    alert('Failed to save profile. Please try again');
+    alert(`Failed to save profile: ${error.message}`);
   }
   finally {
     setIsLoading(false);

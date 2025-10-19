@@ -12,8 +12,8 @@
     
         'jwt' => [
             'secret' => $_ENV['JWT_SECRET'] ?? '',
-            'access_expires' => $_ENV['JWT_ACCESS_EXPIRES'] ?? 3600, //1 HOUR
-            'refresh_expires' => $_ENV['JWT_REFRESH_EXPIRES'] ?? 604800, //1 WEEK
+            'access_expires' => $_ENV['JWT_ACCESS_EXPIRES'] ?? 86400, //24 HOUR
+            'refresh_expires' => $_ENV['JWT_REFRESH_EXPIRES'] ?? 259200, //3 DAYS
             'algorithm' => 'HS256',
         ],
 
