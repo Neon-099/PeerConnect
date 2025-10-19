@@ -24,6 +24,8 @@ class MatchingController {
                 return Response::error('Authentication required', 401);
             }
 
+            Logger::info("Finding tutors for student: $userId");
+
             $filters = [
                 'min_rate' => $_GET['min_rate'] ?? null,
                 'max_rate' => $_GET['max_rate'] ?? null,
@@ -41,7 +43,8 @@ class MatchingController {
 
         } catch (Exception $e) {
             Logger::error("Error finding tutors for student: " . $e->getMessage());
-            return Response::error('Failed to find matching tutors', 500);
+            Logger::error("Stack trace: " . $e->getTraceAsString());
+            return Response::error('Failed to find matching tutors: ' . $e->getMessage(), 500);
         }
     }
 
@@ -55,6 +58,8 @@ class MatchingController {
                 return Response::error('Authentication required', 401);
             }
 
+            Logger::info("Finding students for tutor: $userId");
+
             $matches = $this->matchingService->findMatchingStudents($userId);
             
             Logger::info("Found " . count($matches) . " matching students for tutor $userId");
@@ -66,7 +71,8 @@ class MatchingController {
 
         } catch (Exception $e) {
             Logger::error("Error finding students for tutor: " . $e->getMessage());
-            return Response::error('Failed to find matching students', 500);
+            Logger::error("Stack trace: " . $e->getTraceAsString());
+            return Response::error('Failed to find matching students: ' . $e->getMessage(), 500);
         }
     }
 }

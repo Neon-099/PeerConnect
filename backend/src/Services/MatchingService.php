@@ -76,8 +76,8 @@ class MatchingService {
     /**
      * Build matching query for tutors
      */
-    private function buildMatchingQuery(array $student, array $filters): array {
-        $params = [':student_id' => $student['user_id']];
+    private function buildTutorMatchingQuery(array $tutor, array $filters): array {
+        $params = [':tutor_id' => $tutor['user_id']];
         
         $sql = "
             SELECT DISTINCT 
@@ -95,8 +95,8 @@ class MatchingService {
                 ) THEN 1 ELSE 0 END as learning_style_match
             FROM tutor_profiles tp
             JOIN users u ON tp.user_id = u.id
-            JOIN student_profiles sp ON sp.user_id = :student_id
-            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = :student_id
+            JOIN student_profiles sp ON sp.user_id = :tutor_id
+            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = :tutor_id
             LEFT JOIN tutor_availability ta ON ta.tutor_id = tp.user_id
             WHERE tp.campus_location = sp.campus_location
               AND tp.profile_completed = 1
@@ -134,43 +134,60 @@ class MatchingService {
     /**
      * Build matching query for students
      */
-    private function buildStudentMatchingQuery(array $tutor, array $filters): array {
-        $params = [':tutor_id' => $tutor['user_id']];
+    private function buildStudentMatchingQuery(array $student, array $filters): array {
+        $params = [':student_id' => $student['user_id']];
         
         $sql = "
             SELECT DISTINCT 
-                sp.*, 
+                tp.*, 
                 u.first_name, 
                 u.last_name, 
                 u.email, 
                 u.profile_picture,
                 COUNT(DISTINCT CASE WHEN ssoi.subject IN (
-                    SELECT subject FROM tutor_specializations WHERE tutor_id = :tutor_id
+                    SELECT subject FROM tutor_specializations WHERE tutor_id = tp.user_id
                 ) THEN ssoi.subject END) as subject_matches,
                 COUNT(DISTINCT ta.id) as available_slots,
                 CASE WHEN sp.preferred_learning_style IN (
-                    SELECT teaching_style FROM tutor_teaching_styles WHERE tutor_id = :tutor_id
+                    SELECT teaching_style FROM tutor_teaching_styles WHERE tutor_id = tp.user_id
                 ) THEN 1 ELSE 0 END as learning_style_match
-            FROM student_profiles sp
-            JOIN users u ON sp.user_id = u.id
-            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = sp.user_id
-            JOIN tutor_profiles tp ON tp.user_id = :tutor_id
-            LEFT JOIN tutor_availability ta ON ta.tutor_id = :tutor_id
-            WHERE sp.campus_location = tp.campus_location
-              AND sp.profile_completed = 1
+            FROM tutor_profiles tp
+            JOIN users u ON tp.user_id = u.id
+            JOIN student_profiles sp ON sp.user_id = :student_id
+            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = :student_id
+            LEFT JOIN tutor_availability ta ON ta.tutor_id = tp.user_id
+            WHERE tp.campus_location = sp.campus_location
+              AND tp.profile_completed = 1
+              AND (sp.campus_location IS NOT NULL AND tp.campus_location IS NOT NULL)
+              AND (sp.academic_level IS NOT NULL AND tp.preferred_student_level IS NOT NULL)
               AND (
                   (tp.preferred_student_level = 'shs' AND sp.academic_level IN ('high_school', 'shs'))
                   OR 
                   (tp.preferred_student_level = 'college' AND sp.academic_level IN ('undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior'))
               )
         ";
-
+    
+        // Add additional filters
+        if (!empty($filters['min_rate'])) {
+            $sql .= " AND tp.hourly_rate >= :min_rate";
+            $params[':min_rate'] = $filters['min_rate'];
+        }
+        
+        if (!empty($filters['max_rate'])) {
+            $sql .= " AND tp.hourly_rate <= :max_rate";
+            $params[':max_rate'] = $filters['max_rate'];
+        }
+        
+        if (!empty($filters['verified_only'])) {
+            $sql .= " AND tp.is_verified_tutor = 1";
+        }
+    
         $sql .= "
-            GROUP BY sp.id
+            GROUP BY tp.id
             HAVING subject_matches >= 1
-            ORDER BY subject_matches DESC, learning_style_match DESC, available_slots DESC
+            ORDER BY subject_matches DESC, learning_style_match DESC, available_slots DESC, tp.average_rating DESC
         ";
-
+    
         return ['sql' => $sql, 'params' => $params];
     }
 

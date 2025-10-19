@@ -89,7 +89,8 @@ const StudentAuthForm = () => {
             //CHECK USER PROFILE AFTER SUCCESSFUL LOGIN
             const profile = await checkUserProfile();
             console.log('Check if profile exists', profile)
-            if(profile) {
+            if(profile) { 
+                alert('Account logged in successfully!');
                 navigate('/student/home');
             }
             else {
@@ -97,7 +98,7 @@ const StudentAuthForm = () => {
                 console.log('Form submitted:', formData, );
             
             } 
-            alert('Account logged in successfully!');
+           
 
 
             //RESET ATTEMPT TRACKING ON SUCCESSFUL LOGIN

@@ -72,8 +72,8 @@ class StudentController {
             }
     
             $profileData = [
-                'school' => $input['school'] ?? null,
                 'bio' => $input['bio'] ?? null,
+                'campus_location' => $input['campus_location'] ?? null,
                 'subjects_of_interest' => json_decode($input['subjects_of_interest'] ?? '[]', true ),
                 'academic_level' => $input['academic_level'] ?? null,
                 'preferred_learning_style' => $input['preferred_learning_style'] ?? null,

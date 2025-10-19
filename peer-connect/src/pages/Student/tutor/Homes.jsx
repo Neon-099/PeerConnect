@@ -5,6 +5,8 @@ import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle,
     ChevronUp, ChevronDown, Book, RotateCcw, DollarSign, Clock, MapPin, 
     Video, UserCheck, BarChart3, Settings, Plus, GraduationCap, Eye, 
     Target, Zap, Award, BookOpen, Timer} from 'lucide-react';
+
+import TutorProfilePage from './TutorProfilePage.jsx';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal.jsx';
 import MatchingResults from '../../../components/MatchingResults.jsx';
 import { auth } from '../../../utils/auth';
@@ -266,235 +268,16 @@ const Homes = () => {
           </div>
         </div>
 
-        {/* Profile Section */}
-        {activeTab === 'profile' && (
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 overflow-auto p-8">
-              <div className="max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h1 className="text-3xl font-semibold text-slate-800">Tutor Profile</h1>
-                    <p className="text-slate-600 mt-1">Manage your information and teaching preferences</p>
-                  </div>
-                  <button
-                    onClick={() => setIsEditProfileModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Profile
-                  </button>
-                </div>
-
-                {isLoading ? (
-                  <div className='h-270 overflow-auto'>
-                    <LoadingSpinner />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Profile Overview */}
-                    <div className="lg:col-span-1">
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                        <div className="text-center">
-                          <img 
-                            src={getProfilePictureUrl(tutorProfile?.profile_picture)} 
-                            alt={tutorProfile?.first_name || 'Tutor'} 
-                            className="w-24 h-24 rounded-2xl object-cover mx-auto mb-4 border-4 border-slate-200"
-                          />
-                          <h2 className="text-2xl font-semibold text-slate-800">
-                            {tutorProfile?.first_name || 'Sarah'} {tutorProfile?.last_name || 'Thompson'}
-                          </h2>
-                          <p className="text-slate-600 mb-2">Tutor</p>
-                          <div className="flex items-center justify-center gap-2 mb-4">
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                            <span className="text-sm font-medium text-slate-700">
-                              {tutorProfile?.average_rating || '4.9'} ({tutorProfile?.total_sessions || '127'} reviews)
-                            </span>
-                          </div>
-                          <div className="space-y-2 text-sm text-slate-600">
-                            <div className="flex items-center justify-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{tutorProfile?.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'}</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <GraduationCap className="w-4 h-4" />
-                              <span>{tutorProfile?.highest_education || 'Bachelor\'s Degree'}</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>{tutorProfile?.years_experience || '3'} years experience</span>
-                            </div>
-                            <div className="flex items-center justify-center gap-2">
-                              <DollarSign className="w-4 h-4" />
-                              <span>₱{tutorProfile?.hourly_rate || '45'}/hour</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Quick Stats */}
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200 mt-6">
-                        <h3 className="font-semibold text-slate-800 mb-4">Quick Stats</h3>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Total Sessions</span>
-                            <span className="font-semibold text-slate-800">{tutorProfile?.total_sessions || '247'}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Students Helped</span>
-                            <span className="font-semibold text-slate-800">89</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Success Rate</span>
-                            <span className="font-semibold text-green-600">96%</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-600">Response Time</span>
-                            <span className="font-semibold text-slate-800">2.3 hrs</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Profile Details */}
-                    <div className="lg:col-span-2 space-y-6">
-                      {/* Personal Information */}
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                        <h3 className="text-xl font-semibold text-slate-800 mb-4">Personal Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">First Name</label>
-                            <p className="text-slate-800">{tutorProfile?.first_name || 'Sarah'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Last Name</label>
-                            <p className="text-slate-800">{tutorProfile?.last_name || 'Thompson'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                            <p className="text-slate-800">{userProfile?.email || 'sarah.thompson@email.com'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Gender</label>
-                            <p className="text-slate-800 capitalize">{tutorProfile?.gender || 'Female'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Campus Location</label>
-                            <p className="text-slate-800">{tutorProfile?.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                            <p className="text-slate-800">{userProfile?.phone || '+1 (555) 123-4567'}</p>
-                          </div>
-                        </div>
-                        <div className="mt-6">
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Bio</label>
-                          <p className="text-slate-800 leading-relaxed">
-                            {tutorProfile?.bio || 'Experienced tutor with a passion for helping students achieve their academic goals. Specializing in mathematics and science subjects with a patient and encouraging teaching approach.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Academic Qualifications */}
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                        <h3 className="text-xl font-semibold text-slate-800 mb-4">Academic Qualifications</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Highest Education</label>
-                            <p className="text-slate-800">{tutorProfile?.highest_education || 'Bachelor\'s Degree in Mathematics'}</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Years of Experience</label>
-                            <p className="text-slate-800">{tutorProfile?.years_experience || '3'} years</p>
-                          </div>
-                        </div>
-                        <div className="mt-6">
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Specializations</label>
-                          <div className="flex flex-wrap gap-2">
-                            {(tutorProfile?.specializations || ['Mathematics', 'Physics', 'Chemistry']).map((spec, index) => (
-                              <span key={index} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                                {spec}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Teaching Preferences */}
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                        <h3 className="text-xl font-semibold text-slate-800 mb-4">Teaching Preferences</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Hourly Rate</label>
-                            <p className="text-2xl font-bold text-green-600">₱{tutorProfile?.hourly_rate || '45'}/hour</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Preferred Student Level</label>
-                            <p className="text-slate-800">{tutorProfile?.preferred_student_level === 'shs' ? 'Senior High School' : 'College'}</p>
-                          </div>
-                        </div>
-                        <div className="mt-6">
-                          <label className="block text-sm font-medium text-slate-700 mb-2">Teaching Styles</label>
-                          <div className="flex flex-wrap gap-2">
-                            {(tutorProfile?.teaching_styles || ['Visual Learning', 'Interactive', 'Step-by-step']).map((style, index) => (
-                              <span key={index} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                                {style}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Availability - Updated with Real Data */}
-                      <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-semibold text-slate-800">Availability</h3>
-                          <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors">
-                            <Calendar className="w-4 h-4" />
-                            Update Availability
-                          </button>
-                        </div>
-                        
-                        {tutorProfile?.availability && tutorProfile.availability.length > 0 ? (
-                          <div className="space-y-3">
-                            {tutorProfile.availability.map((slot, index) => (
-                              <div key={index} className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
-                                <div className="flex items-center gap-3">
-                                  <Calendar className="w-5 h-5 text-blue-600" />
-                                  <div>
-                                    <h4 className="font-medium text-slate-800">
-                                      {slot.day.charAt(0).toUpperCase() + slot.day.slice(1)}
-                                    </h4>
-                                    <p className="text-sm text-slate-600">
-                                      {slot.start_time} - {slot.end_time}
-                                    </p>
-                                  </div>
-                                </div>
-                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                                  Available
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 bg-slate-50 rounded-lg">
-                            <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-600">No availability set</p>
-                            <p className="text-sm text-slate-500 mt-1">Set your availability to start receiving students</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="h-16 bg-white border-t border-slate-200 flex items-center justify-end px-8">
-              <Footer />
-            </div>
-          </div>
+         {/* Profile Section */}
+         {activeTab === 'profile' && (
+          <TutorProfilePage 
+            tutorProfile={tutorProfile}
+            userProfile={userProfile}
+            getProfilePictureUrl={getProfilePictureUrl}
+            onProfileUpdate={fetchProfileData}
+          />
         )}
-
+        
         {/* Home Section */}
         {activeTab === 'home' && (
           <div className="flex-1 flex flex-col">

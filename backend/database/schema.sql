@@ -83,6 +83,7 @@ CREATE TABLE student_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
     school VARCHAR(255) NULL,
+    campus_location ENUM('main_campus', 'pucu') NULL,
     bio TEXT NULL,
     academic_level ENUM('high_school', 'undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior', 'graduate', 'phd') NULL,
     preferred_learning_style ENUM('visual', 'auditory', 'kinesthetic', 'reading_writing', 'mixed') NULL,
@@ -103,18 +104,6 @@ CREATE TABLE student_subjects_of_interest (
     INDEX idx_user_subject (user_id, subject)
 );
 
--- Create student availability table (similar to tutor_availability)
-CREATE TABLE student_availability (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id INT NOT NULL,
-    available_day VARCHAR(20) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_student_day (student_id, available_day)
-);
 
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
@@ -142,9 +131,10 @@ CREATE TABLE tutor_profiles (
 CREATE TABLE tutor_availability (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT,
-    available_day VARCHAR(20),
+    day_of_week VARCHAR(20),
     start_time TIME,
     end_time TIME, 
+    is_available DEFAULT 1,
     FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE  -- Fixed: was "REFERENCE"
 );
 

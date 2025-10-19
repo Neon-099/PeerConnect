@@ -21,6 +21,11 @@ const [formData, setFormData] = useState({
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
 
+
+  const campusOptions = [
+    { label: 'Main Campus', value: 'main_campus' },
+    { label: 'PUCU', value: 'pucu' }
+  ];
   const learningStyles = [
     { label: 'Visual Learner', value: 'visual' },
     { label: 'Auditory Learner', value: 'auditory' },
@@ -56,6 +61,7 @@ const [formData, setFormData] = useState({
           lastName: profileData.last_name || '',
           email: profileData.email || '',
           school: profileData.school || '',
+          campus_location: profileData.campus_location || '',
           preferred_learning_style: profileData.preferred_learning_style || '',
           academic_level: profileData.academic_level || '',
           bio: profileData.bio || '',
@@ -81,6 +87,7 @@ const [formData, setFormData] = useState({
           lastName: '',
           email: '',
           school: '',
+          campus_location: '',
           academic_level: '',
           preferred_learning_style: '',
           bio: '',
@@ -183,12 +190,13 @@ const [formData, setFormData] = useState({
     try {
       setIsLoading(true);
 
-    //PREPARE DATA FOR API
+    //PREPARE DATA FOR API REQUEST UPDATE
     const updateData = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       email: formData.email,
       school: formData.school,
+      campus_location: formData.campus_location,
       academic_level: formData.academic_level,
       preferred_learning_style: formData.preferred_learning_style,
       bio: formData.bio,
@@ -336,22 +344,26 @@ const [formData, setFormData] = useState({
                   <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                 )}
               </div>
-              {/* School */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">School </label>
-                <input
-                  type="text"
-                  value={formData.school}
-                  onChange={(e) => handleInputChange('school', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                    errors.school ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.school && (
-                  <p className="mt-1 text-sm text-red-600">{errors.school}</p>
-                )}
-              </div>
-
+              {/* Campus Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Campus Location </label>
+                  <select 
+                    type="text"
+                    value={formData.campus_location}
+                    onChange={(e) => handleInputChange('campus_location', e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                      errors.campus_location ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">Select your campus location</option>
+                    {campusOptions.map((campus) => (
+                      <option key={campus.value} value={campus.value} >{campus.label}</option>
+                    ) )}
+                  </select>
+                  {errors.campus_location && (
+                    <p className="mt-1 text-sm text-red-600">{errors.campus_location}</p>
+                  )}
+                </div>
 
               {/* Learning Style & Academic Level*/}
               <div className="grid grid-cols-2 gap-4">

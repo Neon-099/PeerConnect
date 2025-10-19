@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle, 
     Mail, Bell, Star, Edit, TrendingUp, Shield, Key, LogOut, MessageSquare,
-    ChevronUp, ChevronDown, Book, RotateCcw} from 'lucide-react';
+    ChevronUp, ChevronDown, Book, RotateCcw, MapPin} from 'lucide-react';
 import EditProfileModal from '../../components/EditProfileModal';
 import { auth } from '../../utils/auth';
 import {apiClient} from '../../utils/api';
@@ -480,8 +480,8 @@ const Homes = () =>  {
                          {userProfile?.first_name} {userProfile?.last_name}
                       </h2>
                       <p className="text-sm text-gray-600">{userProfile?.email}</p>
-                      {studentProfile?.school && (
-                        <p className="text-sm text-gray-600">{studentProfile?.school}</p>
+                      {studentProfile?.campus_location && (   
+                        <p className="text-sm text-gray-600 flex">{studentProfile?.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'} <MapPin className="w-4 h-4 text-gray-400" /></p>
                       )}
                     </div>
                     
@@ -493,9 +493,35 @@ const Homes = () =>  {
                       Edit Profile
                     </button>
 
-                    <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
+                  </div>
 
-                    {/* Academic Level */}
+                  {/* Security Section */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 mt-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Shield className="w-5 h-5 text-gray-400" />
+                      <p className="text-sm text-gray-600">Keep your account secure and up to date</p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-50 text-teal-700 rounded-lg font-medium hover:bg-teal-100">
+                        <Key className="w-4 h-4" />
+                        Change Password
+                      </button>
+                      
+                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600"
+                        onClick={handleLogout}>
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Details */}
+                  <div className="flex-1">
+                    <div className="bg-white rounded-xl p-8 border border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
+                      {/* Academic Level */}
                     {studentProfile?.academic_level && (
                       <div className="mb-6">
                         <h3 className="text-sm font-semibold text-gray-700 mb-2">Academic Level</h3>
@@ -538,78 +564,7 @@ const Homes = () =>  {
                         <h3 className="text-sm font-semibold text-gray-700 mb-2">Bio</h3>
                         <p className="text-sm text-gray-600 leading-relaxed">{studentProfile.bio}</p>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Security Section */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 mt-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Shield className="w-5 h-5 text-gray-400" />
-                      <p className="text-sm text-gray-600">Keep your account secure and up to date</p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-50 text-teal-700 rounded-lg font-medium hover:bg-teal-100">
-                        <Key className="w-4 h-4" />
-                        Change Password
-                      </button>
-                      
-                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600"
-                        onClick={handleLogout}>
-                        <LogOut className="w-4 h-4" />
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column - Details */}
-                  <div className="flex-1">
-                    <div className="bg-white rounded-xl p-8 border border-gray-200">
-                      <h2 className="text-xl font-semibold text-gray-800 mb-6">Details</h2>
-                    {/* Upcoming Tutoring Sessions */}
-                    <div className="mb-8">
-                      <h3 className="text-sm font-semibold text-gray-700 mb-4">Upcoming tutoring sessions</h3>
-                      <div className="space-y-3">
-                        {upcomingSessions.map((session) => (
-                          <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Calendar className="w-5 h-5 text-gray-400" />
-                              <div>
-                                <h4 className="font-semibold text-gray-800">{session.title}</h4>
-                                <p className="text-sm text-gray-600">{session.date}</p>
-                              </div>
-                            </div>
-                            <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-                              session.status === 'Confirmed' 
-                                ? 'bg-green-600 text-white' 
-                                : 'bg-orange-500 text-white'
-                            }`}>
-                              {session.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Past Sessions & Feedback */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-4">Past sessions & feedback</h3>
-                      <div className="space-y-3">
-                        {pastSessions.map((session) => (
-                          <div key={session.id} className="flex items-start justify-between p-4 border border-gray-200 rounded-lg">
-                            <div className="flex items-start gap-3 flex-1">
-                              <Star className="w-5 h-5 text-gray-400 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-gray-800 mb-1">{session.title}</h4>
-                                <p className="text-sm text-gray-600">{session.feedback}</p>
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-500 whitespace-nowrap ml-4">{session.date}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    )}                    
                   </div>
                 </div>
               </div>

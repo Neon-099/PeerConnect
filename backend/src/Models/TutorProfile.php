@@ -5,6 +5,7 @@ namespace App\Models;
 use Config\Database;
 use PDO;
 use Exception;
+use App\Utils\Logger;
 
 class TutorProfile {
     private $db;
@@ -97,38 +98,120 @@ class TutorProfile {
     }
 
     // GET AVAILABILITY
-    private function getAvailability(int $userId): array {
-        $query = "SELECT available_day as day_of_week, start_time, end_time 
-                  FROM {$this->availabilityTable} 
-                  WHERE tutor_id = :tutor_id 
-                  ORDER BY available_day, start_time";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':tutor_id' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    // CREATE AVAILABILITY
-    public function createAvailability(int $tutorId, array $availabilityData): bool {
+    public function getAvailability(int $tutorId): array {
         try {
-            // Delete existing availability first
+            // First try to get date-based availability
+            $query = "SELECT availability_date, start_time, end_time, is_available, day_of_week 
+                      FROM {$this->availabilityTable} 
+                      WHERE tutor_id = :tutor_id 
+                      AND availability_date IS NOT NULL
+                      ORDER BY availability_date, start_time";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':tutor_id' => $tutorId]);
+            $dateBasedAvailability = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (!empty($dateBasedAvailability)) {
+                return $dateBasedAvailability;
+            }
+            
+            // Fallback to day-based availability for backward compatibility
+            $query = "SELECT day_of_week, start_time, end_time, is_available 
+                      FROM {$this->availabilityTable} 
+                      WHERE tutor_id = :tutor_id 
+                      AND day_of_week IS NOT NULL
+                      ORDER BY day_of_week, start_time";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':tutor_id' => $tutorId]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            Logger::error('Get availability error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $tutorId
+            ]);
+            return [];
+        }
+    }
+    public function getAvailabilityByDateRange(int $tutorId, string $startDate, string $endDate): array {
+        try {
+            $query = "SELECT availability_date, start_time, end_time, is_available 
+                      FROM {$this->availabilityTable} 
+                      WHERE tutor_id = :tutor_id 
+                      AND availability_date BETWEEN :start_date AND :end_date
+                      ORDER BY availability_date, start_time";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([
+                ':tutor_id' => $tutorId,
+                ':start_date' => $startDate,
+                ':end_date' => $endDate
+            ]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            Logger::error('Get availability by date range error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $tutorId
+            ]);
+            return [];
+        }
+    }
+    // CREATE AVAILABILITY
+    private function createAvailability(int $tutorId, array $availabilityData): bool {
+        try {
+            // Clear existing availability for this tutor
             $deleteQuery = "DELETE FROM {$this->availabilityTable} WHERE tutor_id = :tutor_id";
             $deleteStmt = $this->db->prepare($deleteQuery);
             $deleteStmt->execute([':tutor_id' => $tutorId]);
     
-            // Insert new availability
-            $insertQuery = "INSERT INTO {$this->availabilityTable} 
-                           (tutor_id, available_day, start_time, end_time) 
-                           VALUES (:tutor_id, :available_day, :start_time, :end_time)";
+            if (empty($availabilityData)) {
+                return true;
+            }
+    
+            // Check if the data is in the new date-based format
+            $isDateBased = isset($availabilityData[0]['date']) && !isset($availabilityData[0]['day_of_week']);
             
-            $insertStmt = $this->db->prepare($insertQuery);
-            
-            foreach ($availabilityData as $slot) {
-                $insertStmt->execute([
-                    ':tutor_id' => $tutorId,
-                    ':available_day' => $slot['day_of_week'],  // ✅ Use correct field name
-                    ':start_time' => $slot['start_time'],
-                    ':end_time' => $slot['end_time']
-                ]);
+            if ($isDateBased) {
+                // Handle date-based format (new format from frontend)
+                $insertQuery = "INSERT INTO {$this->availabilityTable} 
+                               (tutor_id, availability_date, start_time, end_time, is_available, day_of_week) 
+                               VALUES (:tutor_id, :availability_date, :start_time, :end_time, :is_available, :day_of_week)";
+                
+                $insertStmt = $this->db->prepare($insertQuery);
+                
+                foreach ($availabilityData as $slot) {
+                    // Convert date to day of week for backward compatibility
+                    $date = new DateTime($slot['date']);
+                    $dayOfWeek = strtolower($date->format('l')); // Monday, Tuesday, etc.
+                    
+                    $insertStmt->execute([
+                        ':tutor_id' => $tutorId,
+                        ':availability_date' => $slot['date'],
+                        ':start_time' => $slot['start_time'],
+                        ':end_time' => $slot['end_time'],
+                        ':is_available' => $slot['is_available'],
+                        ':day_of_week' => $dayOfWeek
+                    ]);
+                }
+            } else {
+                // Handle day-based format (legacy format)
+                $insertQuery = "INSERT INTO {$this->availabilityTable} 
+                               (tutor_id, day_of_week, start_time, end_time, is_available) 
+                               VALUES (:tutor_id, :day_of_week, :start_time, :end_time, :is_available)";
+                
+                $insertStmt = $this->db->prepare($insertQuery);
+                
+                foreach ($availabilityData as $slot) {
+                    $insertStmt->execute([
+                        ':tutor_id' => $tutorId,
+                        ':day_of_week' => $slot['day_of_week'],
+                        ':start_time' => $slot['start_time'],
+                        ':end_time' => $slot['end_time'],
+                        ':is_available' => $slot['is_available'],
+                    ]);
+                }
             }
             
             return true;

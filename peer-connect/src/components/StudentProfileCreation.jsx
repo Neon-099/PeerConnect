@@ -11,7 +11,6 @@ const StudentProfileCreation = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     // Basic Info
-    school: '',
     bio: '',
     campus_location: '',
     // Academic Info
@@ -135,13 +134,6 @@ const StudentProfileCreation = () => {
     switch (step) {
       case 1:
 
-        if (!formData.school.trim()) {
-         newErrors.school = 'School is required';
-        }
-        else if (formData.school.trim().length < 5) {
-          newErrors.school = `School name must be at least 5 characters long`;
-        }
-
         if(!formData.bio.trim()){
           newErrors.bio = `Bio is required - tell use about yourself`;
         }
@@ -197,12 +189,6 @@ const StudentProfileCreation = () => {
       
       switch (step) {
         case 1:
-          if (!formData.school.trim()) {
-            stepErrors.school = 'School/University is required';
-          } else if (formData.school.trim().length < 3) {
-            stepErrors.school = 'School name must be at least 3 characters';
-          }
-          
           if (!formData.bio.trim()) {
             stepErrors.bio = 'Bio is required';
           } else if (formData.bio.trim().length < 5) {
@@ -347,22 +333,6 @@ const StudentProfileCreation = () => {
       case 1:
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">School or University *</label>
-                <input
-                  type="text"
-                  value={formData.school}
-                  onChange={(e) => handleInputChange('school', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                    errors.school ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Your School name"
-                />
-                {errors.school && <p className="mt-1 text-sm text-red-600">{errors.school}</p>}
-              </div>
-            </div> 
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
               <textarea

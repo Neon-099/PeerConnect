@@ -297,116 +297,116 @@ const TutorAuthForm = () => {
 
                     {/*Login Form */}
                     {activeTab === 'login' && (
-                    <div className="bg-gray-800 rounded-2xl p-8 shadow-2xl">
-                        <h2 className="text-2xl font-bold text-white mb-6 text-center">Welcome Back</h2>
-                        
-                        <div className="space-y-6">
-                            <form onSubmit={handleLoginSubmit}>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                                        placeholder="Enter your email"
-                                        required
-                                        disabled={isAccountLocked}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                                    <div className="relative">
+                        <div className="bg-gray-800 rounded-2xl p-8 shadow-2xl">
+                            <h2 className="text-2xl font-bold text-white mb-6 text-center">Welcome Back</h2>
+                            
+                            <div className="space-y-6">
+                                <form onSubmit={handleLoginSubmit}>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
                                         <input
-                                            type={showPassword ? "text" : "password"}
-                                            name="password"
-                                            value={formData.password}
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
-                                            placeholder="Enter your password"
+                                            className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                            placeholder="Enter your email"
                                             required
                                             disabled={isAccountLocked}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
-                                            disabled={isAccountLocked}
-                                        >
-                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                        </button>
                                     </div>
-                                    
-                                    {/* Login Error Display */}
-                                    {loginError && (
-                                        <div className="mt-3 p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
-                                            <div className="flex items-center space-x-2 text-red-400 text-sm">
-                                                {isAccountLocked ? <Lock size={16} /> : <AlertTriangle size={16} />}
-                                                <span>{loginError}</span>
-                                            </div>
-                                            
-                                            {/* Lockout Countdown */}
-                                            {isAccountLocked && lockoutTime > 0 && (
-                                                <div className="mt-2 text-orange-400 text-xs">
-                                                    Account unlocks in: {formatLockoutTime(lockoutTime)}
-                                                </div>
-                                            )}
-                                            
-                                            {/* Remaining Attempts */}
-                                            {!isAccountLocked && remainingAttempts < 5 && (
-                                                <div className="mt-2 text-yellow-400 text-xs">
-                                                    {remainingAttempts} attempts remaining
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
 
-                                    {/* Forgot Password Suggestion */}
-                                    {showForgotPasswordSuggestion && !isAccountLocked && (
-                                        <div className="mt-3 p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-2 text-blue-400 text-sm">
-                                                    <AlertTriangle size={16} />
-                                                    <span>Having trouble logging in?</span>
-                                                </div>
-                                                <button 
-                                                    type="button"
-                                                    onClick={handleForgotPasswordClick}
-                                                    className="text-blue-400 hover:text-blue-300 text-sm font-medium underline"
-                                                >
-                                                    Reset Password
-                                                </button>
-                                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleInputChange}
+                                                className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
+                                                placeholder="Enter your password"
+                                                required
+                                                disabled={isAccountLocked}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                                                disabled={isAccountLocked}
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
                                         </div>
-                                    )}
+                                        
+                                        {/* Login Error Display */}
+                                        {loginError && (
+                                            <div className="mt-3 p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+                                                <div className="flex items-center space-x-2 text-red-400 text-sm">
+                                                    {isAccountLocked ? <Lock size={16} /> : <AlertTriangle size={16} />}
+                                                    <span>{loginError}</span>
+                                                </div>
+                                                
+                                                {/* Lockout Countdown */}
+                                                {isAccountLocked && lockoutTime > 0 && (
+                                                    <div className="mt-2 text-orange-400 text-xs">
+                                                        Account unlocks in: {formatLockoutTime(lockoutTime)}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Remaining Attempts */}
+                                                {!isAccountLocked && remainingAttempts < 5 && (
+                                                    <div className="mt-2 text-yellow-400 text-xs">
+                                                        {remainingAttempts} attempts remaining
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
-                                    <div className="flex justify-end">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setShowPasswordResetModal(true)}
-                                            className='text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors'
-                                        >
-                                            Forgot Password?
-                                        </button>
+                                        {/* Forgot Password Suggestion */}
+                                        {showForgotPasswordSuggestion && !isAccountLocked && (
+                                            <div className="mt-3 p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center space-x-2 text-blue-400 text-sm">
+                                                        <AlertTriangle size={16} />
+                                                        <span>Having trouble logging in?</span>
+                                                    </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleForgotPasswordClick}
+                                                        className="text-blue-400 hover:text-blue-300 text-sm font-medium underline"
+                                                    >
+                                                        Reset Password
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowPasswordResetModal(true)}
+                                                className='text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors'
+                                            >
+                                                Forgot Password?
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={isAccountLocked}
-                                    className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-                                >
-                                    {isAccountLocked ? 'Account Locked' : 'Sign In'}
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            </form>
+                                    <button
+                                        type="submit"
+                                        disabled={isAccountLocked}
+                                        className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-4 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                    >
+                                        {isAccountLocked ? 'Account Locked' : 'Sign In'}
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                        </div>
-                        )}
+                    )}
 
                     {/*Sign Up Form */}
                     {activeTab === 'signup' && (
@@ -527,7 +527,7 @@ const TutorAuthForm = () => {
                                 <p>By creating an account, you agree to our Terms of Service and Privacy Policy.</p>
                             </div>
                     </div>
-                        )}
+                    )}
                     </div>
             </main>
 
