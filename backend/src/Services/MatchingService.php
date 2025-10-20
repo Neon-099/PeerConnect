@@ -33,11 +33,8 @@ class MatchingService {
         $query = $this->buildTutorMatchingQuery($student, $filters);
         $stmt = $this->db->prepare($query['sql']);
         
-        foreach ($query['params'] as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        
-        $stmt->execute();
+        // Use execute() with parameters
+        $stmt->execute($query['params']);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Calculate match scores and sort
@@ -60,11 +57,8 @@ class MatchingService {
         $query = $this->buildStudentMatchingQuery($tutor, $filters);
         $stmt = $this->db->prepare($query['sql']);
         
-        foreach ($query['params'] as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        
-        $stmt->execute();
+        // Use execute() with parameters
+        $stmt->execute($query['params']);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Calculate match scores and sort
@@ -75,57 +69,48 @@ class MatchingService {
 
     /**
      * Build matching query for tutors (for students to find tutors)
+     * SIMPLIFIED VERSION - Only core 3 criteria
      */
     private function buildTutorMatchingQuery(array $student, array $filters): array {
-        $params = [':student_id' => $student['user_id']];
+        $params = [
+            ':student_id' => $student['user_id'],
+            ':student_campus' => $student['campus_location'],
+            ':student_level_1' => $student['academic_level'],
+            ':student_level_2' => $student['academic_level']
+        ];
         
         $sql = "
             SELECT DISTINCT 
-                tp.*, 
+                tp.id,
+                tp.user_id,
+                tp.campus_location,
+                tp.preferred_student_level,
+                tp.hourly_rate,
+                tp.is_verified_tutor,
+                tp.average_rating,
+                tp.years_experience,
                 u.first_name, 
                 u.last_name, 
                 u.email, 
                 u.profile_picture,
-                COUNT(DISTINCT CASE WHEN ssoi.subject IN (
-                    SELECT subject FROM tutor_specializations WHERE tutor_id = tp.user_id
-                ) THEN ssoi.subject END) as subject_matches,
-                COUNT(DISTINCT ta.id) as available_slots,
-                CASE WHEN sp.preferred_learning_style IN (
-                    SELECT teaching_style FROM tutor_teaching_styles WHERE tutor_id = tp.user_id
-                ) THEN 1 ELSE 0 END as learning_style_match
+                (
+                    SELECT COUNT(*) 
+                    FROM student_subjects_of_interest ssoi 
+                    JOIN tutor_specializations ts ON ssoi.subject = ts.subject 
+                    WHERE ssoi.user_id = :student_id 
+                    AND ts.tutor_id = tp.user_id
+                ) as subject_matches
             FROM tutor_profiles tp
             JOIN users u ON tp.user_id = u.id
-            JOIN student_profiles sp ON sp.user_id = :student_id
-            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = :student_id
-            LEFT JOIN tutor_availability ta ON ta.tutor_id = tp.user_id
-            WHERE tp.campus_location = sp.campus_location
+            WHERE tp.campus_location = :student_campus
               AND tp.profile_completed = 1
               AND (
-                  (tp.preferred_student_level = 'shs' AND sp.academic_level IN ('high_school', 'shs'))
+                  (tp.preferred_student_level = 'shs' AND :student_level_1 IN ('high_school', 'shs'))
                   OR 
-                  (tp.preferred_student_level = 'college' AND sp.academic_level IN ('undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior'))
+                  (tp.preferred_student_level = 'college' AND :student_level_2 IN ('undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior'))
               )
-        ";
-
-        // Add additional filters
-        if (!empty($filters['min_rate'])) {
-            $sql .= " AND tp.hourly_rate >= :min_rate";
-            $params[':min_rate'] = $filters['min_rate'];
-        }
-        
-        if (!empty($filters['max_rate'])) {
-            $sql .= " AND tp.hourly_rate <= :max_rate";
-            $params[':max_rate'] = $filters['max_rate'];
-        }
-        
-        if (!empty($filters['verified_only'])) {
-            $sql .= " AND tp.is_verified_tutor = 1";
-        }
-
-        $sql .= "
-            GROUP BY tp.id
             HAVING subject_matches >= 1
-            ORDER BY subject_matches DESC, learning_style_match DESC, available_slots DESC, tp.average_rating DESC
+            ORDER BY subject_matches DESC
         ";
 
         return ['sql' => $sql, 'params' => $params];
@@ -133,50 +118,44 @@ class MatchingService {
 
     /**
      * Build matching query for students (for tutors to find students)
+     * SIMPLIFIED VERSION - Only core 3 criteria
      */
     private function buildStudentMatchingQuery(array $tutor, array $filters): array {
         $params = [
             ':tutor_id' => $tutor['user_id'],
-            ':tutor_id2' => $tutor['user_id'],
-            ':tutor_id3' => $tutor['user_id'],
-            ':tutor_id4' => $tutor['user_id']
+            ':tutor_campus' => $tutor['campus_location'],
+            ':tutor_level_1' => $tutor['preferred_student_level'],
+            ':tutor_level_2' => $tutor['preferred_student_level']
         ];
         
         $sql = "
             SELECT DISTINCT 
-                sp.*, 
+                sp.id,
+                sp.user_id,
+                sp.campus_location,
+                sp.academic_level,
                 u.first_name, 
                 u.last_name, 
                 u.email, 
                 u.profile_picture,
-                COUNT(DISTINCT CASE WHEN ssoi.subject IN (
-                    SELECT subject FROM tutor_specializations WHERE tutor_id = :tutor_id
-                ) THEN ssoi.subject END) as subject_matches,
-                CASE WHEN sp.preferred_learning_style IN (
-                    SELECT teaching_style FROM tutor_teaching_styles WHERE tutor_id = :tutor_id2
-                ) THEN 1 ELSE 0 END as learning_style_match
+                (
+                    SELECT COUNT(*) 
+                    FROM student_subjects_of_interest ssoi 
+                    JOIN tutor_specializations ts ON ssoi.subject = ts.subject 
+                    WHERE ssoi.user_id = sp.user_id 
+                    AND ts.tutor_id = :tutor_id
+                ) as subject_matches
             FROM student_profiles sp
             JOIN users u ON sp.user_id = u.id
-            JOIN student_subjects_of_interest ssoi ON ssoi.user_id = sp.user_id
-            WHERE sp.campus_location = (
-                SELECT campus_location FROM tutor_profiles WHERE user_id = :tutor_id3
-            )
+            WHERE sp.campus_location = :tutor_campus
               AND sp.profile_completed = 1
               AND (
-                  (sp.academic_level IN ('high_school', 'shs') AND (
-                      SELECT preferred_student_level FROM tutor_profiles WHERE user_id = :tutor_id4
-                  ) = 'shs')
+                  (sp.academic_level IN ('high_school', 'shs') AND :tutor_level_1 = 'shs')
                   OR 
-                  (sp.academic_level IN ('undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior') AND (
-                      SELECT preferred_student_level FROM tutor_profiles WHERE user_id = :tutor_id4
-                  ) = 'college')
+                  (sp.academic_level IN ('undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior') AND :tutor_level_2 = 'college')
               )
-        ";
-
-        $sql .= "
-            GROUP BY sp.id
             HAVING subject_matches >= 1
-            ORDER BY subject_matches DESC, learning_style_match DESC
+            ORDER BY subject_matches DESC
         ";
 
         return ['sql' => $sql, 'params' => $params];
@@ -184,6 +163,7 @@ class MatchingService {
 
     /**
      * Calculate match scores for tutors
+     * ONLY based on 3 core criteria: Location, Academic Level, Subjects
      */
     private function calculateMatchScores(array $results, array $student): array {
         $matches = [];
@@ -192,56 +172,22 @@ class MatchingService {
             $score = 0;
             $matchDetails = [];
             
-            // Location match (100 points - already filtered)
+            // 1. Location match (100 points - already filtered)
             $score += 100;
             $matchDetails['location'] = 'Perfect match';
             
-            // Academic level match (100 points - already filtered)
+            // 2. Academic level match (100 points - already filtered)
             $score += 100;
             $matchDetails['academic_level'] = 'Perfect match';
             
-            // Subject matches (50 points each)
+            // 3. Subject matches (50 points each)
             $subjectScore = (int)$tutor['subject_matches'] * 50;
             $score += $subjectScore;
             $matchDetails['subjects'] = "{$tutor['subject_matches']} matching subjects";
             
-            // Learning style match (30 points)
-            if ($tutor['learning_style_match']) {
-                $score += 30;
-                $matchDetails['learning_style'] = 'Learning style matches';
-            } else {
-                $matchDetails['learning_style'] = 'Learning style differs';
-            }
-            
-            // Availability (20 points)
-            if ($tutor['available_slots'] > 0) {
-                $score += 20;
-                $matchDetails['availability'] = "{$tutor['available_slots']} time slots available";
-            } else {
-                $matchDetails['availability'] = 'No availability set';
-            }
-            
-            // Quality bonuses
-            if ($tutor['is_verified_tutor']) {
-                $score += 10;
-                $matchDetails['verified'] = 'Verified tutor';
-            }
-            
-            if ($tutor['average_rating'] > 0) {
-                $ratingBonus = floor($tutor['average_rating'] / 0.5) * 5;
-                $score += $ratingBonus;
-                $matchDetails['rating'] = "Rating: {$tutor['average_rating']}/5";
-            }
-            
-            if ($tutor['years_experience'] > 0) {
-                $expBonus = $tutor['years_experience'] * 2;
-                $score += $expBonus;
-                $matchDetails['experience'] = "{$tutor['years_experience']} years experience";
-            }
-            
             $tutor['match_score'] = $score;
             $tutor['match_details'] = $matchDetails;
-            $tutor['match_percentage'] = min(100, round(($score / 300) * 100)); // Max theoretical score ~300
+            $tutor['match_percentage'] = min(100, round(($score / 250) * 100)); // Max score 250 (100+100+50)
             
             $matches[] = $tutor;
         }
@@ -256,6 +202,7 @@ class MatchingService {
 
     /**
      * Calculate match scores for students
+     * ONLY based on 3 core criteria: Location, Academic Level, Subjects
      */
     private function calculateStudentMatchScores(array $results, array $tutor): array {
         $matches = [];
@@ -264,30 +211,22 @@ class MatchingService {
             $score = 0;
             $matchDetails = [];
             
-            // Location match (100 points)
+            // 1. Location match (100 points)
             $score += 100;
             $matchDetails['location'] = 'Perfect match';
             
-            // Academic level match (100 points)
+            // 2. Academic level match (100 points)
             $score += 100;
             $matchDetails['academic_level'] = 'Perfect match';
             
-            // Subject matches (50 points each)
+            // 3. Subject matches (50 points each)
             $subjectScore = (int)$student['subject_matches'] * 50;
             $score += $subjectScore;
             $matchDetails['subjects'] = "{$student['subject_matches']} matching subjects";
             
-            // Learning style match (30 points)
-            if ($student['learning_style_match']) {
-                $score += 30;
-                $matchDetails['learning_style'] = 'Learning style matches';
-            } else {
-                $matchDetails['learning_style'] = 'Learning style differs';
-            }
-            
             $student['match_score'] = $score;
             $student['match_details'] = $matchDetails;
-            $student['match_percentage'] = min(100, round(($score / 300) * 100));
+            $student['match_percentage'] = min(100, round(($score / 250) * 100)); // Max score 250 (100+100+50)
             
             $matches[] = $student;
         }
