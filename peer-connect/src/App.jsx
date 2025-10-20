@@ -7,7 +7,7 @@ import Landing from './pages/student/Landing.jsx';
 import StudentAuthForm from './components/auth/StudentAuthForm.jsx';
 import StudentProfileCreation from './components/StudentProfileCreation.jsx';
 import PasswordResetModal from './components/PasswordResetModal.jsx';
-import Homes from './pages/student/Homes.jsx';
+import Homes from './pages/student/HomesSection.jsx';
 
 
 import TutorLanding from './pages/student/tutor/TutorLanding.jsx';

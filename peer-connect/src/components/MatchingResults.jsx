@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, MapPin, Clock, BookOpen, CheckCircle, Users } from 'lucide-react';
+import { Star, MapPin, Clock, BookOpen, CheckCircle, Users, Calendar } from 'lucide-react';
 
 const MatchingResults = ({ matches, type = 'tutors' }) => {
   const getMatchColor = (percentage) => {

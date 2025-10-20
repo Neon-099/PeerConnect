@@ -8,7 +8,7 @@ import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle,
 
 import TutorProfilePage from './TutorProfilePage.jsx';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal.jsx';
-import MatchingResults from '../../../components/MatchingResults.jsx';
+import TutorMatchingSection from '../../../components/tutor/TutorMatchingSection.jsx';
 import { auth } from '../../../utils/auth';
 import {apiClient} from '../../../utils/api';
 
@@ -33,10 +33,6 @@ const Homes = () => {
   const [tutorProfile, setTutorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // New state for matching functionality
-  const [matchingStudents, setMatchingStudents] = useState([]);
-  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
-
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -80,7 +76,6 @@ const Homes = () => {
 
   useEffect(() => {
     fetchProfileData();
-    fetchMatchingStudents();
   }, []);
 
   // Add this useEffect to initialize availability from profile data
@@ -347,7 +342,6 @@ const Homes = () => {
               { id: 'profile', label: 'Profile', icon: User, active: activeTab === 'profile' },
               { id: 'home', label: 'Dashboard', icon: Home, active: activeTab === 'home' },
               { id: 'sessions', label: 'Sessions', icon: Calendar, active: activeTab === 'sessions' },
-              { id: 'students', label: 'Students', icon: Users, active: activeTab === 'students' },
               { id: 'matches', label: 'Find Students', icon: Target, active: activeTab === 'matches' },
               { id: 'earnings', label: 'Earnings', icon: DollarSign, active: activeTab === 'earnings' },
               { id: 'messages', label: 'Messages', icon: MessageSquare, active: activeTab === 'messages' }
@@ -641,43 +635,7 @@ const Homes = () => {
         {activeTab === 'matches' && (
           <div className="flex-1 flex flex-col">
             <div className="flex-1 overflow-auto p-8">
-              <div className="max-w-6xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h1 className="text-3xl font-semibold text-slate-800">Find Your Students</h1>
-                    <p className="text-slate-600 mt-1">Students who match your teaching preferences</p>
-                  </div>
-                  <button 
-                    onClick={fetchMatchingStudents}
-                    disabled={isLoadingMatches}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Refresh Matches
-                  </button>
-                </div>
-
-                {isLoadingMatches ? (
-                  <div className="text-center py-12">
-                    <LoadingSpinner />
-                    <p className="text-slate-600 mt-4">Finding matching students...</p>
-                  </div>
-                ) : matchingStudents.length > 0 ? (
-                  <MatchingResults matches={matchingStudents} type="students" />
-                ) : (
-                  <div className="text-center py-12">
-                    <Target className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-slate-800 mb-2">No Students Found</h3>
-                    <p className="text-slate-600 mb-6">We couldn't find any students matching your preferences right now.</p>
-                    <button 
-                      onClick={fetchMatchingStudents}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                )}
-              </div>
+              <TutorMatchingSection />
             </div>
           </div>
         )}
