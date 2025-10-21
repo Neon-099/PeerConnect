@@ -81,29 +81,89 @@ class TutorProfile {
         throw new Exception("Failed to create tutor profile");
     }
 
-    // INSERT SPECIALIZATIONS
-    private function insertSpecializations(int $userId, array $specializations): void {
-        $query = "INSERT INTO {$this->specializationsTable} (tutor_id, subject) VALUES (:tutor_id, :subject)";
-        $stmt = $this->db->prepare($query);
-        
-        foreach ($specializations as $subject) {
-            $stmt->execute([
-                ':tutor_id' => $userId,
-                ':subject' => $subject
+    // INSERT SPECIALIZATIONS - Add error handling and return boolean
+    private function insertSpecializations(int $userId, array $specializations): bool {
+        try {
+            if (empty($specializations)) {
+                return true; // No specializations to insert
+            }
+
+            $query = "INSERT INTO {$this->specializationsTable} (tutor_id, subject) VALUES (:tutor_id, :subject)";
+            $stmt = $this->db->prepare($query);
+            
+            foreach ($specializations as $subject) {
+                $result = $stmt->execute([
+                    ':tutor_id' => $userId,
+                    ':subject' => $subject
+                ]);
+                
+                if (!$result) {
+                    Logger::error('Failed to insert specialization', [
+                        'tutor_id' => $userId,
+                        'subject' => $subject,
+                        'error' => $stmt->errorInfo()
+                    ]);
+                    return false;
+                }
+            }
+            
+            Logger::info('Successfully inserted specializations', [
+                'tutor_id' => $userId,
+                'specializations' => $specializations,
+                'count' => count($specializations)
             ]);
+            
+            return true;
+        } catch (Exception $e) {
+            Logger::error('Error inserting specializations', [
+                'tutor_id' => $userId,
+                'specializations' => $specializations,
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 
-    // INSERT TEACHING STYLES
-    private function insertTeachingStyles(int $userId, array $teachingStyles): void {
-        $query = "INSERT INTO {$this->teachingStylesTable} (tutor_id, teaching_style) VALUES (:tutor_id, :teaching_style)";
-        $stmt = $this->db->prepare($query);
-        
-        foreach ($teachingStyles as $style) {
-            $stmt->execute([
-                ':tutor_id' => $userId,
-                ':teaching_style' => $style
+    // INSERT TEACHING STYLES - Add error handling and return boolean
+    private function insertTeachingStyles(int $userId, array $teachingStyles): bool {
+        try {
+            if (empty($teachingStyles)) {
+                return true; // No teaching styles to insert
+            }
+
+            $query = "INSERT INTO {$this->teachingStylesTable} (tutor_id, teaching_style) VALUES (:tutor_id, :teaching_style)";
+            $stmt = $this->db->prepare($query);
+            
+            foreach ($teachingStyles as $style) {
+                $result = $stmt->execute([
+                    ':tutor_id' => $userId,
+                    ':teaching_style' => $style
+                ]);
+                
+                if (!$result) {
+                    Logger::error('Failed to insert teaching style', [
+                        'tutor_id' => $userId,
+                        'teaching_style' => $style,
+                        'error' => $stmt->errorInfo()
+                    ]);
+                    return false;
+                }
+            }
+            
+            Logger::info('Successfully inserted teaching styles', [
+                'tutor_id' => $userId,
+                'teaching_styles' => $teachingStyles,
+                'count' => count($teachingStyles)
             ]);
+            
+            return true;
+        } catch (Exception $e) {
+            Logger::error('Error inserting teaching styles', [
+                'tutor_id' => $userId,
+                'teaching_styles' => $teachingStyles,
+                'error' => $e->getMessage()
+            ]);
+            return false;
         }
     }
 
@@ -255,11 +315,11 @@ class TutorProfile {
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    // UPDATE PROFILE
+    // UPDATE PROFILE - Check return values
     public function update(int $userId, array $data): bool {
         $fields = [];
         $params = [':user_id' => $userId];
-
+    
         // Handle regular fields
         $allowedFields = ['gender', 'campus_location', 'bio', 'highest_education', 
                          'years_experience', 'hourly_rate', 'preferred_student_level', 'profile_picture'];
@@ -270,15 +330,15 @@ class TutorProfile {
                 $params[":{$key}"] = $value;
             }
         }
-
+    
         // Handle teaching_styles JSON field
         if (isset($data['teaching_styles'])) {
             $fields[] = "teaching_styles = :teaching_styles";
             $params[":teaching_styles"] = json_encode($data['teaching_styles']);
         }
-
+    
         $result = true;
-
+    
         // Update the main profile table if there are fields to update
         if (!empty($fields)) {
             $query = "UPDATE {$this->table} SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
@@ -288,62 +348,115 @@ class TutorProfile {
             if (!$result) {
                 Logger::error('Failed to update profile fields', [
                     'user_id' => $userId,
-                    'fields' => $fields
+                    'fields' => $fields,
+                    'error' => $stmt->errorInfo()
                 ]);
                 return false;
             }
         }
-
-        // Update specializations if provided
+    
+        // Update specializations if provided - CHECK RETURN VALUE
         if (isset($data['specializations'])) {
-            $this->updateSpecializations($userId, $data['specializations']);
-        }
-
-        // Update teaching styles if provided
-        if (isset($data['teaching_styles'])) {
-            $this->updateTeachingStyles($userId, $data['teaching_styles']);
-        }
-
-        // Update availability if provided - THIS IS THE KEY FIX
-        if (isset($data['availability'])) {
-            Logger::info('Updating availability in update method', [
-                'user_id' => $userId,
-                'availability_data' => $data['availability']
-            ]);
-            
-            $availabilityResult = $this->updateAvailability($userId, $data['availability']);
-            if (!$availabilityResult) {
-                Logger::error('Failed to update availability', [
+            $specializationsResult = $this->updateSpecializations($userId, $data['specializations']);
+            if (!$specializationsResult) {
+                Logger::error('Failed to update specializations', [
                     'user_id' => $userId,
-                    'availability_data' => $data['availability']
+                    'specializations' => $data['specializations']
                 ]);
                 return false;
             }
         }
-
+    
+        // Update teaching styles if provided - CHECK RETURN VALUE
+        if (isset($data['teaching_styles'])) {
+            $teachingStylesResult = $this->updateTeachingStyles($userId, $data['teaching_styles']);
+            if (!$teachingStylesResult) {
+                Logger::error('Failed to update teaching styles', [
+                    'user_id' => $userId,
+                    'teaching_styles' => $data['teaching_styles']
+                ]);
+                return false;
+            }
+        }
+    
         return $result;
     }
 
-    // UPDATE SPECIALIZATIONS
-    private function updateSpecializations(int $userId, array $specializations): void {
-        // Delete existing specializations
-        $deleteQuery = "DELETE FROM {$this->specializationsTable} WHERE tutor_id = :tutor_id";
-        $stmt = $this->db->prepare($deleteQuery);
-        $stmt->execute([':tutor_id' => $userId]);
-
-        // Insert new specializations
-        $this->insertSpecializations($userId, $specializations);
+    // UPDATE AVAILABILITY ONLY (for home page availability modal)
+    public function updateAvailabilityOnly(int $userId, array $availabilityData): bool {
+        Logger::info('Updating availability only', [
+            'user_id' => $userId,
+            'availability_data' => $availabilityData
+        ]);
+        
+        $availabilityResult = $this->updateAvailability($userId, $availabilityData);
+        if (!$availabilityResult) {
+            Logger::error('Failed to update availability only', [
+                'user_id' => $userId,
+                'availability_data' => $availabilityData
+            ]);
+            return false;
+        }
+        
+        return true;
     }
 
-    // UPDATE TEACHING STYLES
-    private function updateTeachingStyles(int $userId, array $teachingStyles): void {
-        // Delete existing teaching styles
-        $deleteQuery = "DELETE FROM {$this->teachingStylesTable} WHERE tutor_id = :tutor_id";
-        $stmt = $this->db->prepare($deleteQuery);
-        $stmt->execute([':tutor_id' => $userId]);
+    // UPDATE SPECIALIZATIONS - Check return value
+    private function updateSpecializations(int $userId, array $specializations): bool {
+        try {
+            // Delete existing specializations
+            $deleteQuery = "DELETE FROM {$this->specializationsTable} WHERE tutor_id = :tutor_id";
+            $stmt = $this->db->prepare($deleteQuery);
+            $deleteResult = $stmt->execute([':tutor_id' => $userId]);
+            
+            if (!$deleteResult) {
+                Logger::error('Failed to delete existing specializations', [
+                    'tutor_id' => $userId,
+                    'error' => $stmt->errorInfo()
+                ]);
+                return false;
+            }
 
-        // Insert new teaching styles
-        $this->insertTeachingStyles($userId, $teachingStyles);
+            // Insert new specializations
+            $insertResult = $this->insertSpecializations($userId, $specializations);
+            return $insertResult;
+        } catch (Exception $e) {
+            Logger::error('Error updating specializations', [
+                'tutor_id' => $userId,
+                'specializations' => $specializations,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    // UPDATE TEACHING STYLES - Check return value
+    private function updateTeachingStyles(int $userId, array $teachingStyles): bool {
+        try {
+            // Delete existing teaching styles
+            $deleteQuery = "DELETE FROM {$this->teachingStylesTable} WHERE tutor_id = :tutor_id";
+            $stmt = $this->db->prepare($deleteQuery);
+            $deleteResult = $stmt->execute([':tutor_id' => $userId]);
+            
+            if (!$deleteResult) {
+                Logger::error('Failed to delete existing teaching styles', [
+                    'tutor_id' => $userId,
+                    'error' => $stmt->errorInfo()
+                ]);
+                return false;
+            }
+
+            // Insert new teaching styles
+            $insertResult = $this->insertTeachingStyles($userId, $teachingStyles);
+            return $insertResult;
+        } catch (Exception $e) {
+            Logger::error('Error updating teaching styles', [
+                'tutor_id' => $userId,
+                'teaching_styles' => $teachingStyles,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 
     // UPDATE AVAILABILITY - Ensure dates are stored correctly
@@ -354,7 +467,7 @@ class TutorProfile {
                 'availability_data' => $availabilityData,
                 'count' => count($availabilityData)
             ]);
-
+    
             // Clear existing availability for this tutor
             $deleteQuery = "DELETE FROM {$this->availabilityTable} WHERE tutor_id = :tutor_id";
             $deleteStmt = $this->db->prepare($deleteQuery);
@@ -367,13 +480,13 @@ class TutorProfile {
                 ]);
                 return false;
             }
-
+    
             if (empty($availabilityData)) {
                 Logger::info('No availability data to insert after clearing');
                 return true;
             }
-
-            // Only handle date-based format
+    
+            // Insert availability data - only date, day_of_week, and is_available
             $insertQuery = "INSERT INTO {$this->availabilityTable} 
                            (tutor_id, availability_date, is_available, day_of_week) 
                            VALUES (:tutor_id, :availability_date, :is_available, :day_of_week)";
@@ -395,7 +508,7 @@ class TutorProfile {
                     }
                     
                     // Convert date to day of week for backward compatibility
-                    $date = new DateTime($dateStr . ' 00:00:00', new DateTimeZone('Asia/Manila')); // Use Philippine timezone
+                    $date = new DateTime($dateStr . ' 00:00:00', new DateTimeZone('Asia/Manila'));
                     $dayOfWeek = strtolower($date->format('l')); // Monday, Tuesday, etc.
                     
                     $insertResult = $insertStmt->execute([
@@ -432,17 +545,18 @@ class TutorProfile {
                     return false;
                 }
             }
-
-            Logger::info('Availability updated successfully', [
+            
+            Logger::info('Successfully updated availability', [
                 'tutor_id' => $tutorId,
                 'total_slots' => count($availabilityData)
             ]);
+            
             return true;
         } catch (Exception $e) {
-            Logger::error('Update availability error', [
-                'error' => $e->getMessage(),
+            Logger::error('Error updating availability', [
                 'tutor_id' => $tutorId,
-                'availability_data' => $availabilityData
+                'availability_data' => $availabilityData,
+                'error' => $e->getMessage()
             ]);
             return false;
         }
