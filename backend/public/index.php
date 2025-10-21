@@ -156,9 +156,14 @@ switch(true) {
         error_log("DEBUG: Matched student complete session POST route");
         $student->completeSession();
         break;
+    case preg_match('#^/api/student/sessions/(\d+)/reschedule$#', $uri, $m) && $method === 'POST':
+        error_log("DEBUG: Matched student rescheduled session POST route");
+        $student->rescheduleSession((int)$m[1]);
+        break;
+
     case preg_match('#^/api/student/sessions/(\d+)/cancel$#', $uri, $m) && $method === 'POST':
         error_log("DEBUG: Matched student cancel session POST route");
-        $student->cancelSession((int)$m[1]);
+        $student->cancelSession((int)$m[0]);
         break;
     case $uri === '/api/student/rate-tutor' && $method === 'POST':
         error_log("DEBUG: Matched student rate tutor POST route");
@@ -194,12 +199,19 @@ switch(true) {
     case $uri === '/api/tutor/sessions' && $method === 'GET':
         error_log("DEBUG: Matched tutor sessions GET route");
         $tutor->getTutorSessions();
-        break;
+            break;
     case preg_match('#^/api/tutor/sessions/(\d+)/status$#', $uri, $m) && $method === 'PUT':
         error_log("DEBUG: Matched tutor session update PUT route");
         $tutor->updateSessionStatus((int)$m[1]);
-        break;
-    
+            break;
+    case preg_match('#^/api/tutor/sessions/(\d+)/cancel$#', $uri, $m) && $method === 'POST':
+        error_log("DEBUG: Matched tutor cancel session POST route");
+        $tutor->cancelSession((int)$m[1]);
+            break;
+    case preg_match('#^/api/tutor/sessions/(\d+)/reschedule$#', $uri, $m) && $method === 'POST':
+        error_log("DEBUG: Matched tutor reschedule session POST route");
+        $tutor->rescheduleSession((int)$m[1]);
+            break;
 
 
     //MATCHING

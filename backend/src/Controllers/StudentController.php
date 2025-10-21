@@ -527,31 +527,106 @@ class StudentController {
             }
     }
 
-    //GET STUDENT BOOKED SESSIONS
-    //GET /api/student/sessions
-    public function getStudentSessions(): void {
+    // Reschedule session - Student can reschedule confirmed sessions
+    // POST /api/student/sessions/{id}/reschedule
+    public function rescheduleSession(int $sessionId): void {
         try {
             $user = $this->authMiddleware->requireAuth();
-            
+    
             if(!RoleMiddleware::studentOnly($user)){
                 return;
             }
-
-            $status = $_GET['status'] ?? null; // pending, confirmed, completed, cancelled
-            $sessionService = new \App\Services\SessionService();
-            $sessions = $sessionService->getStudentSessions($user['user_id'], $status);
-
-            Response::success($sessions, 'Sessions retrieved successfully');
+    
+            $input = $this->getJsonInput();
+    
+            if(!$input || !isset($input['new_date']) || !isset($input['new_start_time']) || !isset($input['new_end_time'])){
+                Response::error('New date, start time, and end time are required', 400);
+                return;
+            }
+    
+            Logger::info('Student rescheduling session', [
+                'student_id' => $user['user_id'],
+                'session_id' => $sessionId,
+                'new_date' => $input['new_date']
+            ]);
+    
+            // Check if session exists and belongs to the student
+            $sessionQuery = "SELECT * FROM tutoring_sessions WHERE id = :session_id AND student_id = :student_id AND status = 'confirmed'";
+            $stmt = $this->db->prepare($sessionQuery);
+            $stmt->execute([
+                ':session_id' => $sessionId,
+                ':student_id' => $user['user_id']
+            ]);
+            
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$session) {
+                Response::error('Session not found or cannot be rescheduled', 404);
+                return;
+            }
+    
+            // Calculate new total cost based on new duration
+            $startTime = new \DateTime($input['new_start_time']);
+            $endTime = new \DateTime($input['new_end_time']);
+            $duration = $endTime->diff($startTime)->h + ($endTime->diff($startTime)->i / 60);
+            
+            if ($duration < 1) {
+                Response::error('Minimum session duration is 1 hour', 400);
+                return;
+            }
+    
+            $newTotalCost = $duration * $session['hourly_rate'];
+    
+            // Update session with new date, time, and recalculated cost
+            $updateQuery = "UPDATE tutoring_sessions SET 
+                session_date = :new_date, 
+                start_time = :new_start_time, 
+                end_time = :new_end_time,
+                total_cost = :new_total_cost
+                WHERE id = :session_id";
+            $stmt = $this->db->prepare($updateQuery);
+            $result = $stmt->execute([
+                ':session_id' => $sessionId,
+                ':new_date' => $input['new_date'],
+                ':new_start_time' => $input['new_start_time'],
+                ':new_end_time' => $input['new_end_time'],
+                ':new_total_cost' => $newTotalCost
+            ]);
+    
+            if (!$result) {
+                Logger::error('Failed to reschedule session', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id'],
+                    'error' => $stmt->errorInfo()
+                ]);
+                Response::error('Failed to reschedule session', 500);
+                return;
+            }
+    
+            // Create notification for tutor about reschedule
+            try {
+                $this->notificationService->createSessionRescheduledNotification($session['tutor_id'], $sessionId, 'student');
+            } catch (Exception $e) {
+                Logger::error('Failed to create reschedule notification', [
+                    'session_id' => $sessionId,
+                    'tutor_id' => $session['tutor_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            Response::success([
+                'new_total_cost' => $newTotalCost,
+                'duration_hours' => $duration
+            ], 'Session rescheduled successfully');
         }
-        catch (AuthenticationException $e) {
+        catch (AuthenticationException $e){
             Response::handleException($e);
         }
-        catch (\Exception $e){
-            Logger::error('Get student sessions error', [
+        catch (Exception $e){
+            Logger::error('Reschedule session error', [
                 'error' => $e->getMessage(),
-                'student_id' => $user['user_id'] ?? 'unknown'
+                'session_id' => $sessionId
             ]);
-            Response::serverError('Failed to retrieve sessions');
+            Response::serverError('Failed to reschedule session');
         }
     }
 
@@ -628,16 +703,16 @@ class StudentController {
     public function cancelSession(int $sessionId): void {
         try {
             $user = $this->authMiddleware->requireAuth();
-
+    
             if(!RoleMiddleware::studentOnly($user)){
                 return;
             }
-
+    
             Logger::info('Student cancelling session', [
                 'student_id' => $user['user_id'],
                 'session_id' => $sessionId
             ]);
-
+    
             // Check if session exists and belongs to the student
             $sessionQuery = "SELECT * FROM tutoring_sessions WHERE id = :session_id AND student_id = :student_id AND status IN ('pending', 'confirmed')";
             $stmt = $this->db->prepare($sessionQuery);
@@ -648,15 +723,19 @@ class StudentController {
             
             $session = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$session) {
+                Logger::warning('Session not found for cancellation', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id']
+                ]);
                 Response::error('Session not found or cannot be cancelled', 404);
                 return;
             }
-
+    
             // Update session status to cancelled
             $updateQuery = "UPDATE tutoring_sessions SET status = 'cancelled' WHERE id = :session_id";
             $stmt = $this->db->prepare($updateQuery);
             $result = $stmt->execute([':session_id' => $sessionId]);
-
+    
             if (!$result) {
                 Logger::error('Failed to cancel session', [
                     'session_id' => $sessionId,
@@ -666,24 +745,66 @@ class StudentController {
                 Response::error('Failed to cancel session', 500);
                 return;
             }
-
+    
+            Logger::info('Session cancelled successfully', [
+                'session_id' => $sessionId,
+                'student_id' => $user['user_id']
+            ]);
+    
             // Create notification for tutor
-            $this->notificationService->createSessionCancelledNotification($session['tutor_id'], $sessionId, 'student');
+            try {
+                $this->notificationService->createSessionCancelledNotification($session['tutor_id'], $sessionId, 'student');
+            } catch (Exception $e) {
+                Logger::error('Failed to create cancellation notification', [
+                    'session_id' => $sessionId,
+                    'tutor_id' => $session['tutor_id'],
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the cancellation if notification fails
+            }
             
             Response::success([], 'Session cancelled successfully');
         }
         catch (AuthenticationException $e){
             Response::handleException($e);
         }
-        catch (\Exception $e){
+        catch (Exception $e){
             Logger::error('Cancel session error', [
                 'error' => $e->getMessage(),
-                'session_id' => $sessionId
+                'session_id' => $sessionId,
+                'student_id' => $user['user_id'] ?? 'unknown'
             ]);
-            Response::serverError('Failed to cancel session');
+            Response::serverError('Failed to cancel session: ' . $e->getMessage());
         }
     }
 
+    //GET STUDENT BOOKED SESSIONS
+    //GET /api/student/sessions
+    public function getStudentSessions(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+
+            $status = $_GET['status'] ?? null; // pending, confirmed, completed, cancelled
+            $sessionService = new \App\Services\SessionService();
+            $sessions = $sessionService->getStudentSessions($user['user_id'], $status);
+
+            Response::success($sessions, 'Sessions retrieved successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Get student sessions error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to retrieve sessions');
+        }
+    }
     //RATE A TUTOR AFTER A SESSION
        //POST /api/student/rate-tutor
     public function rateTutor(): void {

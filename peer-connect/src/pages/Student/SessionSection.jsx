@@ -4,8 +4,11 @@ import Footer from './Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import BookingModal from '../../components/BookingModal.jsx';
 import ReviewModal from '../../components/ReviewModal.jsx';
+import RescheduleModal from '../../components/RescheduleModal.jsx';
+
 import { Calendar, Book, Users, MessageSquare, Star, RotateCcw, Clock, DollarSign, CheckCircle, Eye, XCircle } from 'lucide-react';
 import { apiClient } from '../../utils/api';
+
 
 const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfile }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +18,8 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
   const [requestSessions, setRequestSessions] = useState([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTutor, setSelectedTutor] = useState(null);
-  
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedSessionForReview, setSelectedSessionForReview] = useState(null);
@@ -74,7 +78,7 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
   const handleCancelSession = async (sessionId) => {
     if (window.confirm('Are you sure you want to cancel this session?')) {
       try {
-        await apiClient.delete(`/api/student/sessions/${sessionId}`);
+        await apiClient.post(`/api/student/sessions/${sessionId}/cancel`);
         alert('Session cancelled successfully');
         fetchSessions();
       } catch (error) {
@@ -85,8 +89,8 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
   };
 
   const handleRescheduleSession = (session) => {
-    // Open reschedule modal or redirect to booking page
-    alert('Reschedule functionality coming soon!');
+    setSelectedSession(session);
+    setShowRescheduleModal(true);
   };
 
   const formatSessionTime = (sessionDate, startTime, endTime) => {
@@ -394,7 +398,23 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
           onReviewSubmitted={handleReviewSubmitted}
         />
       )}
-    </div>
+      {showRescheduleModal && (
+        <RescheduleModal
+          isOpen={showRescheduleModal}
+          onClose={() => {
+            setShowRescheduleModal(false);
+            setSelectedSession(null);
+          }}
+          session={selectedSession}
+          userRole="student"
+          onRescheduleSuccess={() => {
+            fetchSessions();
+          }}
+        />
+      )}
+  </div>
+
+
   );
 };
 

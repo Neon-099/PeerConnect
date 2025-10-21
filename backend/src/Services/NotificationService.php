@@ -107,6 +107,31 @@ class NotificationService {
         );
     }
 
+    // Session Rescheduled Notification
+    public function createSessionRescheduledNotification(int $userId, int $sessionId, string $rescheduledBy): void {
+        $session = $this->sessionModel->findById($sessionId);
+        if (!$session) {
+            throw new Exception("Session not found");
+        }
+
+        $otherUserName = ($rescheduledBy === 'student') ? 
+            "{$session['tutor_first_name']} {$session['tutor_last_name']}" : 
+            "{$session['student_first_name']} {$session['student_last_name']}";
+
+        $this->createNotification(
+            $userId,
+            'session_rescheduled',
+            'Session Rescheduled',
+            "Your session with {$otherUserName} for {$session['subject_name']} has been rescheduled.",
+            [
+                'session_id' => $sessionId,
+                'rescheduled_by' => $rescheduledBy,
+                'other_user_name' => $otherUserName,
+                'subject' => $session['subject_name'],
+                'session_date' => $session['session_date']
+            ]
+        );
+    }
     // Session Cancelled Notification
     public function createSessionCancelledNotification(int $userId, int $sessionId, string $cancelledBy): void {
         $session = $this->sessionModel->findById($sessionId);
