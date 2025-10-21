@@ -14,9 +14,11 @@ import {
   Star,
   Filter,
   Search,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
+import ReviewModal from '../../../components/ReviewModal.jsx';
 
 const SessionPage = () => {
   const [sessions, setSessions] = useState([]);
@@ -26,15 +28,27 @@ const SessionPage = () => {
   const [filterDate, setFilterDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Add review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedSessionForReview, setSelectedSessionForReview] = useState(null);
+
   useEffect(() => {
     fetchSessions();
-  }, [activeTab]);
+  }, []); // Remove activeTab dependency - fetch all sessions once
 
   const fetchSessions = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get(`/api/tutor/sessions?status=${activeTab}`);
-      setSessions(response || []);
+      // Fetch ALL sessions, not filtered by status
+      const response = await apiClient.get('/api/tutor/sessions');
+      
+      // Ensure response is always an array
+      if (Array.isArray(response)) {
+        setSessions(response);
+      } else {
+        console.error('Invalid response format:', response);
+        setSessions([]);
+      }
     } catch (error) {
       console.error('Error fetching sessions:', error);
       setSessions([]);
@@ -125,25 +139,60 @@ const SessionPage = () => {
     }
   };
 
-  const filteredSessions = sessions.filter(session => {
-    const matchesSearch = !searchTerm || 
-      session.student_first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.student_last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
+  // Calculate filtered sessions based on active tab
+  const getFilteredSessions = () => {
+    if (!Array.isArray(sessions)) {
+      return [];
+    }
     
-    const matchesDate = !filterDate || session.session_date === filterDate;
+    return sessions.filter(session => {
+      // Filter by status first
+      const matchesStatus = session.status === activeTab;
+      
+      // Then apply search and date filters
+      const matchesSearch = !searchTerm || 
+        session.student_first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.student_last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        session.subject_name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesDate = !filterDate || session.session_date === filterDate;
+      
+      return matchesStatus && matchesSearch && matchesDate;
+    });
+  };
+
+  // Calculate counts for each status - with safety check
+  const getSessionCounts = () => {
+    if (!Array.isArray(sessions)) {
+      return {
+        pending: 0,
+        confirmed: 0,
+        completed: 0,
+        cancelled: 0
+      };
+    }
     
-    return matchesSearch && matchesDate;
-  });
+    return {
+      pending: sessions.filter(s => s.status === 'pending').length,
+      confirmed: sessions.filter(s => s.status === 'confirmed').length,
+      completed: sessions.filter(s => s.status === 'completed').length,
+      cancelled: sessions.filter(s => s.status === 'cancelled').length
+    };
+  };
 
-  const tabs = [
-    { key: 'pending', label: 'Pending Requests', count: sessions.filter(s => s.status === 'pending').length },
-    { key: 'confirmed', label: 'Confirmed', count: sessions.filter(s => s.status === 'confirmed').length },
-    { key: 'completed', label: 'Completed', count: sessions.filter(s => s.status === 'completed').length },
-    { key: 'rejected', label: 'Rejected', count: sessions.filter(s => s.status === 'rejected').length },
-    { key: 'cancelled', label: 'Cancelled', count: sessions.filter(s => s.status === 'cancelled').length }
-  ];
+  const sessionCounts = getSessionCounts();
+  const filteredSessions = getFilteredSessions();
 
+  const handleReviewSubmitted = () => {
+    // Refresh sessions to get updated data
+    fetchSessions();
+  };
+
+  const handleRateSession = (session) => {
+    setSelectedSessionForReview(session);
+    setShowReviewModal(true);
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -170,7 +219,7 @@ const SessionPage = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+      <div className="bg-white w-220 rounded-lg border border-gray-200 p-4 mb-6">
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -214,26 +263,53 @@ const SessionPage = () => {
         )}
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Use calculated counts */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => setActiveTab('pending')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.key
+                activeTab === 'pending'
                   ? 'border-teal-500 text-teal-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              {tab.label} ({tab.count})
+              Pending Requests ({sessionCounts.pending})
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab('confirmed')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'confirmed'
+                  ? 'border-teal-500 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Confirmed ({sessionCounts.confirmed})
+            </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'completed'
+                  ? 'border-teal-500 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Completed ({sessionCounts.completed})
+            </button>
+            <button
+              onClick={() => setActiveTab('cancelled')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'cancelled'
+                  ? 'border-teal-500 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Cancelled ({sessionCounts.cancelled})
+            </button>
         </nav>
       </div>
 
-      {/* Sessions List */}
+      {/* Sessions List - Use filteredSessions */}
       {filteredSessions.length === 0 ? (
         <div className="text-center py-12">
           <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -261,7 +337,7 @@ const SessionPage = () => {
       ) : (
         <div className="space-y-4">
           {filteredSessions.map((session) => (
-            <div key={session.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div key={session.id} className="w-220 bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
                   <img
@@ -356,6 +432,18 @@ const SessionPage = () => {
                         </div>
                       </div>
                     )}
+
+                    {session.status === 'completed' && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm font-medium text-blue-700">Session Completed</span>
+                          <span className="text-sm text-blue-600">
+                            {session.has_review ? 'Reviewed' : 'Awaiting Review'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -370,24 +458,7 @@ const SessionPage = () => {
                         <CheckCircle className="w-4 h-4" />
                         Confirm
                       </button>
-                      <button
-                        onClick={() => updateSessionStatus(session.id, 'rejected')}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 text-sm font-medium"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Reject
-                      </button>
                     </>
-                  )}
-                  
-                  {session.status === 'confirmed' && (
-                    <button
-                      onClick={() => updateSessionStatus(session.id, 'completed')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
-                    >
-                      <Star className="w-4 h-4" />
-                      Mark Complete
-                    </button>
                   )}
 
                   {(session.status === 'confirmed' || session.status === 'pending') && (
@@ -406,8 +477,8 @@ const SessionPage = () => {
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Summary Stats - Use calculated counts */}
+      <div className="mt-80 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -416,7 +487,7 @@ const SessionPage = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Pending</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {sessions.filter(s => s.status === 'pending').length}
+                {sessionCounts.pending}
               </p>
             </div>
           </div>
@@ -430,7 +501,7 @@ const SessionPage = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Confirmed</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {sessions.filter(s => s.status === 'confirmed').length}
+                {sessionCounts.confirmed}
               </p>
             </div>
           </div>
@@ -444,7 +515,7 @@ const SessionPage = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Completed</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {sessions.filter(s => s.status === 'completed').length}
+                {sessionCounts.completed}
               </p>
             </div>
           </div>
@@ -453,20 +524,27 @@ const SessionPage = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
             <div className="p-2 bg-gray-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-gray-600" />
+              <XCircle className="w-6 h-6 text-gray-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+              <p className="text-sm font-medium text-gray-600">Cancelled</p>
               <p className="text-2xl font-semibold text-gray-900">
-                ${sessions
-                  .filter(s => s.status === 'completed')
-                  .reduce((sum, s) => sum + parseFloat(s.total_cost || 0), 0)
-                  .toFixed(2)}
+                {sessionCounts.cancelled}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          session={selectedSessionForReview}
+          onReviewSubmitted={handleReviewSubmitted}
+        />
+      )}
     </div>
   );
 };

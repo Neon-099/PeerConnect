@@ -148,7 +148,7 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     <div className="fixed inset-0 backdrop-blur-sm bg-black/25 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Book Session with {tutor.first_name} {tutor.last_name}</h2>
+          <h2 className="text-2xl font-bold">Book Session with {tutor?.first_name} {tutor?.last_name}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={24} />
           </button>
@@ -166,26 +166,26 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
             <h3 className="font-semibold mb-2">Tutor Information</h3>
             <div className="flex items-center gap-4">
               <img 
-                src={tutor.profile_picture || '/default-avatar.png'} 
-                alt={tutor.first_name}
+                src={tutor?.profile_picture || '/default-avatar.png'} 
+                alt={tutor?.first_name}
                 className="w-12 h-12 rounded-full object-cover"
               />
               <div>
-                <p className="font-medium">{tutor.first_name} {tutor.last_name}</p>
-                <p className="text-sm text-gray-600">${tutor.hourly_rate}/hour</p>
+                <p className="font-medium">{tutor?.first_name} {tutor?.last_name}</p>
+                <p className="text-sm text-gray-600">${tutor?.hourly_rate}/hour</p>
               </div>
             </div>
           </div>
 
           {/* Tutor Availability */}
-          {tutor.availability && tutor.availability.length > 0 && (
+          {tutor?.availability && tutor?.availability.length > 0 && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Tutor Availability
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {tutor.availability
+                {tutor?.availability
                   .filter(slot => slot.is_available)
                   .slice(0, 6)
                   .map((slot, index) => (
@@ -194,9 +194,9 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
                       <span>{formatAvailabilityDate(slot.availability_date)}</span>
                     </div>
                   ))}
-                {tutor.availability.filter(slot => slot.is_available).length > 6 && (
+                {tutor?.availability.filter(slot => slot.is_available).length > 6 && (
                   <div className="text-sm text-blue-600">
-                    +{tutor.availability.filter(slot => slot.is_available).length - 6} more dates
+                    +{tutor?.availability.filter(slot => slot.is_available).length - 6} more dates
                   </div>
                 )}
               </div>

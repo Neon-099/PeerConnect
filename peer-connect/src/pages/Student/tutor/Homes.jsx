@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users,  Calendar,  
      Bell, Star,  LogOut, MessageSquare, DollarSign,MapPin, Video, Settings, Target, 
-     Award,ChevronLeft, ChevronRight} from 'lucide-react';
+     Award,ChevronLeft, ChevronRight, X, CheckCircle, Clock, AlertCircle} from 'lucide-react';
 
 import TutorProfilePage from './TutorProfilePage.jsx';
 import SessionPage from './SessionPage.jsx';
@@ -16,6 +16,7 @@ import Header from '../Header.jsx';
 import Footer from '../Footer.jsx';
 import { LoadingSpinner } from '../../../components/LoadingSpinner.jsx';
 import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
+import NotificationModal from '../../../components/NotificationModal.jsx';
 
 const Homes = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -38,6 +39,7 @@ const Homes = () => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -410,6 +412,13 @@ const Homes = () => {
               userProfilePictureUrl={getProfilePictureUrl(tutorProfile?.profile_picture)}
               userProfile={tutorProfile?.first_name} 
             />
+            <button 
+              onClick={() => setShowNotificationModal(true)}
+              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            >
+              <Bell size={20} />
+             
+            </button>
           </div>
         </div>
 
@@ -673,7 +682,7 @@ const Homes = () => {
           />
         )}
         {/* Footer */}
-        <div className="h-16 bg-white border-t border-slate-200 flex items-center justify-end px-8">
+        <div className="h-16 mt-auto bg-white border-t border-slate-200 flex items-center justify-end px-8">
           <Footer />
         </div>
       </div>
@@ -693,6 +702,14 @@ const Homes = () => {
           onClose={() => setShowAvailabilityModal(false)}
           onSave={handleAvailabilitySave}
           initialAvailability={availability}
+        />
+      )}
+
+      {showNotificationModal && (
+        <NotificationModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          userRole="tutor"
         />
       )}
     </div>
