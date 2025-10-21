@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Upload, Trash2, User, GraduationCap, DollarSign, Camera, Star, BookOpen} from 'lucide-react';
+import { X, Upload, Trash2, User, GraduationCap, DollarSign, Camera, Star, BookOpen, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { apiClient } from '../utils/api';
 
 const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
@@ -28,7 +28,6 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
-
   // Options for dropdowns
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -107,6 +106,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
           setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
         }
       }
+
+      
     } catch (error) {
       console.error('Error fetching tutor profile data:', error);
       // Set default values if profile doesn't exist
@@ -238,6 +239,12 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     }
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchProfileData();
+    }
+  }, [isOpen]);
+
   const handleSave = async () => {
     if (!validateForm()) {
       console.log('Validation failed:', errors);
@@ -260,7 +267,7 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         specializations: formData.specializations,
         hourly_rate: parseFloat(formData.hourly_rate),
         teaching_styles: formData.teaching_styles,
-        preferred_student_level: formData.preferred_student_level
+        preferred_student_level: formData.preferred_student_level,
       };
 
       // Update profile
@@ -292,6 +299,7 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
       if (onProfileUpdate) {
         onProfileUpdate(updatedProfile);
       }
+
       onClose();
     } catch (error) {
       console.error('Error saving tutor profile:', error);
@@ -618,27 +626,6 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
                     {errors.teaching_styles && (
                       <p className="mt-1 text-sm text-red-600">{errors.teaching_styles}</p>
                     )}
-                  </div>
-                </div>
-
-                {/* Teaching Stats */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Teaching Statistics</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-white rounded-lg">
-                      <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-2">
-                        <BookOpen className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <p className="text-2xl font-bold text-gray-800">24</p>
-                      <p className="text-sm text-gray-600">Total Sessions</p>
-                    </div>
-                    <div className="text-center p-4 bg-white rounded-lg">
-                      <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-2">
-                        <Star className="w-6 h-6 text-green-600" />
-                      </div>
-                      <p className="text-2xl font-bold text-gray-800">4.8</p>
-                      <p className="text-sm text-gray-600">Average Rating</p>
-                    </div>
                   </div>
                 </div>
 

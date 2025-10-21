@@ -404,9 +404,10 @@ const Homes = () =>  {
       )}
 
       {activeTab === 'find_tutors' && (
-        <div className="flex-1 overflow-auto p-8">
-          <StudentMatchingSection />
-        </div>
+          <StudentMatchingSection
+            getProfilePictureUrl={getProfilePictureUrl}
+            studentProfile={studentProfile}
+          />
       )}
       {/* Session Section*/}
       {activeTab === 'session' && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, CheckCircle, XCircle, Clock, Calendar, User, BookOpen } from 'lucide-react';
-import { apiClient } from '../../utils/api';
+import { apiClient } from '../../../utils/api';
 
 const NotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -15,7 +15,7 @@ const NotificationPage = () => {
   const fetchNotifications = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/api/student/notifications');
+      const response = await apiClient.get('/api/tutor/notifications');
       setNotifications(response);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -26,7 +26,7 @@ const NotificationPage = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      const response = await apiClient.get('/api/student/notifications/unread-count');
+      const response = await apiClient.get('/api/tutor/notifications/unread-count');
       setUnreadCount(response.count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -35,7 +35,7 @@ const NotificationPage = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await apiClient.put(`/api/student/notifications/${notificationId}/read`);
+      await apiClient.put(`/api/tutor/notifications/${notificationId}/read`);
       setNotifications(prev => 
         prev.map(notif => 
           notif.id === notificationId ? { ...notif, is_read: true } : notif
@@ -94,7 +94,7 @@ const NotificationPage = () => {
         <div className="text-center py-12">
           <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-          <p className="text-gray-500">You'll see session confirmations and updates here.</p>
+          <p className="text-gray-500">You'll see session requests and updates here.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -119,12 +119,12 @@ const NotificationPage = () => {
                     
                     {notification.data && (
                       <div className="bg-gray-50 rounded-md p-3 text-sm">
-                        {notification.type === 'session_confirmed' && (
+                        {notification.type === 'session_request' && (
                           <div className="grid grid-cols-2 gap-2">
                             <div className="flex items-center gap-1">
                               <User className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-600">Tutor:</span>
-                              <span className="font-medium">{notification.data.tutor_name}</span>
+                              <span className="text-gray-600">Student:</span>
+                              <span className="font-medium">{notification.data.student_name}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               <BookOpen className="w-4 h-4 text-gray-500" />

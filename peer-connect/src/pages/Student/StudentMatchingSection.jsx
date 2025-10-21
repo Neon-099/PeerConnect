@@ -3,8 +3,10 @@ import { Search, Users, AlertCircle, RotateCcw, Target } from 'lucide-react';
 import { apiClient } from '../../utils/api';
 import MatchingResults from '../../components/MatchingResults';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import Header from './Header.jsx';
+import Footer from './Footer.jsx';
 
-const StudentMatchingSection = () => {
+const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchPhase, setSearchPhase] = useState('');
@@ -81,8 +83,19 @@ const StudentMatchingSection = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className='flex-1 flex flex-col'>
+      {/* Header */}
+      <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+        <div></div>
+        <div className="flex items-center gap-4">
+          <Header 
+            userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+            userProfile={studentProfile?.first_name} 
+          />
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between mb-8 overflow-auto">
         <div>
           <h1 className="text-3xl font-semibold text-slate-800">Find Your Tutor</h1>
           <p className="text-slate-600 mt-1">Tutors who match your profile and subjects</p>
@@ -196,6 +209,11 @@ const StudentMatchingSection = () => {
           )}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="h-[49px] mt-auto bg-white border-t border-gray-200 flex items-center justify-end px-8">
+        <Footer/>
+      </div>
     </div>
   );
 };

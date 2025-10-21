@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, User, Users, Search, Calendar, AlertTriangle, CheckCircle, 
-    Mail, Bell, Star, Edit, TrendingUp, Shield, Key, LogOut, MessageSquare,
-    ChevronUp, ChevronDown, Book, RotateCcw, DollarSign, Clock, MapPin, 
-    Video, UserCheck, BarChart3, Settings, Plus, GraduationCap, Eye, 
-    Target, Zap, Award, BookOpen, Timer, ChevronLeft, ChevronRight} from 'lucide-react';
+import { Home, User, Users,  Calendar,  
+     Bell, Star,  LogOut, MessageSquare, DollarSign,MapPin, Video, Settings, Target, 
+     Award,ChevronLeft, ChevronRight} from 'lucide-react';
 
 import TutorProfilePage from './TutorProfilePage.jsx';
+import SessionPage from './SessionPage.jsx';
+import NotificationPage from './NotificationPage.jsx';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal.jsx';
 import TutorMatchingSection from '../../../components/tutor/TutorMatchingSection.jsx';
 import { auth } from '../../../utils/auth';
@@ -36,6 +36,8 @@ const Homes = () => {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(new Date());
+
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const navigate = useNavigate();
 
@@ -85,6 +87,25 @@ const Homes = () => {
     }
   }, [tutorProfile]);
 
+  // Add notification count fetch function
+  const fetchUnreadNotificationCount = async () => {
+    try {
+      const response = await apiClient.get('/api/tutor/notifications/unread-count');
+      setUnreadNotificationCount(response.count);
+    } catch (error) {
+      console.error('Error fetching unread notification count:', error);
+    }
+  };
+
+  // Add useEffect to fetch notification count
+  useEffect(() => {
+    fetchUnreadNotificationCount();
+    // Set up interval to check for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  
   const getProfilePictureUrl = (profilePicture) => {
     if (!profilePicture) return '/default-avatar.png';
     if (profilePicture.startsWith('http')) return profilePicture;
@@ -342,6 +363,7 @@ const Homes = () => {
               { id: 'profile', label: 'Profile', icon: User, active: activeTab === 'profile' },
               { id: 'home', label: 'Dashboard', icon: Home, active: activeTab === 'home' },
               { id: 'sessions', label: 'Sessions', icon: Calendar, active: activeTab === 'sessions' },
+              { id: 'notifications', label: 'Notifications', icon: Bell, active: activeTab === 'notifications' },
               { id: 'matches', label: 'Find Students', icon: Target, active: activeTab === 'matches' },
               { id: 'earnings', label: 'Earnings', icon: DollarSign, active: activeTab === 'earnings' },
               { id: 'messages', label: 'Messages', icon: MessageSquare, active: activeTab === 'messages' }
@@ -640,6 +662,16 @@ const Homes = () => {
           </div>
         )}
 
+        {activeTab === 'sessions' && (
+          <SessionPage />
+        )}
+
+        {activeTab === 'notifications' && (
+          <NotificationPage
+            tutorProfile={tutorProfile}
+            getProfilePictureUrl={getProfilePictureUrl}
+          />
+        )}
         {/* Footer */}
         <div className="h-16 bg-white border-t border-slate-200 flex items-center justify-end px-8">
           <Footer />
