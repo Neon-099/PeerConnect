@@ -6,6 +6,7 @@ use App\Controllers\AuthController;
 use App\Controllers\StudentController;
 use App\Controllers\TutorController;  
 use App\Controllers\MatchingController;
+use App\Controllers\GeneralController;
 use App\Utils\Response;
 
 // Load environment variables
@@ -63,6 +64,7 @@ try {
     $student = new StudentController();
     $tutor = new TutorController();  
     $matching = new MatchingController();
+    $general = new GeneralController(); // Add this line
     error_log("DEBUG: Controllers created successfully");
 } catch (Exception $e) {
     error_log("ERROR: Failed to create controllers: " . $e->getMessage());
@@ -143,6 +145,16 @@ switch(true) {
         $student->getTutorDetails((int)$m[1]);
         break;
 
+    //STUDENT SESSIONS
+    case $uri === '/api/student/book-session' && $method === 'POST':
+        error_log("DEBUG: Matched student book session POST route");
+        $student->bookSession();
+        break;
+    case $uri === '/api/student/sessions' && $method === 'GET':
+        error_log("DEBUG: Matched student session GET route");
+        $student->getStudentSessions();
+        break;
+    
     //TUTOR 
     case $uri === '/api/tutor/profile' && $method === 'GET': 
         error_log("DEBUG: Matched tutor profile GET route");
@@ -157,6 +169,16 @@ switch(true) {
         $tutor->updateProfile();
         break;
 
+    //TUTOR SESSIONS
+    case $uri === '/api/tutor/sessions' && $method === 'GET':
+        error_log("DEBUG: Matched tutor sessions GET route");
+        $tutor->getTutorSessions();
+        break;
+    case preg_match('#^/api/tutor/sessions/(\d+)/status$#', $uri, $m) && $method === 'PUT':
+        error_log("DEBUG: Matched tutor session update PUT route");
+        $tutor->updateSessionStatus((int)$m[1]);
+        break;
+
     //MATCHING
     case $uri === '/api/matching/findStudents' && $method === 'GET':
         error_log("DEBUG: Matched matching students route");
@@ -165,6 +187,35 @@ switch(true) {
     case $uri === '/api/matching/findTutors' && $method === 'GET':
         error_log("DEBUG: Matched matching tutors route");
         $matching->findTutorsForStudent();
+        break;
+
+    //STUDENT NOTIFICATIONS
+    case $uri === '/api/student/notifications' && $method === 'GET':
+        $student->getNotifications();
+        break;
+    case preg_match('#^/api/student/notifications/(\d+)/read$#', $uri, $m) && $method === 'PUT':
+        $student->markNotificationAsRead((int)$m[1]);
+        break;
+    case $uri === '/api/student/notifications/unread-count' && $method === 'GET':
+        $student->getUnreadNotificationCount();
+        break;
+
+    //TUTOR NOTIFICATIONS
+    case $uri === '/api/tutor/notifications' && $method === 'GET':
+        $tutor->getNotifications();
+        break;
+    case preg_match('#^/api/tutor/notifications/(\d+)/read$#', $uri, $m) && $method === 'PUT':
+        $tutor->markNotificationAsRead((int)$m[1]);
+        break;
+    case $uri === '/api/tutor/notifications/unread-count' && $method === 'GET':
+        $tutor->getUnreadNotificationCount();
+        break;
+
+        
+    //GENERAL ROUTES
+    case $uri === '/api/subjects' && $method === 'GET':
+        error_log("DEBUG: Matched subjects route");
+        $general->getSubjects();
         break;
 
     //DEBUG
@@ -186,14 +237,14 @@ switch(true) {
         error_log("  POST /api/auth/register");
         error_log("  POST /api/auth/login");
         error_log("  POST /api/auth/refresh");
-        error_log("  POST /api/auth/googleAuth");
         error_log("  GET /api/student/profile");
         error_log("  PUT /api/student/profile");
         error_log("  GET /api/student/tutors");
         error_log("  GET /api/student/tutors/{id}");
-        error_log("  POST /api/tutor/profile");  // Add this
-        error_log("  GET /api/tutor/profile");   // Add this
-        error_log("  PUT /api/tutor/profile");   // Add this
+        error_log("  POST /api/tutor/profile");
+        error_log("  GET /api/tutor/profile");
+        error_log("  PUT /api/tutor/profile");
+        error_log("  GET /api/subjects");
         error_log("  GET /debug/users");
         http_response_code(404);
         echo json_encode([

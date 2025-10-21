@@ -8,26 +8,26 @@ use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Models\TutorProfile;
 use App\Models\StudentProfile;
+use App\Services\NotificationService;
 use App\Utils\Response;
 use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
 
 use Cloudinary\Cloudinary;
-use Cloudinary\Configuration\Configuration;
-
-use Google\Service\ServiceConsumerManagement\Authentication;
 
 class StudentController {
     private $authService;
     private $authMiddleware;
     private $tutorProfileModel;
     private $studentProfileModel;
+    private $notificationService;
 
     public function __construct() {
         $this -> authService = new AuthService();
         $this -> authMiddleware = new AuthMiddleware();
         $this -> tutorProfileModel = new TutorProfile();
         $this -> studentProfileModel = new StudentProfile();
+        $this -> notificationService = new NotificationService();
     }
 
 
@@ -475,70 +475,74 @@ class StudentController {
     }
 
     //BOOK A SESSION WITH TUTOR 
-       //POST/ api/student/book-session
+//POST /api/student/book-session
     public function bookSession(): void {
+    try {
+        $user = $this->authMiddleware->requireAuth();
+        
+        if(!RoleMiddleware::studentOnly($user)){
+            return;
+        }
+
+        $input = $this->getJsonInput();
+
+        // Validate required fields
+        $requiredFields = ['tutor_id', 'session_date', 'start_time', 'end_time'];
+        foreach ($requiredFields as $field) {
+            if (!isset($input[$field]) || empty($input[$field])) {
+                Response::error("Field '{$field}' is required", 400);
+                return;
+            }
+        }
+
+        // Validate subject requirement
+        if (!isset($input['subject_id']) && !isset($input['custom_subject'])) {
+            Response::error("Either subject_id or custom_subject is required", 400);
+            return;
+        }
+
+        // Add student_id to input
+        $input['student_id'] = $user['user_id'];
+
+        // Use SessionService to book session
+        $sessionService = new \App\Services\SessionService();
+        $result = $sessionService->bookSession($input);
+
+        Response::created($result, 'Session booked successfully');
+    }
+    catch (AuthenticationException $e) {
+        Response::handleException($e);
+    }
+    catch (\Exception $e){
+        Logger::error('Book session error', [
+            'error' => $e->getMessage(),
+            'student_id' => $user['user_id'] ?? 'unknown'
+        ]);
+        Response::serverError('Failed to book session: ' . $e->getMessage());
+        }
+    }
+
+    //GET STUDENT BOOKED SESSIONS
+    //GET /api/student/sessions
+    public function getStudentSessions(): void {
         try {
-            $user =  $this->authMiddleware->requireAuth();
+            $user = $this->authMiddleware->requireAuth();
             
             if(!RoleMiddleware::studentOnly($user)){
                 return;
             }
 
-            $input = $this->getJsonInput();
+            $status = $_GET['status'] ?? null; // pending, confirmed, completed, cancelled
+            $sessionService = new \App\Services\SessionService();
+            $sessions = $sessionService->getStudentSessions($user['user_id'], $status);
 
-            if(!$input || !isset($input['tutor_id']) || !isset($input['scheduled_at'])){
-                Response::error('Tutor ID and scheduled time are required', 400);
-                return;
-            }
-
-            Logger::info('Session booking attempt', [
-                'student_id' => $user['user_id'],
-                'tutor_id' => $input['tutor_id'],
-                'scheduled_at' => $input['scheduled_at']
-            ]);
-            Response::created([], 'Session booked successfully');
+            Response::success($sessions, 'Sessions retrieved successfully');
         }
         catch (AuthenticationException $e) {
             Response::handleException($e);
         }
         catch (\Exception $e){
-            Logger::error('Book session error', [
-                'error' => $e->getMessage(),
-                'student_id' => $user['user_id'] ?? 'unknown'
-            ]);
-            Response::serverError('Failed to book session');
-        }
-    }
-
-    //GET STUDENT BOOKED SESSIONS
-       //GET /api/student/sessions
-    public function getSessions(): void {
-        try {
-            $user = $this->authMiddleware->requireAuth();
-
-            if(!RoleMiddleware::studentOnly($user)) {
-                return;
-            }
-
-            $status = $_GET['status'] ?? 'all';
-            $page = (int)($_GET['page'] ?? 1);
-            $perPage = (int)($_GET['per_page'] ?? 20);
-            
-            Logger::debug('Fetching student sessions', [
-                'student_id' => $user['user_id'],
-                'status' => $status
-            ]);
-
-            // Implement session retrieval logic
-            // $sessions = $this->sessionService->getStudentSessions($user['user_id'], $status, $page, $perPage);
-            
-            Response::success([], 'Sessions retrieved successfully');
-        }
-        catch (AuthenticationException $e){
-            Response::handleException($e);
-        }
-        catch (\Exception $e) {
-            Logger::error('Get sessions error', [
+            Logger::error('Get student sessions error', [
                 'error' => $e->getMessage(),
                 'student_id' => $user['user_id'] ?? 'unknown'
             ]);
@@ -619,6 +623,88 @@ class StudentController {
                 'error' => $e->getMessage()
             ]);
             Response::serverError('Failed to submit rating');
+        }
+    }
+
+    public function getNotifications(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+    
+            $unreadOnly = isset($_GET['unread_only']) && $_GET['unread_only'] === 'true';
+            $notifications = $this->notificationService->getUserNotifications($user['user_id'], $unreadOnly);
+    
+            Response::success($notifications, 'Notifications retrieved successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Get student notifications error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to retrieve notifications: ' . $e->getMessage());
+        }
+    }
+    
+    //MARK STUDENT NOTIFICATION AS READ
+    //PUT /api/student/notifications/{id}/read
+    public function markNotificationAsRead(int $notificationId): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+    
+            $success = $this->notificationService->markNotificationAsRead($notificationId, $user['user_id']);
+    
+            if ($success) {
+                Response::success(['notification_id' => $notificationId], 'Notification marked as read');
+            } else {
+                Response::error('Failed to mark notification as read', 400);
+            }
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Mark student notification as read error', [
+                'error' => $e->getMessage(),
+                'notification_id' => $notificationId,
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to mark notification as read: ' . $e->getMessage());
+        }
+    }
+    
+    //GET STUDENT UNREAD NOTIFICATION COUNT
+    //GET /api/student/notifications/unread-count
+    public function getUnreadNotificationCount(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+    
+            $count = $this->notificationService->getUnreadNotificationCount($user['user_id']);
+    
+            Response::success(['count' => $count], 'Unread notification count retrieved');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Get student unread notification count error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to get unread notification count: ' . $e->getMessage());
         }
     }
     private function getJsonInput():? array {

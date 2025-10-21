@@ -104,6 +104,18 @@ CREATE TABLE student_subjects_of_interest (
     INDEX idx_user_subject (user_id, subject)
 );
 
+-- table to track student availability preferences
+CREATE TABLE student_availability_preferences (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    preferred_date DATE NOT NULL,
+    preferred_start_time TIME NOT NULL,
+    preferred_end_time TIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_student_date (student_id, preferred_date)
+);
+
 
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
@@ -201,13 +213,25 @@ CREATE TABLE tutoring_sessions (
     tutor_id INT,
     student_id INT,
     subject_id INT,
+    custom_subject VARCHAR(255) NULL,
     session_date DATETIME,
+    start_time TIME,
+    end_time TIME,
+    hourly_rate DECIMAL(8,2) DEFAULT 0.00,
+    total_cost DECIMAL(8,2) DEFAULT 0.00,
     notes TEXT,
+    session_type ENUM('virtual', 'in-person') DEFAULT 'virtual',
+    meeting_link VARCHAR(255) NULL,
+    location VARCHAR(255) NULL,
     status ENUM('pending','confirmed','completed','cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (tutor_id) REFERENCES users(id),
     FOREIGN KEY (student_id) REFERENCES users(id),
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id)
 );
+
 
 CREATE TABLE session_feedback (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -218,4 +242,19 @@ CREATE TABLE session_feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
     FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  -- Fixed: was "sessions(id)"
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('session_request', 'session_confirmed', 'session_cancelled', 'session_reminder', 'message', 'feedback') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    data JSON NULL, -- Additional data like session_id, tutor_id, etc.
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_unread (user_id, is_read),
+    INDEX idx_user_type (user_id, type),
+    INDEX idx_created_at (created_at)
 );
