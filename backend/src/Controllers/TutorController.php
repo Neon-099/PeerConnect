@@ -499,7 +499,37 @@ class TutorController {
         }
     }
     
-    //GET UNREAD NOTIFICATION COUNT
+    //MARK ALL TUTOR NOTIFICATIONS AS READ
+    //PUT /api/tutor/notifications/mark-all-read
+    public function markAllNotificationsAsRead(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::tutorOnly($user)){
+                return;
+            }
+
+            $success = $this->notificationService->markAllNotificationsAsRead($user['user_id']);
+
+            if ($success) {
+                Response::success([], 'All notifications marked as read');
+            } else {
+                Response::error('Failed to mark all notifications as read', 400);
+            }
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Mark all tutor notifications as read error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to mark all notifications as read: ' . $e->getMessage());
+        }
+    }
+
+    //GET TUTOR UNREAD NOTIFICATION COUNT
     //GET /api/tutor/notifications/unread-count
     public function getUnreadNotificationCount(): void {
         try {
@@ -508,16 +538,16 @@ class TutorController {
             if(!RoleMiddleware::tutorOnly($user)){
                 return;
             }
-    
+
             $count = $this->notificationService->getUnreadNotificationCount($user['user_id']);
-    
-            Response::success(['count' => $count], 'Unread notification count retrieved');
+
+            Response::success(['count' => $count], 'Unread notification count retrieved successfully');
         }
         catch (AuthenticationException $e) {
             Response::handleException($e);
         }
         catch (\Exception $e){
-            Logger::error('Get unread notification count error', [
+            Logger::error('Get tutor unread notification count error', [
                 'error' => $e->getMessage(),
                 'tutor_id' => $user['user_id'] ?? 'unknown'
             ]);

@@ -59,10 +59,16 @@ class TutoringSession {
         $query = "SELECT ts.*, 
                     u.first_name as tutor_first_name, u.last_name as tutor_last_name,
                     u.profile_picture as tutor_profile_picture,
-                    COALESCE(ls.name, ts.custom_subject) as subject_name
+                    COALESCE(ls.name, ts.custom_subject) as subject_name,
+                    sf.id as review_id,
+                    sf.rating as review_rating,
+                    sf.comment as review_comment,
+                    sf.created_at as review_created_at,
+                    CASE WHEN sf.id IS NOT NULL THEN 1 ELSE 0 END as has_review
                   FROM {$this->table} ts
                   JOIN users u ON ts.tutor_id = u.id
                   LEFT JOIN learning_subjects ls ON ts.subject_id = ls.id
+                  LEFT JOIN session_feedback sf ON ts.id = sf.session_id AND sf.student_id = ts.student_id
                   {$whereClause}
                   ORDER BY ts.session_date DESC, ts.start_time DESC";
 
@@ -83,10 +89,16 @@ class TutoringSession {
         $query = "SELECT ts.*, 
                     u.first_name as student_first_name, u.last_name as student_last_name,
                     u.profile_picture as student_profile_picture,
-                    COALESCE(ls.name, ts.custom_subject) as subject_name
+                    COALESCE(ls.name, ts.custom_subject) as subject_name,
+                    sf.id as review_id,
+                    sf.rating as review_rating,
+                    sf.comment as review_comment,
+                    sf.created_at as review_created_at,
+                    CASE WHEN sf.id IS NOT NULL THEN 1 ELSE 0 END as has_review
                   FROM {$this->table} ts
                   JOIN users u ON ts.student_id = u.id
                   LEFT JOIN learning_subjects ls ON ts.subject_id = ls.id
+                  LEFT JOIN session_feedback sf ON ts.id = sf.session_id AND sf.student_id = ts.student_id
                   {$whereClause}
                   ORDER BY ts.session_date DESC, ts.start_time DESC";
 

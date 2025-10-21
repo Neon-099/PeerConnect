@@ -14,6 +14,9 @@ use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
 
 use Cloudinary\Cloudinary;
+use Config\Database;
+use PDO;
+use Exception;
 
 class StudentController {
     private $authService;
@@ -21,6 +24,7 @@ class StudentController {
     private $tutorProfileModel;
     private $studentProfileModel;
     private $notificationService;
+    private $db;
 
     public function __construct() {
         $this -> authService = new AuthService();
@@ -28,6 +32,7 @@ class StudentController {
         $this -> tutorProfileModel = new TutorProfile();
         $this -> studentProfileModel = new StudentProfile();
         $this -> notificationService = new NotificationService();
+        $this -> db = Database::getInstance()->getConnection();
     }
 
 
@@ -477,49 +482,49 @@ class StudentController {
     //BOOK A SESSION WITH TUTOR 
 //POST /api/student/book-session
     public function bookSession(): void {
-    try {
-        $user = $this->authMiddleware->requireAuth();
-        
-        if(!RoleMiddleware::studentOnly($user)){
-            return;
-        }
-
-        $input = $this->getJsonInput();
-
-        // Validate required fields
-        $requiredFields = ['tutor_id', 'session_date', 'start_time', 'end_time'];
-        foreach ($requiredFields as $field) {
-            if (!isset($input[$field]) || empty($input[$field])) {
-                Response::error("Field '{$field}' is required", 400);
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
                 return;
             }
+
+            $input = $this->getJsonInput();
+
+            // Validate required fields
+            $requiredFields = ['tutor_id', 'session_date', 'start_time', 'end_time'];
+            foreach ($requiredFields as $field) {
+                if (!isset($input[$field]) || empty($input[$field])) {
+                    Response::error("Field '{$field}' is required", 400);
+                    return;
+                }
+            }
+
+            // Validate subject requirement
+            if (!isset($input['subject_id']) && !isset($input['custom_subject'])) {
+                Response::error("Either subject_id or custom_subject is required", 400);
+                return;
+            }
+
+            // Add student_id to input
+            $input['student_id'] = $user['user_id'];
+
+            // Use SessionService to book session
+            $sessionService = new \App\Services\SessionService();
+            $result = $sessionService->bookSession($input);
+
+            Response::created($result, 'Session booked successfully');
         }
-
-        // Validate subject requirement
-        if (!isset($input['subject_id']) && !isset($input['custom_subject'])) {
-            Response::error("Either subject_id or custom_subject is required", 400);
-            return;
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
         }
-
-        // Add student_id to input
-        $input['student_id'] = $user['user_id'];
-
-        // Use SessionService to book session
-        $sessionService = new \App\Services\SessionService();
-        $result = $sessionService->bookSession($input);
-
-        Response::created($result, 'Session booked successfully');
-    }
-    catch (AuthenticationException $e) {
-        Response::handleException($e);
-    }
-    catch (\Exception $e){
-        Logger::error('Book session error', [
-            'error' => $e->getMessage(),
-            'student_id' => $user['user_id'] ?? 'unknown'
-        ]);
-        Response::serverError('Failed to book session: ' . $e->getMessage());
-        }
+        catch (\Exception $e){
+            Logger::error('Book session error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to book session: ' . $e->getMessage());
+            }
     }
 
     //GET STUDENT BOOKED SESSIONS
@@ -550,8 +555,76 @@ class StudentController {
         }
     }
 
-    //CANCEL A BOOKED SESSION
-        //DELETE /api/student/sessions/{id}
+    // Add new method for student to complete session
+    //POST /api/student/complete-session
+    public function completeSession(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+
+            $input = $this->getJsonInput();
+
+            if(!$input || !isset($input['session_id'])){
+                Response::error('Session ID is required', 400);
+                return;
+            }
+
+            Logger::info('Student completing session', [
+                'student_id' => $user['user_id'],
+                'session_id' => $input['session_id']
+            ]);
+
+            // Check if session exists and belongs to the student
+            $sessionQuery = "SELECT * FROM tutoring_sessions WHERE id = :session_id AND student_id = :student_id AND status = 'confirmed'";
+            $stmt = $this->db->prepare($sessionQuery);
+            $stmt->execute([
+                ':session_id' => $input['session_id'],
+                ':student_id' => $user['user_id']
+            ]);
+            
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$session) {
+                Response::error('Session not found or not confirmed', 404);
+                return;
+            }
+
+            // Update session status to completed
+            $updateQuery = "UPDATE tutoring_sessions SET status = 'completed' WHERE id = :session_id";
+            $stmt = $this->db->prepare($updateQuery);
+            $result = $stmt->execute([':session_id' => $input['session_id']]);
+
+            if (!$result) {
+                Logger::error('Failed to complete session', [
+                    'session_id' => $input['session_id'],
+                    'student_id' => $user['user_id'],
+                    'error' => $stmt->errorInfo()
+                ]);
+                Response::error('Failed to complete session', 500);
+                return;
+            }
+
+            // Create notification for tutor
+            $this->notificationService->createSessionCompletedNotification($session['tutor_id'], $input['session_id']);
+            
+            Response::success([], 'Session completed successfully');
+        }
+        catch (AuthenticationException $e){
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Complete session error', [
+                'error' => $e->getMessage(),
+                'session_id' => $input['session_id'] ?? null
+            ]);
+            Response::serverError('Failed to complete session');
+        }
+    }
+    
+    // Add method for student to cancel confirmed session
+    //DELETE /api/student/sessions/{id}
     public function cancelSession(int $sessionId): void {
         try {
             $user = $this->authMiddleware->requireAuth();
@@ -560,17 +633,46 @@ class StudentController {
                 return;
             }
 
-            Logger::info('Session cancellation attempt', [
+            Logger::info('Student cancelling session', [
                 'student_id' => $user['user_id'],
                 'session_id' => $sessionId
             ]);
 
-            // Implement session cancellation logic
-            // $this->sessionService->cancelSession($sessionId, $user['user_id']);
+            // Check if session exists and belongs to the student
+            $sessionQuery = "SELECT * FROM tutoring_sessions WHERE id = :session_id AND student_id = :student_id AND status IN ('pending', 'confirmed')";
+            $stmt = $this->db->prepare($sessionQuery);
+            $stmt->execute([
+                ':session_id' => $sessionId,
+                ':student_id' => $user['user_id']
+            ]);
+            
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$session) {
+                Response::error('Session not found or cannot be cancelled', 404);
+                return;
+            }
+
+            // Update session status to cancelled
+            $updateQuery = "UPDATE tutoring_sessions SET status = 'cancelled' WHERE id = :session_id";
+            $stmt = $this->db->prepare($updateQuery);
+            $result = $stmt->execute([':session_id' => $sessionId]);
+
+            if (!$result) {
+                Logger::error('Failed to cancel session', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id'],
+                    'error' => $stmt->errorInfo()
+                ]);
+                Response::error('Failed to cancel session', 500);
+                return;
+            }
+
+            // Create notification for tutor
+            $this->notificationService->createSessionCancelledNotification($session['tutor_id'], $sessionId, 'student');
             
             Response::success([], 'Session cancelled successfully');
         }
-        catch (AuthenticationException $e) {
+        catch (AuthenticationException $e){
             Response::handleException($e);
         }
         catch (\Exception $e){
@@ -604,25 +706,117 @@ class StudentController {
                 return;
             }
 
+            if(!isset($input['comment']) || empty(trim($input['comment']))) {
+                Response::error('Review comment is required', 400);
+                return;
+            }
+
             Logger::info('Tutor rating submitted', [
                 'student_id' => $user['user_id'],
                 'session_id' => $input['session_id'],
                 'rating' => $input['rating']
             ]);
 
-            // Implement rating logic
-            // $this->ratingService->rateTutor($input);
+            // Check if session exists and belongs to the student
+            $sessionQuery = "SELECT * FROM tutoring_sessions WHERE id = :session_id AND student_id = :student_id AND status = 'completed'";
+            $stmt = $this->db->prepare($sessionQuery);
+            $stmt->execute([
+                ':session_id' => $input['session_id'],
+                ':student_id' => $user['user_id']
+            ]);
             
-            Response::success([], 'Rating submitted successfully');
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$session) {
+                Response::error('Session not found or not completed', 404);
+                return;
+            }
+
+            // Check if review already exists
+            $existingReviewQuery = "SELECT id FROM session_feedback WHERE session_id = :session_id AND student_id = :student_id";
+            $stmt = $this->db->prepare($existingReviewQuery);
+            $stmt->execute([
+                ':session_id' => $input['session_id'],
+                ':student_id' => $user['user_id']
+            ]);
+            
+            if ($stmt->fetch()) {
+                Response::error('You have already reviewed this session', 400);
+                return;
+            }
+
+            // Insert review
+            $insertQuery = "INSERT INTO session_feedback (session_id, student_id, rating, comment) VALUES (:session_id, :student_id, :rating, :comment)";
+            $stmt = $this->db->prepare($insertQuery);
+            $result = $stmt->execute([
+                ':session_id' => $input['session_id'],
+                ':student_id' => $user['user_id'],
+                ':rating' => $input['rating'],
+                ':comment' => trim($input['comment'])
+            ]);
+
+            if (!$result) {
+                Logger::error('Failed to insert review', [
+                    'session_id' => $input['session_id'],
+                    'student_id' => $user['user_id'],
+                    'error' => $stmt->errorInfo()
+                ]);
+                Response::error('Failed to submit review', 500);
+                return;
+            }
+
+            // Update tutor's average rating
+            $this->updateTutorAverageRating($session['tutor_id']);
+
+            // Create notification for tutor about the review
+            $this->notificationService->createReviewReceivedNotification($session['tutor_id'], $input['session_id'], $input['rating']);
+            
+            Response::success([], 'Review submitted successfully');
         }
         catch (AuthenticationException $e){
             Response::handleException($e);
         }
         catch (\Exception $e){
             Logger::error('Rate tutor error', [
+                'error' => $e->getMessage(),
+                'session_id' => $input['session_id'] ?? null
+            ]);
+            Response::serverError('Failed to submit review');
+        }
+    }
+
+    private function updateTutorAverageRating(int $tutorId): void {
+        try {
+            // Calculate average rating
+            $avgQuery = "SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews FROM session_feedback sf 
+                         JOIN tutoring_sessions ts ON sf.session_id = ts.id 
+                         WHERE ts.tutor_id = :tutor_id";
+            $stmt = $this->db->prepare($avgQuery);
+            $stmt->execute([':tutor_id' => $tutorId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result) {
+                $averageRating = round($result['avg_rating'], 2);
+                $totalReviews = $result['total_reviews'];
+
+                // Update tutor profile
+                $updateQuery = "UPDATE tutor_profiles SET average_rating = :avg_rating WHERE user_id = :tutor_id";
+                $stmt = $this->db->prepare($updateQuery);
+                $stmt->execute([
+                    ':avg_rating' => $averageRating,
+                    ':tutor_id' => $tutorId
+                ]);
+
+                Logger::info('Updated tutor average rating', [
+                    'tutor_id' => $tutorId,
+                    'average_rating' => $averageRating,
+                    'total_reviews' => $totalReviews
+                ]);
+            }
+        } catch (Exception $e) {
+            Logger::error('Failed to update tutor average rating', [
+                'tutor_id' => $tutorId,
                 'error' => $e->getMessage()
             ]);
-            Response::serverError('Failed to submit rating');
         }
     }
 
@@ -682,6 +876,36 @@ class StudentController {
         }
     }
     
+    //MARK ALL STUDENT NOTIFICATIONS AS READ
+//PUT /api/student/notifications/mark-all-read
+    public function markAllNotificationsAsRead(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+
+            $success = $this->notificationService->markAllNotificationsAsRead($user['user_id']);
+
+            if ($success) {
+                Response::success([], 'All notifications marked as read');
+            } else {
+                Response::error('Failed to mark all notifications as read', 400);
+            }
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e){
+            Logger::error('Mark all student notifications as read error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to mark all notifications as read: ' . $e->getMessage());
+        }
+    }
+
     //GET STUDENT UNREAD NOTIFICATION COUNT
     //GET /api/student/notifications/unread-count
     public function getUnreadNotificationCount(): void {
@@ -691,10 +915,10 @@ class StudentController {
             if(!RoleMiddleware::studentOnly($user)){
                 return;
             }
-    
+
             $count = $this->notificationService->getUnreadNotificationCount($user['user_id']);
-    
-            Response::success(['count' => $count], 'Unread notification count retrieved');
+
+            Response::success(['count' => $count], 'Unread notification count retrieved successfully');
         }
         catch (AuthenticationException $e) {
             Response::handleException($e);

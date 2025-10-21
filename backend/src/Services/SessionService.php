@@ -62,15 +62,20 @@ class SessionService {
         // Create session
         $sessionId = $this->sessionModel->create($sessionData);
 
-        // Create notification for tutor
+        // Create notification for tutor - ENSURE THIS HAPPENS
         try {
             $this->notificationService->createSessionRequestNotification($sessionData['tutor_id'], $sessionId);
+            Logger::info('Session request notification created', [
+                'tutor_id' => $sessionData['tutor_id'],
+                'session_id' => $sessionId
+            ]);
         } catch (Exception $e) {
             Logger::error('Failed to create session request notification', [
                 'error' => $e->getMessage(),
                 'tutor_id' => $sessionData['tutor_id'],
                 'session_id' => $sessionId
             ]);
+            // Don't fail the session creation if notification fails
         }
 
         Logger::info('Session booked successfully', [

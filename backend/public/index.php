@@ -93,7 +93,6 @@ switch(true) {
         error_log("DEBUG: Matched googleAuth route");
         $auth->googleAuth();
             break;
-
     case $uri === '/api/auth/logout' && $method === 'POST': 
         error_log("DEBUG: Matched logout route");
         break;
@@ -125,17 +124,16 @@ switch(true) {
         error_log("DEBUG: Matched student profile GET route");
         $student->getProfile();
         break;
-        
     case $uri === '/api/student/updateProfile' && $method === 'PUT':
         error_log("DEBUG: Matched student profile PUT route");
         $student->updateProfile();
         break;
-
     case $uri === '/api/student/profilePicture' && $method === 'POST':
         error_log("DEBUG: Matched student profile picture POST route");
         $student->updateProfilePicture();
         break;
 
+    //STUDENT FINDING MATCH 
     case $uri === '/api/student/tutors' && $method === 'GET':
         error_log("DEBUG: Matched student tutors route");
         $student->findTutors();
@@ -154,7 +152,30 @@ switch(true) {
         error_log("DEBUG: Matched student session GET route");
         $student->getStudentSessions();
         break;
-    
+    case $uri === '/api/student/complete-session' && $method === 'POST':
+        error_log("DEBUG: Matched student complete session POST route");
+        $student->completeSession();
+        break;
+    case preg_match('#^/api/student/sessions/(\d+)/cancel$#', $uri, $m) && $method === 'POST':
+        error_log("DEBUG: Matched student cancel session POST route");
+        $student->cancelSession((int)$m[1]);
+        break;
+    case $uri === '/api/student/rate-tutor' && $method === 'POST':
+        error_log("DEBUG: Matched student rate tutor POST route");
+        $student->rateTutor();
+        break;
+
+    //STUDENT NOTIFICATIONS
+    case $uri === '/api/student/notifications' && $method === 'GET':
+        $student->getNotifications();
+        break;
+    case preg_match('#^/api/student/notifications/(\d+)/read$#', $uri, $m) && $method === 'PUT':
+        $student->markNotificationAsRead((int)$m[1]);
+        break;
+    case $uri === '/api/student/notifications/unread-count' && $method === 'GET':
+        $student->getUnreadNotificationCount();
+        break;
+
     //TUTOR 
     case $uri === '/api/tutor/profile' && $method === 'GET': 
         error_log("DEBUG: Matched tutor profile GET route");
@@ -178,6 +199,8 @@ switch(true) {
         error_log("DEBUG: Matched tutor session update PUT route");
         $tutor->updateSessionStatus((int)$m[1]);
         break;
+    
+
 
     //MATCHING
     case $uri === '/api/matching/findStudents' && $method === 'GET':
@@ -189,16 +212,7 @@ switch(true) {
         $matching->findTutorsForStudent();
         break;
 
-    //STUDENT NOTIFICATIONS
-    case $uri === '/api/student/notifications' && $method === 'GET':
-        $student->getNotifications();
-        break;
-    case preg_match('#^/api/student/notifications/(\d+)/read$#', $uri, $m) && $method === 'PUT':
-        $student->markNotificationAsRead((int)$m[1]);
-        break;
-    case $uri === '/api/student/notifications/unread-count' && $method === 'GET':
-        $student->getUnreadNotificationCount();
-        break;
+    
 
     //TUTOR NOTIFICATIONS
     case $uri === '/api/tutor/notifications' && $method === 'GET':
@@ -207,6 +221,10 @@ switch(true) {
     case preg_match('#^/api/tutor/notifications/(\d+)/read$#', $uri, $m) && $method === 'PUT':
         $tutor->markNotificationAsRead((int)$m[1]);
         break;
+    case $uri === '/api/tutor/mark-all-read' && $method === 'PUT':
+        $tutor->markAllNotificationsAsRead();
+        break;
+
     case $uri === '/api/tutor/notifications/unread-count' && $method === 'GET':
         $tutor->getUnreadNotificationCount();
         break;
