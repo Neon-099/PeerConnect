@@ -124,11 +124,11 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
   };
 
   const calculateCost = () => {
-    if (formData.start_time && formData.end_time && tutor.hourly_rate) {
+    if (formData.start_time && formData.end_time && tutor?.hourly_rate) {
       const start = new Date(`2000-01-01T${formData.start_time}`);
       const end = new Date(`2000-01-01T${formData.end_time}`);
       const duration = (end - start) / (1000 * 60 * 60);
-      return duration * tutor.hourly_rate;
+      return duration * tutor?.hourly_rate;
     }
     return 0;
   };

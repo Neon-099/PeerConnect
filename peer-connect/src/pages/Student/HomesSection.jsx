@@ -10,7 +10,6 @@ import Footer from './Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import FindTutorModal from '../../components/FindTutorModal.jsx';
 
-
 import ProfileSection from './ProfileSection.jsx';
 import StudentMatchingSection from './StudentMatchingSection.jsx';
 import SessionSection from './SessionSection.jsx';
@@ -36,7 +35,6 @@ const Homes = () =>  {
 
   const [isFindTutorModalOpen, setIsFindTutorModalOpen] = useState(false);
 
-  const navigate = useNavigate();
   //PROFILE DATA
   const fetchProfileData = async() => {
     try {
@@ -59,13 +57,6 @@ const Homes = () =>  {
     finally {
       setIsLoading(false);
     }
-  }
-  
-  //PROFILE UPDATE 
-  const handleProfileUpdate = (updatedProfile) => {
-    setUserProfile(updatedProfile);
-    //REFRESH THE PROFILE DATA TO GET LATEST INFO
-    fetchProfileData();
   }
 
   useEffect(() => {
@@ -90,7 +81,9 @@ const Homes = () =>  {
     console.log('Constructed profile picture URL:', fullUrl);
     return fullUrl;
   }
- 
+  
+  
+  
   const recentNotifications = [
     {
       id: 1,
@@ -410,6 +403,7 @@ const Homes = () =>  {
             studentProfile={studentProfile}
           />
       )}
+
       {/* Session Section*/}
       {activeTab === 'session' && (
         <SessionSection
@@ -445,6 +439,8 @@ const Homes = () =>  {
         isOpen={isFindTutorModalOpen} 
         onClose={() => setIsFindTutorModalOpen(false)}
       />
+
+     
     </div>
   );
 }

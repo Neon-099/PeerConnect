@@ -21,7 +21,7 @@ class GeneralController {
             
             Response::success($subjects, 'Subjects retrieved successfully');
         }
-        catch (\Exception $e){
+        catch (Exception $e){
             Logger::error('Get subjects error', [
                 'error' => $e->getMessage()
             ]);

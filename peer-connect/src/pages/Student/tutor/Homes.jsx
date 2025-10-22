@@ -8,7 +8,7 @@ import TutorProfilePage from './TutorProfilePage.jsx';
 import SessionPage from './SessionPage.jsx';
 import NotificationPage from './NotificationPage.jsx';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal.jsx';
-import TutorMatchingSection from '../../../components/tutor/TutorMatchingSection.jsx';
+import TutorMatchingSection from './TutorMatchingSection.jsx';
 import { auth } from '../../../utils/auth';
 import {apiClient} from '../../../utils/api';
 
@@ -17,18 +17,14 @@ import Footer from '../Footer.jsx';
 import { LoadingSpinner } from '../../../components/LoadingSpinner.jsx';
 import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
 import NotificationModal from '../../../components/NotificationModal.jsx';
+import FloatingMatchingNotification from '../../../components/notification/FloatingMatchingNotification.jsx';
+
+import { useNotifications } from '../../../hooks/useNotifications.js';
 
 const Homes = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [searchInput, setSearchInput] = useState('');
-  const [sessions, setSessions] = useState([]);
-  const [filterTab, setFilterTab] = useState('all');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState('Dashboard');
-  const [selectedStudent, setSelectedStudent] = useState('');
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [feedback, setFeedback] = useState('');
 
   const [userProfile, setUserProfile] = useState(null);
   const [tutorProfile, setTutorProfile] = useState(null);
@@ -38,8 +34,12 @@ const Homes = () => {
   const [availability, setAvailability] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  const { notifications, unreadCount,
+    floatingNotification, hideFloatingNotification,
+    refreshNotifications} = useNotifications('tutor');
 
   const navigate = useNavigate();
 
@@ -62,19 +62,6 @@ const Homes = () => {
       console.error('Error fetching profile data:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // FETCH MATCHING STUDENTS
-  const fetchMatchingStudents = async() => {
-    try {
-      setIsLoadingMatches(true);
-      const response = await apiClient.get('/api/matching/findStudents');
-      setMatchingStudents(response.matches || []);
-    } catch (error) {
-      console.error('Error fetching matching students:', error);
-    } finally {
-      setIsLoadingMatches(false);
     }
   };
 
@@ -246,21 +233,6 @@ const Homes = () => {
     }
   };
 
-  // Format availability for display
-  const formatAvailability = (availability) => {
-    if (!availability || availability.length === 0) return 'Not set';
-    
-    const groupedByDay = availability.reduce((acc, slot) => {
-      if (!acc[slot.day_of_week]) acc[slot.day_of_week] = [];
-      acc[slot.day_of_week].push(`${slot.start_time}-${slot.end_time}`);
-      return acc;
-    }, {});
-
-    return Object.entries(groupedByDay).map(([day, times]) => 
-      `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.join(', ')}`
-    ).join(' | ');
-};
-
   // Mock data for demonstration
   const mockSessions = [
     {
@@ -323,16 +295,6 @@ const Homes = () => {
     }
   ];
 
-  const weeklyData = [
-    { day: 'Sun', date: '10', sessions: 0 },
-    { day: 'Mon', date: '11', sessions: 2 },
-    { day: 'Tue', date: '12', sessions: 1 },
-    { day: 'Wed', date: '13', sessions: 0 },
-    { day: 'Thu', date: '14', sessions: 1 },
-    { day: 'Fri', date: '15', sessions: 0 },
-    { day: 'Sat', date: '16', sessions: 0 }
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
@@ -364,11 +326,9 @@ const Homes = () => {
             {[
               { id: 'profile', label: 'Profile', icon: User, active: activeTab === 'profile' },
               { id: 'home', label: 'Dashboard', icon: Home, active: activeTab === 'home' },
+              { id: 'matches', label: 'Find Students', icon: Target, active: activeTab === 'matches' },
               { id: 'sessions', label: 'Sessions', icon: Calendar, active: activeTab === 'sessions' },
               { id: 'notifications', label: 'Notifications', icon: Bell, active: activeTab === 'notifications' },
-              { id: 'matches', label: 'Find Students', icon: Target, active: activeTab === 'matches' },
-              { id: 'earnings', label: 'Earnings', icon: DollarSign, active: activeTab === 'earnings' },
-              { id: 'messages', label: 'Messages', icon: MessageSquare, active: activeTab === 'messages' }
             ].map((item) => (
               <button
                 key={item.id}
@@ -710,6 +670,14 @@ const Homes = () => {
           isOpen={showNotificationModal}
           onClose={() => setShowNotificationModal(false)}
           userRole="tutor"
+        />
+      )}
+
+      {/* Floating Matching Notification */}
+      {floatingNotification && (
+        <FloatingMatchingNotification
+          notification={floatingNotification}
+          onClose={hideFloatingNotification}
         />
       )}
     </div>

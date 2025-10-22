@@ -28,7 +28,7 @@ class Notification {
             ':title' => $notificationData['title'],
             ':message' => $notificationData['message'],
             ':data' => json_encode($notificationData['data'] ?? []),
-            ':is_read' => false
+            ':is_read' => 0
         ];
 
         if ($stmt->execute($params)) {

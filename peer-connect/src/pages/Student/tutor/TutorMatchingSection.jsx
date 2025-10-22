@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Users, Clock, Star, MapPin, BookOpen, CheckCircle, AlertCircle, RotateCcw, GraduationCap, Target } from 'lucide-react';
-import { apiClient } from '../../utils/api.js';
-import MatchingResults from '../MatchingResults';
+import { apiClient } from '../../../utils/api.js';
+import MatchingResults from '../../../components/MatchingResults.jsx';
+
+import { useNotifications } from '../../../hooks/useNotifications.js';
+import FloatingMatchingNotification from '../../../components/notification/FloatingMatchingNotification.jsx';
 
 const StudentMatchingSection = () => {
+  const { notifications, unreadCount,
+    floatingNotification, hideFloatingNotification,
+    refreshNotifications} = useNotifications('tutor');
+
+  const [showMatchToast, setShowMatchToast] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
   const [searchPhase, setSearchPhase] = useState('');
@@ -79,6 +87,11 @@ const StudentMatchingSection = () => {
         setIsSearching(false);
       }, 500);
 
+      try {
+        await apiClient.post('/api/tutor/create-student-match-notification');
+      } catch (error) {
+        console.error('Error creating student match notification:', error);
+      }
     } catch (err) {
       console.error('Search error:', err);
       
@@ -91,7 +104,14 @@ const StudentMatchingSection = () => {
       setIsSearching(false);
     }
   };
-
+  // Show match toast
+  useEffect(() => {
+    if (Array.isArray(matches) && matches.length > 0) {
+      setShowMatchToast(true);
+      const t = setTimeout(() => setShowMatchToast(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [matches]);
   const handleSearchTimeout = () => {
     setError('Search is taking longer than expected. Please try again.');
     setIsSearching(false);
@@ -238,6 +258,14 @@ const StudentMatchingSection = () => {
           )}
         </div>
       )}
+
+    {showMatchToast && (
+      <FloatingMatchingNotification
+        title="New student match found!"
+        message="You have new student matches based on your subjects."
+        onClose={() => setShowMatchToast(false)}
+      />
+    )}
     </div>
   );
 };

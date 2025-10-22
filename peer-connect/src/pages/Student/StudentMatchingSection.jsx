@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Users, AlertCircle, RotateCcw, Target } from 'lucide-react';
 import { apiClient } from '../../utils/api';
 import MatchingResults from '../../components/MatchingResults';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
+
+
+import FloatingMatchingNotification from '../../components/notification/FloatingMatchingNotification.jsx';
 
 const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [isSearching, setIsSearching] = useState(false);
@@ -14,6 +16,8 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [searchComplete, setSearchComplete] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const [showMatchToast, setShowMatchToast] = useState(false);
 
   // Match phases and durations (consistent with tutor side)
   const searchPhases = [
@@ -63,24 +67,45 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
 
       setSearchProgress(100);
       setSearchPhase('Search complete!');
-      setTimeout(() => {
-        setMatches(response.matches || []);
+      
+      setTimeout(async () => {
+        const matches = response.matches || [];
+        setMatches(matches);
         setSearchComplete(true);
         setIsSearching(false);
+      
+
+      //TUTOR NOTIFICATION FOR TUTOR MATCHES
+      if(matches.length > 0){
+        try {
+          await apiClient.post('/api/student/create-tutor-match-notification');
+        } catch (error) {
+          console.error('Error creating tutor match notification:', error);
+        }
+      }
       }, 500);
     } catch (err) {
       clearInterval(phaseInterval);
       clearInterval(progressInterval);
       clearTimeout(timeout);
+
       setIsSearching(false);
       setError(err?.message || 'Failed to find matching tutors. Please try again.');
     }
   };
+  useEffect(() => {
+    if (Array.isArray(matches) && matches.length > 0) {
+      setShowMatchToast(true);
+      const t = setTimeout(() => setShowMatchToast(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [matches]);
 
   const retrySearch = () => {
     setError(null);
     startSearch();
-  };
+  };  
+ 
 
   return (
     <div className='flex-1 flex flex-col'>
@@ -214,6 +239,14 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
       <div className="h-[49px] mt-auto bg-white border-t border-gray-200 flex items-center justify-end px-8">
         <Footer/>
       </div>
+
+      {showMatchToast && (
+        <FloatingMatchingNotification
+          title="New tutor match found!"
+          message="We found a tutor that matches your preferences."
+          onClose={() => setShowMatchToast(false)}
+        />
+      )}
     </div>
   );
 };

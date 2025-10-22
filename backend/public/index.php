@@ -163,7 +163,7 @@ switch(true) {
 
     case preg_match('#^/api/student/sessions/(\d+)/cancel$#', $uri, $m) && $method === 'POST':
         error_log("DEBUG: Matched student cancel session POST route");
-        $student->cancelSession((int)$m[0]);
+        $student->cancelSession((int)$m[1]);
         break;
     case $uri === '/api/student/rate-tutor' && $method === 'POST':
         error_log("DEBUG: Matched student rate tutor POST route");
@@ -171,6 +171,9 @@ switch(true) {
         break;
 
     //STUDENT NOTIFICATIONS
+    case $uri === '/api/student/create-tutor-match-notification' && $method === 'POST':
+        $student->createMatchNotification();
+        break;
     case $uri === '/api/student/notifications' && $method === 'GET':
         $student->getNotifications();
         break;
@@ -213,20 +216,10 @@ switch(true) {
         $tutor->rescheduleSession((int)$m[1]);
             break;
 
-
-    //MATCHING
-    case $uri === '/api/matching/findStudents' && $method === 'GET':
-        error_log("DEBUG: Matched matching students route");
-        $matching->findStudentsForTutor();
-        break;
-    case $uri === '/api/matching/findTutors' && $method === 'GET':
-        error_log("DEBUG: Matched matching tutors route");
-        $matching->findTutorsForStudent();
-        break;
-
-    
-
     //TUTOR NOTIFICATIONS
+    case $uri === '/api/tutor/create-student-match-notification' && $method === 'POST':
+        $tutor->createMatchNotification();
+        break;
     case $uri === '/api/tutor/notifications' && $method === 'GET':
         $tutor->getNotifications();
         break;
@@ -241,7 +234,16 @@ switch(true) {
         $tutor->getUnreadNotificationCount();
         break;
 
-        
+    //MATCHING
+    case $uri === '/api/matching/findStudents' && $method === 'GET':
+        error_log("DEBUG: Matched matching students route");
+        $matching->findStudentsForTutor();
+        break;
+    case $uri === '/api/matching/findTutors' && $method === 'GET':
+        error_log("DEBUG: Matched matching tutors route");
+        $matching->findTutorsForStudent();
+        break;
+    
     //GENERAL ROUTES
     case $uri === '/api/subjects' && $method === 'GET':
         error_log("DEBUG: Matched subjects route");

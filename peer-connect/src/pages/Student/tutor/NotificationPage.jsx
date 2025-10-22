@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, XCircle, Clock, Calendar, User, BookOpen } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Star,Clock, Calendar, User, BookOpen } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
 
 const NotificationPage = () => {
@@ -55,6 +55,14 @@ const NotificationPage = () => {
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'session_cancelled':
         return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'session_rescheduled':
+        return <Clock className="w-5 h-5 text-orange-500" />;
+      case 'session_completed':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'review_received':
+        return <Star className="w-5 h-5 text-yellow-500" />;
+      case 'student_match':
+        return <User className="w-5 h-5 text-green-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
     }
@@ -118,35 +126,94 @@ const NotificationPage = () => {
                     <p className="text-gray-600 mb-2">{notification.message}</p>
                     
                     {notification.data && (
-                      <div className="bg-gray-50 rounded-md p-3 text-sm">
-                        {notification.type === 'session_request' && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-600">Student:</span>
-                              <span className="font-medium">{notification.data.student_name}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <BookOpen className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-600">Subject:</span>
-                              <span className="font-medium">{notification.data.subject}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-600">Date:</span>
-                              <span className="font-medium">{notification.data.session_date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4 text-gray-500" />
-                              <span className="text-gray-600">Time:</span>
-                              <span className="font-medium">
-                                {notification.data.start_time} - {notification.data.end_time}
-                              </span>
-                            </div>
+                    <div className="bg-gray-50 rounded-md p-3 text-sm">
+                      {notification.type === 'session_confirmed' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Tutor:</span>
+                            <span className="font-medium">{notification.data.tutor_name}</span>
                           </div>
-                        )}
-                      </div>
-                    )}
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Subject:</span>
+                            <span className="font-medium">{notification.data.subject}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-medium">{notification.data.session_date}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Time:</span>
+                            <span className="font-medium">
+                              {notification.data.start_time} - {notification.data.end_time}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {notification.type === 'session_rescheduled' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">With:</span>
+                            <span className="font-medium">{notification.data.other_user_name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Subject:</span>
+                            <span className="font-medium">{notification.data.subject}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">New Date:</span>
+                            <span className="font-medium">{notification.data.session_date}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-600">Rescheduled by:</span>
+                            <span className="font-medium capitalize">{notification.data.rescheduled_by}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {notification.type === 'session_completed' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">With:</span>
+                            <span className="font-medium">{notification.data.tutor_name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Subject:</span>
+                            <span className="font-medium">{notification.data.subject}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Completed:</span>
+                            <span className="font-medium">{notification.data.session_date}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {notification.type === 'student_match' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Match Type:</span>
+                            <span className="font-medium">Student Match</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="text-gray-600">Found:</span>
+                            <span className="font-medium">{new Date(notification.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                          )}
+                        </div>
+                      )}
                     
                     <p className="text-xs text-gray-500 mt-2">
                       {formatDate(notification.created_at)}

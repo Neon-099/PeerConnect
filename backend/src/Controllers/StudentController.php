@@ -680,16 +680,33 @@ class StudentController {
                 Response::error('Failed to complete session', 500);
                 return;
             }
+            Logger::info('Session completed successfully', [
+                'session_id' => $input['session_id'],
+                'student_id' => $user['user_id']
+            ]);
 
-            // Create notification for tutor
-            $this->notificationService->createSessionCompletedNotification($session['tutor_id'], $input['session_id']);
-            
+             // Create notification for tutor - wrap in try-catch to prevent failure
+            try {
+                $this->notificationService->createSessionCompletedNotification($session['tutor_id'], $input['session_id']);
+                
+                $this->notificationService->createSessionCompletedForStudentNotification($user['user_id'], $input['session_id']);
+                Logger::info('Notification created successfully', [
+                    'session_id' => $input['session_id'],
+                    'tutor_id' => $session['tutor_id'],
+                    'student_id' => $user['user_id']
+                ]);
+            } catch (Exception $e) {
+                Logger::error('Failed to create completion notification', [
+                    'session_id' => $input['session_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
             Response::success([], 'Session completed successfully');
         }
         catch (AuthenticationException $e){
             Response::handleException($e);
         }
-        catch (\Exception $e){
+        catch (Exception $e){
             Logger::error('Complete session error', [
                 'error' => $e->getMessage(),
                 'session_id' => $input['session_id'] ?? null
@@ -941,6 +958,30 @@ class StudentController {
         }
     }
 
+    //CREATE STUDENT MATCH NOTIFICATION
+    public function createMatchNotification(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            
+            if(!RoleMiddleware::studentOnly($user)){
+                return;
+            }
+    
+            $this->notificationService->createTutorMatchNotification($user['user_id']);
+            
+            Response::success([], 'Match notification created successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (Exception $e){
+            Logger::error('Create match notification error', [
+                'error' => $e->getMessage(),
+                'student_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to create match notification: ' . $e->getMessage());
+        }
+    }
     public function getNotifications(): void {
         try {
             $user = $this->authMiddleware->requireAuth();
