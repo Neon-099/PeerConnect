@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
 import ReviewModal from '../../../components/ReviewModal.jsx';
-
+import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
 const SessionPage = () => {
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,9 +195,7 @@ const SessionPage = () => {
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-      </div>
+      <LoadingSpinner />
     );
   }
 
@@ -476,65 +474,6 @@ const SessionPage = () => {
           ))}
         </div>
       )}
-
-      {/* Summary Stats - Use calculated counts */}
-      <div className="mt-80 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {sessionCounts.pending}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Confirmed</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {sessionCounts.confirmed}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Star className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {sessionCounts.completed}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <XCircle className="w-6 h-6 text-gray-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Cancelled</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {sessionCounts.cancelled}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Review Modal */}
       {showReviewModal && (

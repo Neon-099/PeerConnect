@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, CheckCircle, XCircle, Star,Clock, Calendar, User, BookOpen } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
-
+import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
 const NotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,9 +80,7 @@ const NotificationPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-      </div>
+      <LoadingSpinner />
     );
   }
 

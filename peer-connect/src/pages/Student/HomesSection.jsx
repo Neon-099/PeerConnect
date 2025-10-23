@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users, Search, Calendar, Bell, Star, Target} from 'lucide-react';
-import EditProfileModal from '../../components/EditProfileModal.jsx';
-import { auth } from '../../utils/auth.js';
 import {apiClient} from '../../utils/api.js';
 
 import Header from './Header.jsx';
@@ -239,14 +237,15 @@ const Homes = () =>  {
         </div>
       </div>
 
+      {/* Main Content */}
       {/* Profile Section */}
       {activeTab === 'profile' && (
         <ProfileSection
-        userProfile={userProfile}
-        studentProfile={studentProfile}
-        onProfileUpdate={fetchProfileData}
-        getProfilePictureUrl={getProfilePictureUrl}
-        isLoading={isLoading}
+          userProfile={userProfile}
+          studentProfile={studentProfile}
+          onProfileUpdate={fetchProfileData}
+          getProfilePictureUrl={getProfilePictureUrl}
+          isLoading={isLoading}
         />
       )}
 
@@ -254,7 +253,7 @@ const Homes = () =>  {
       {activeTab === 'home' && (
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+          <div className="h-32 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div></div>
             <div className="flex items-center gap-4">
               <Header 
@@ -397,6 +396,7 @@ const Homes = () =>  {
         </div>
       )}
 
+      {/* Find Tutors Section */}
       {activeTab === 'find_tutors' && (
           <StudentMatchingSection
             getProfilePictureUrl={getProfilePictureUrl}

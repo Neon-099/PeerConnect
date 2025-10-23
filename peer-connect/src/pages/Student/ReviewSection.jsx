@@ -82,7 +82,7 @@ const ReviewsSection = ({ reviews, onSubmitReview, getProfilePictureUrl, student
   return (
     <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+        <div className="h-23 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div></div>
             <div className="flex items-center gap-4">
               <Header 
@@ -252,11 +252,7 @@ const ReviewsSection = ({ reviews, onSubmitReview, getProfilePictureUrl, student
 
         {/* Footer */}
         <div className="h-12 bg-white border-t border-gray-200 flex items-center justify-end px-8">
-          <div className="flex gap-6 text-sm text-gray-600">
-            <a href="#" className="hover:text-gray-800">Help Center</a>
-            <a href="#" className="hover:text-gray-800">Contact</a>
-            <a href="#" className="hover:text-gray-800">Privacy Policy</a>
-          </div>
+          <Footer/>
         </div>
       </div>
   );

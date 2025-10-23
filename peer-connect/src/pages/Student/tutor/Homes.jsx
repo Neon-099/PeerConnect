@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users,  Calendar,  
      Bell, Star,  LogOut, MessageSquare, DollarSign,MapPin, Video, Settings, Target, 
-     Award,ChevronLeft, ChevronRight, X, CheckCircle, Clock, AlertCircle} from 'lucide-react';
+     ChevronLeft, ChevronRight, GraduationCapIcon} from 'lucide-react';
 
 import TutorProfilePage from './TutorProfilePage.jsx';
 import SessionPage from './SessionPage.jsx';
@@ -12,9 +12,10 @@ import TutorMatchingSection from './TutorMatchingSection.jsx';
 import { auth } from '../../../utils/auth';
 import {apiClient} from '../../../utils/api';
 
-import Header from '../Header.jsx';
+
+import Header from './Header.jsx';
 import Footer from '../Footer.jsx';
-import { LoadingSpinner } from '../../../components/LoadingSpinner.jsx';
+import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
 import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
 import NotificationModal from '../../../components/NotificationModal.jsx';
 import FloatingMatchingNotification from '../../../components/notification/FloatingMatchingNotification.jsx';
@@ -300,24 +301,9 @@ const Homes = () => {
       {/* Sidebar */}
       <div className="fixed left-0 top-0 h-full w-64 bg-slate-100 border-r border-slate-200 flex flex-col">
         {/* Profile Section */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <img 
-              src={getProfilePictureUrl(tutorProfile?.profile_picture)} 
-              alt={tutorProfile?.first_name || 'Tutor'} 
-              className="w-12 h-12 rounded-xl object-cover border-2 border-slate-200"
-            />
-            <div>
-              <h3 className="font-semibold text-slate-800">{tutorProfile?.first_name || 'Sarah'} {tutorProfile?.last_name || 'Thompson'}</h3>
-              <p className="text-sm text-slate-600">Tutor</p>
-              {tutorProfile?.is_verified_tutor && (
-                <div className="flex items-center gap-1 mt-1">
-                  <Award className="w-3 h-3 text-green-600" />
-                  <span className="text-xs text-green-600 font-medium">Verified</span>
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="p-6  flex items-center gap-3">
+           <span className="text-xl font-semibold text-slate-800 ">PeerConnect</span>
+           <GraduationCapIcon className="w-5 h-5" />
         </div>
 
         {/* Navigation */}
@@ -347,12 +333,8 @@ const Homes = () => {
         </div>
 
         {/* Bottom Links */}
-        <div className="p-4 border-t border-slate-200">
+        <div className="p-2 ">
           <div className="space-y-2">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors">
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">Settings</span>
-            </button>
             <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
               onClick={handleLogout}>
               <LogOut className="w-5 h-5" />
@@ -365,7 +347,7 @@ const Homes = () => {
       {/* Main Content */}
       <div className="ml-64 flex flex-col min-h-screen">  
         {/* Header */}
-        <div className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+        <div className="h-16 sticky top-0 z-10 bg-white border-b border-slate-200 flex items-center justify-between px-8">
           <div></div>
           <div className="flex items-center gap-4">
             <Header 
@@ -376,7 +358,7 @@ const Homes = () => {
               onClick={() => setShowNotificationModal(true)}
               className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
             >
-              <Bell size={20} />
+              <Bell className="w-5 h-5 text-blue-600" />
              
             </button>
           </div>
@@ -642,7 +624,7 @@ const Homes = () => {
           />
         )}
         {/* Footer */}
-        <div className="h-16 mt-auto bg-white border-t border-slate-200 flex items-center justify-end px-8">
+        <div className="h-16 sticky bottom-0 z-10 mt-auto bg-white border-t border-slate-200 flex items-center justify-end px-8">
           <Footer />
         </div>
       </div>

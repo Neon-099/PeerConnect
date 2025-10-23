@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, CheckCircle, XCircle, Clock, Calendar, User, BookOpen } from 'lucide-react';
 import { apiClient } from '../../utils/api';
+import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
+import Header from './Header.jsx';
+import Footer from './Footer.jsx';
 
-const NotificationPage = () => {
+const NotificationSection = ({ onMarkRead, getProfilePictureUrl, studentProfile }) => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -78,17 +81,28 @@ const NotificationPage = () => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-      </div>
-    );
-  }
+if (isLoading) {
+  return (
+    <div className="flex-1 flex justify-center ">
+      <LoadingSpinner />
+    </div>
+  )
+}
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex-1 flex flex-col">
+      {/* Header */}
+      <div className="h-23 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+        <div></div>
+        <div className="flex items-center gap-4">
+          <Header 
+            userProfilePictureUrl={getProfilePictureUrl(studentProfile?.profile_picture)}
+            userProfile={studentProfile?.first_name} 
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mx-14 my-6">
         <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-gray-500" />
@@ -97,6 +111,7 @@ const NotificationPage = () => {
           </span>
         </div>
       </div>
+
 
       {notifications.length === 0 ? (
         <div className="text-center py-12">
@@ -258,4 +273,4 @@ const NotificationPage = () => {
   );
 };
 
-export default NotificationPage;
+export default NotificationSection;

@@ -1,17 +1,16 @@
-import {MessageSquare, Bell} from 'lucide-react';
+import {Bell} from 'lucide-react';
 
 const Header = ({userProfile, userProfilePictureUrl}) => {
     return (
         <div className="flex items-center gap-4">
-            <div></div>
             <button className="p-2 hover:bg-gray-100 rounded-lg">
             </button>
             <button className="p-2 hover:bg-gray-100 rounded-lg">
-                <Bell className="w-5 h-5 text-teal-600" />
+                
             </button>
                 <img 
                 src={userProfilePictureUrl}
-                alt={userProfile || 'Student'} 
+                alt={userProfile || 'Tutor'} 
                 className="w-10 h-10 rounded-lg object-cover"
                 />
         </div>

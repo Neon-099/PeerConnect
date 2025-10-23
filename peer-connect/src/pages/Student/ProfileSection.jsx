@@ -37,7 +37,7 @@ const ProfileSection = ({ userProfile, studentProfile, onProfileUpdate, getProfi
     return (
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+          <div className="h-23 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div></div>
             <div className="flex items-center gap-4">
               <Header 
