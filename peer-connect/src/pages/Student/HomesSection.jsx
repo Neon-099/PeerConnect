@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, User, Users, Search, Calendar, Bell, Star, Target} from 'lucide-react';
 import {apiClient} from '../../utils/api.js';
+import { useNotifications } from '../../hooks/useNotifications.js';
 
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import FindTutorModal from '../../components/FindTutorModal.jsx';
+import StudentFloatingNotification from '../../components/notification/StudentFloatingNotification.jsx';
 
 import ProfileSection from './ProfileSection.jsx';
 import StudentMatchingSection from './StudentMatchingSection.jsx';
@@ -32,6 +34,10 @@ const Homes = () =>  {
   const [isLoading, setIsLoading] = useState(false);
 
   const [isFindTutorModalOpen, setIsFindTutorModalOpen] = useState(false);
+
+  const { notifications, unreadCount,
+    floatingNotification, hideFloatingNotification, 
+    markAsRead, showFloatingNotification } = useNotifications('student');
 
   //PROFILE DATA
   const fetchProfileData = async() => {
@@ -80,7 +86,37 @@ const Homes = () =>  {
     return fullUrl;
   }
   
-  
+  const handleFloatingNotificationAction = async (notification, action) => {
+    try {
+      // Mark notification as read
+      await markAsRead(notification.id);
+      
+      switch (action) {
+        case 'view_session':
+          setActiveNav('My Sessions');
+          setActiveTab('sessions');
+          break;
+        case 'complete_session':
+          // Navigate to sessions and trigger completion
+          setActiveNav('My Sessions');
+          setActiveTab('sessions');
+          // You could add additional logic here to highlight the specific session
+          break;
+        case 'view_request':
+          setActiveNav('My Sessions');
+          setActiveTab('sessions');
+          break;
+        case 'write_review':
+          setActiveNav('Reviews');
+          setActiveTab('reviews');
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error('Error handling notification action:', error);
+    }
+  };
   
   const recentNotifications = [
     {
@@ -217,20 +253,29 @@ const Homes = () =>  {
             <Bell className="w-5 h-5" />
             <span className="font-medium">Notifications</span>
           </button>
-
-          <button 
-            onClick={() => setActiveTab('review')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${
-              activeTab === 'review' 
-                ? 'bg-teal-700 text-white' 
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Star className="w-5 h-5" />
-            <span className="font-medium">Reviews</span>
-          </button>
         </nav>
-
+        <button 
+  onClick={() => {
+    const testNotification = {
+      id: Date.now(),
+      type: 'session_confirmed',
+      title: 'Test Session Confirmed',
+      message: 'This is a test notification to verify the floating notification system.',
+      data: {
+        tutor_name: 'John Doe',
+        subject: 'Mathematics',
+        session_date: '2025-01-25',
+        start_time: '10:00:00'
+      },
+      is_read: false,
+      created_at: new Date().toISOString()
+    };
+    showFloatingNotification(testNotification);
+  }}
+  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+>
+  Test Floating Notification
+</button>
         {/* Footer */}
         <div className="p-4 text-xs text-gray-500 border-t border-gray-200">
           © 2025 PeerConnect
@@ -440,6 +485,14 @@ const Homes = () =>  {
         onClose={() => setIsFindTutorModalOpen(false)}
       />
 
+      {/* Floating Session Notification */}
+      {floatingNotification && (
+        <StudentFloatingNotification
+          notification={floatingNotification}
+          onClose={hideFloatingNotification}
+          onAction={handleFloatingNotificationAction}
+        />
+      )}
      
     </div>
   );

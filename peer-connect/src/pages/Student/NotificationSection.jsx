@@ -81,14 +81,6 @@ const NotificationSection = ({ onMarkRead, getProfilePictureUrl, studentProfile 
     });
   };
 
-if (isLoading) {
-  return (
-    <div className="flex-1 flex justify-center ">
-      <LoadingSpinner />
-    </div>
-  )
-}
-
   return (
     <div className="flex-1 flex flex-col">
       {/* Header */}
@@ -102,18 +94,12 @@ if (isLoading) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mx-14 my-6">
-        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-500" />
-          <span className="text-sm text-gray-600">
-            {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-          </span>
+      {isLoading ? (
+        <div>
+          <LoadingSpinner />
         </div>
-      </div>
-
-
-      {notifications.length === 0 ? (
+      ) : (
+      notifications.length === 0 ? (
         <div className="text-center py-12">
           <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
@@ -121,6 +107,15 @@ if (isLoading) {
         </div>
       ) : (
         <div className="space-y-4">
+          <div className="flex items-center justify-between mx-14 my-6">
+            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-gray-500" />
+              <span className="text-sm text-gray-600">
+                {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
           {notifications.map((notification) => (
             <div
               key={notification.id}
@@ -268,7 +263,8 @@ if (isLoading) {
             </div>
           ))}
         </div>
-      )}
+      )
+    )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-// peer-connect/src/hooks/useNotifications.js
+// peer-connect/src/hooks/useNotifications.js (Updated)
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../utils/api';
 
@@ -6,19 +6,49 @@ export const useNotifications = (userRole) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [floatingNotification, setFloatingNotification] = useState(null);
+  const [previousNotificationIds, setPreviousNotificationIds] = useState(new Set());
 
   const fetchNotifications = useCallback(async () => {
     try {
-        // CHECK IF USER IS STUDENT OR TUTOR
       const endpoint = userRole === 'student' ? '/api/student/notifications' : '/api/tutor/notifications';
-      //AFTER CHECKING, FETCH NOTIFICATIONS ENDPOINT
       const response = await apiClient.get(endpoint);
-      //SET OR STORE NOTIFICATIONS IN STATE
-      setNotifications(response || []);
+      const newNotifications = response || [];
+      
+      // Parse JSON data field for each notification
+      const parsedNotifications = newNotifications.map(notification => ({
+        ...notification,
+        data: typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data
+      }));
+      
+      // Check for new notifications to show floating notification
+      const currentIds = new Set(parsedNotifications.map(n => n.id));
+      const newNotificationIds = [...currentIds].filter(id => !previousNotificationIds.has(id));
+      
+      console.log('Previous IDs:', Array.from(previousNotificationIds));
+      console.log('Current IDs:', Array.from(currentIds));
+      console.log('New notification IDs:', newNotificationIds);
+      
+      if (newNotificationIds.length > 0) {
+        // Find the most recent new notification
+        const latestNewNotification = parsedNotifications.find(n => 
+          newNotificationIds.includes(n.id) && 
+          !n.is_read &&
+          ['session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received'].includes(n.type)
+        );
+        
+        console.log('Latest new notification:', latestNewNotification);
+        
+        if (latestNewNotification) {
+          setFloatingNotification(latestNewNotification);
+        }
+      }
+      
+      setNotifications(parsedNotifications);
+      setPreviousNotificationIds(currentIds);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  }, [userRole]);
+  }, [userRole, previousNotificationIds]);
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -31,10 +61,12 @@ export const useNotifications = (userRole) => {
   }, [userRole]);
 
   const showFloatingNotification = useCallback((notification) => {
+    console.log('Manually showing floating notification:', notification);
     setFloatingNotification(notification);
   }, []);
 
   const hideFloatingNotification = useCallback(() => {
+    console.log('Hiding floating notification');
     setFloatingNotification(null);
   }, []);
 
@@ -57,7 +89,7 @@ export const useNotifications = (userRole) => {
     }
   }, [userRole]);
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications every 5 seconds for more responsive notifications
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
@@ -65,7 +97,7 @@ export const useNotifications = (userRole) => {
     const interval = setInterval(() => {
       fetchNotifications();
       fetchUnreadCount();
-    }, 30000);
+    }, 5000); // Reduced from 15 seconds to 5 seconds
 
     return () => clearInterval(interval);
   }, [fetchNotifications, fetchUnreadCount]);
