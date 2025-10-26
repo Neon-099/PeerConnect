@@ -78,6 +78,22 @@ class SessionService {
             // Don't fail the session creation if notification fails
         }
 
+        //CREATE NOTIFICATION FOR STUDENT IF SUCCESSFUL BOOKING SESSION
+        try {
+            $this->notificationService->createSessionBookedNotification($sessionData['student_id'], $sessionId);
+            Logger::info('Session booked notification created for student', [
+                'student_id' => $sessionData['student_id'],
+                'session_id' => $sessionId
+            ]);
+        }
+        catch (Exception $e) {
+            Logger::error('Failed to create session booked notification', [
+                'error' => $e->getMessage(),
+                'student_id' => $sessionData['student_id'],
+                'session_id' => $sessionId
+            ]);
+        }
+
         Logger::info('Session booked successfully', [
             'session_id' => $sessionId,
             'student_id' => $sessionData['student_id'],

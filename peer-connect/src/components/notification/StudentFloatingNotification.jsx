@@ -30,20 +30,26 @@ const StudentFloatingNotification = ({ notification, onClose, onAction }) => {
 
   const getNotificationColor = (type) => {
     switch (type) {
-      case 'session_confirmed':
-        return 'border-l-green-500 bg-green-50';
-      case 'session_request':
-        return 'border-l-blue-500 bg-blue-50';
-      case 'session_cancelled':
-        return 'border-l-red-500 bg-red-50';
-      case 'session_rescheduled':
-        return 'border-l-orange-500 bg-orange-50';
-      case 'session_completed':
-        return 'border-l-purple-500 bg-purple-50';
-      case 'review_received':
-        return 'border-l-yellow-500 bg-yellow-50';
-      default:
-        return 'border-l-gray-500 bg-gray-50';
+        case 'session_booked' :
+            return 'border-1-yellow-500 bg-yellow-50';
+        case 'session_confirmed':
+            return 'border-l-green-500 bg-green-50';
+        case 'session_request':
+            return 'border-l-blue-500 bg-blue-50';
+        case 'session_cancelled':
+            return 'border-l-red-500 bg-red-50';
+        case 'session_rescheduled':
+            return 'border-l-orange-500 bg-orange-50';
+        case 'session_completed':
+            return 'border-l-purple-500 bg-purple-50';
+        case 'review_received':
+            return 'border-l-yellow-500 bg-yellow-50';
+        case 'tutor_match':
+            return 'border-l-blue-500 bg-blue-50';
+        case 'student_match':
+            return 'border-l-green-500 bg-green-50';
+        default:
+            return 'border-l-gray-500 bg-gray-50';
     }
   };
 
@@ -63,35 +69,46 @@ const StudentFloatingNotification = ({ notification, onClose, onAction }) => {
 
   const renderActionButtons = () => {
     switch (notification.type) {
-      case 'session_confirmed':
-        return (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => handleAction('view_session')}
-              className="px-3 py-1 bg-teal-600 text-white text-xs rounded-md hover:bg-teal-700 transition-colors"
-            >
-              View Session
-            </button>
-            <button
-              onClick={() => handleAction('complete_session')}
-              className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
-            >
-              Complete
-            </button>
-          </div>
-        );
-      case 'session_request':
-        return (
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={() => handleAction('view_request')}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
-            >
-              View Request
-            </button>
-          </div>
-        );
-      case 'session_completed':
+        case 'session_booked':
+            return (
+            <div className="flex gap-2 mt-3">
+                <button
+                onClick={() => handleAction('view_request')}
+                className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                >
+                View Request
+                </button>
+            </div>
+            );
+        case 'session_confirmed':
+            return (
+            <div className="flex gap-2 mt-3">
+                <button
+                onClick={() => handleAction('view_session')}
+                className="px-3 py-1 bg-teal-600 text-white text-xs rounded-md hover:bg-teal-700 transition-colors"
+                >
+                View Session
+                </button>
+                <button
+                onClick={() => handleAction('complete_session')}
+                className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
+                >
+                Complete
+                </button>
+            </div>
+            );
+        case 'session_request':
+            return (
+            <div className="flex gap-2 mt-3">
+                <button
+                onClick={() => handleAction('view_request')}
+                className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                >
+                View Request
+                </button>
+            </div>
+            );
+        case 'session_completed':
         return (
           <div className="flex gap-2 mt-3">
             <button
@@ -102,8 +119,14 @@ const StudentFloatingNotification = ({ notification, onClose, onAction }) => {
             </button>
           </div>
         );
-      default:
-        return null;
+        case 'review_cancelled':
+            return (
+                <div className='flex gap-2 mt-3'>
+
+                </div>
+            )
+        default:
+            return null;
     }
   };
 

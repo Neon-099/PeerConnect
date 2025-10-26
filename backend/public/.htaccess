@@ -1,0 +1,35 @@
+RewriteEngine On
+
+# Handle CORS preflight requests
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# Handle OPTIONS requests for CORS
+RewriteCond %{REQUEST_METHOD} ^OPTIONS
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Redirect all API requests to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ index.php [QSA,L]
+
+# Prevent directory listing
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Deny access to sensitive files
+<FilesMatch "^(\.env|composer\.json|composer\.lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
