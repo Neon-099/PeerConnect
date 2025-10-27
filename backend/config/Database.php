@@ -36,6 +36,7 @@ use Exception;
         }
 
         public static function getInstance() {
+            
             if(self::$instance == null) {
                 self::$instance = new Database();
             }
@@ -61,7 +62,7 @@ use Exception;
                     );
             } catch (PDOException $exception) {
                 error_log("Connection error: ". $exception->getMessage());
-                throw new \Exception("Database connection failed");
+                throw new Exception("Database connection failed");
             }
         }
 
@@ -74,7 +75,6 @@ use Exception;
 
         //TO PREVENT UNSERIALIZATION
         public function __wakeup() {
-            throw new \Exception("Cannot unserialize singleton");
+            throw new Exception("Cannot unserialize singleton");
         }
     }   
-?>

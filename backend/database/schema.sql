@@ -116,7 +116,6 @@ CREATE TABLE student_availability_preferences (
     INDEX idx_student_date (student_id, preferred_date)
 );
 
-
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -156,17 +155,17 @@ CREATE TABLE tutor_availability (
     INDEX idx_availability_date (availability_date),
     INDEX idx_tutor_available (tutor_id, is_available)
 );
-
+--FOR TUTORS SUBJECTS WHEN CREATING A PROFILE
 CREATE TABLE tutor_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,  -- Fixed: was "PRIMARY_KEY"
+    id INT AUTO_INCREMENT PRIMARY KEY,  
     tutor_id INT,
     subject_id INT,
     FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
 );
-
+--FOR TUTORS SUBJECTS WHEN BOOKING A SESSION
 CREATE TABLE learning_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,  -- ADD THIS LINE
+    id INT AUTO_INCREMENT PRIMARY KEY,  
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
     category VARCHAR(100),
@@ -205,9 +204,6 @@ CREATE TABLE tutor_specializations (
     INDEX idx_tutor_subject (tutor_id, subject)
 );
 
-
-
-
 CREATE TABLE tutoring_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT,
@@ -232,15 +228,14 @@ CREATE TABLE tutoring_sessions (
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id)
 );
 
-
 CREATE TABLE session_feedback (
     id INT AUTO_INCREMENT PRIMARY KEY,
     session_id INT,
     student_id INT,
-    rating TINYINT CHECK (rating BETWEEN 1 AND 5),  -- Fixed: was "TINYIT"
+    rating TINYINT CHECK (rating BETWEEN 1 AND 5), 
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  -- Fixed: was "sessions(id)"
+    FOREIGN KEY (session_id) REFERENCES tutoring_sessions(id) ON DELETE CASCADE,  
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

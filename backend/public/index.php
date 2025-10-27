@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $uri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Add comprehensive debugging
+// comprehensive debugging
 error_log("=== REQUEST DEBUG ===");
 error_log("URI: " . $uri);
 error_log("Method: " . $method);
@@ -64,7 +64,7 @@ try {
     $student = new StudentController();
     $tutor = new TutorController();  
     $matching = new MatchingController();
-    $general = new GeneralController(); // Add this line
+    $general = new GeneralController(); 
     error_log("DEBUG: Controllers created successfully");
 } catch (Exception $e) {
     error_log("ERROR: Failed to create controllers: " . $e->getMessage());
@@ -75,6 +75,7 @@ try {
 
 error_log("DEBUG: About to enter routing switch");
 
+//ENTRY POINT FOR ROUTING REQUEST (API ENDPOINTS)
 switch(true) {
     //AUTH 
     case $uri === '/api/auth/register' && $method === 'POST':

@@ -369,14 +369,30 @@ class RoleMiddleware
     }
 
     /**
-     * Middleware for admin-only routes
+     * Middleware for admin-only routes (includes super_admin)
      * 
      * @param array $user Current user data
      * @return bool True if authorized
      */
     public static function adminOnly(array $user): bool
     {
+        $userRole = $user['role'] ?? '';
+        // Allow both admin and super_admin
+        if ($userRole === 'super_admin') {
+            return true;
+        }
         return self::requireRole($user, 'admin');
+    }
+
+    /**
+     * Middleware for super-admin-only routes
+     * 
+     * @param array $user Current user data
+     * @return bool True if authorized
+     */
+    public static function superAdminOnly(array $user): bool
+    {
+        return self::requireRole($user, 'super_admin');
     }
 
     /**
