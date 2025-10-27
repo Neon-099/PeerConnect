@@ -33,7 +33,7 @@ export const useNotifications = (userRole) => {
         const latestNewNotification = parsedNotifications.find(n => 
           newNotificationIds.includes(n.id) && 
           !n.is_read &&
-          ['session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received'].includes(n.type)
+          ['session_booked', 'session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received', 'tutor_match', 'student_match'].includes(n.type)
         );
         
         console.log('Latest new notification:', latestNewNotification);

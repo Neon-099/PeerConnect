@@ -247,8 +247,8 @@ CREATE TABLE session_feedback (
 CREATE TABLE notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    type ENUM('session_request', 'session_confirmed', 'session_completed', 'session_cancelled',
-     'session_rescheduled', 'session_reminder', 'session_received', 'message', 'feedback') NOT NULL,
+    type ENUM('session_request', 'session_booked', 'session_confirmed', 'session_completed', 'session_cancelled',
+     'session_rescheduled', 'session_reminder', 'session_received', 'message', 'feedback', 'tutor_match', 'student_match') NOT NULL,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     data JSON NULL, -- Additional data like session_id, tutor_id, etc.

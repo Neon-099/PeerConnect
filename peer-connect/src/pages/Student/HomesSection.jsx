@@ -14,7 +14,7 @@ import ProfileSection from './ProfileSection.jsx';
 import StudentMatchingSection from './StudentMatchingSection.jsx';
 import SessionSection from './SessionSection.jsx';
 import NotificationSection from './NotificationSection.jsx';
-import ReviewSection from './ReviewSection.jsx';
+import ReviewModal from '../../components/ReviewModal.jsx';
 
 const Homes = () =>  {
   const [activeTab, setActiveTab] = useState('home');
@@ -38,6 +38,7 @@ const Homes = () =>  {
   const { notifications, unreadCount,
     floatingNotification, hideFloatingNotification, 
     markAsRead, showFloatingNotification } = useNotifications('student');
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   //PROFILE DATA
   const fetchProfileData = async() => {
@@ -108,7 +109,7 @@ const Homes = () =>  {
           break;
         case 'write_review':
           setActiveNav('Reviews');
-          setActiveTab('reviews');
+          setShowReviewModal(true);
           break;
         default:
           break;
@@ -118,6 +119,10 @@ const Homes = () =>  {
     }
   };
   
+  const handleReviewSubmitted = () => {
+    setShowReviewModal(false);
+  }
+
   const recentNotifications = [
     {
       id: 1,
@@ -469,16 +474,14 @@ const Homes = () =>  {
       />
       )}
 
-      {/* Reviews Section*/}
-      {activeTab === 'review' && (
-        <ReviewSection
-        reviews={[]}
-        onSubmitReview={() => {}}
-        getProfilePictureUrl={getProfilePictureUrl}
-        studentProfile={studentProfile}
-      />
-      )}  
-      
+      {/* Review Modal */}
+      {showReviewModal && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          onReviewSubmitted={handleReviewSubmitted}
+        />
+      )}
       {/* Find Tutor Modal */}
       <FindTutorModal 
         isOpen={isFindTutorModalOpen} 

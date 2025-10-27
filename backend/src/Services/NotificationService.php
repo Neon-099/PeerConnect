@@ -74,6 +74,39 @@ class NotificationService {
     }
 
     
+
+    public function createSessionBookedNotification(int $studentId, int $sessionId): void {
+        try {
+            $session = $this->sessionModel->findById($sessionId);
+            if(!$session) {
+                throw new Exception('Session now found!');
+            }
+
+            $this->createNotification(
+                $studentId, 
+                'session_booked',
+                'Session Booked Successfully',
+                "Your session request with {$session['tutor_first_name']} {$session['tutor_last_name']} for {$session['subject_name']} has been sent and is waiting for confirmation.",
+                [
+                    'session_id' => $sessionId,
+                    'tutor_name' => "{$session['tutor_first_name']} {$session['tutor_last_name']}",
+                    'subject' => $session['subject_name'],
+                    'session_date' => $session['session_date'],
+                    'start_time' => $session['start_time'],
+                    'end_time' => $session['end_time']
+                ]
+            );
+        }
+        catch (Exception $e){
+            Logger::error('Failed to create session. Please try again later!', [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId,
+                'session_id' => $sessionId
+            ]);
+            throw $e;
+        }
+    }
+    
     // SESSION COMPLETED NOTIFICATION (Student → Tutor)
     public function createSessionCompletedNotification(int $tutorId, int $sessionId): void {
         try {

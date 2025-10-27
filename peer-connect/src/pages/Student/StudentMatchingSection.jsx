@@ -17,8 +17,6 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const [showMatchToast, setShowMatchToast] = useState(false);
-
   // Match phases and durations (consistent with tutor side)
   const searchPhases = [
     { phase: 'Analyzing your profile...', duration: 3000 },
@@ -74,15 +72,6 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
         setSearchComplete(true);
         setIsSearching(false);
       
-
-      //TUTOR NOTIFICATION FOR TUTOR MATCHES
-      if(matches.length > 0){
-        try {
-          await apiClient.post('/api/student/create-tutor-match-notification');
-        } catch (error) {
-          console.error('Error creating tutor match notification:', error);
-        }
-      }
       }, 500);
     } catch (err) {
       clearInterval(phaseInterval);
@@ -93,13 +82,6 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
       setError(err?.message || 'Failed to find matching tutors. Please try again.');
     }
   };
-  useEffect(() => {
-    if (Array.isArray(matches) && matches.length > 0) {
-      setShowMatchToast(true);
-      const t = setTimeout(() => setShowMatchToast(false), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [matches]);
 
   const retrySearch = () => {
     setError(null);
@@ -240,13 +222,6 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
         <Footer/>
       </div>
 
-      {showMatchToast && (
-        <FloatingMatchingNotification
-          title="New tutor match found!"
-          message="We found a tutor that matches your preferences."
-          onClose={() => setShowMatchToast(false)}
-        />
-      )}
     </div>
   );
 };
