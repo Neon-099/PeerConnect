@@ -7,9 +7,9 @@ import {User, GraduationCap, DollarSign,  ArrowRight, CheckCircle,
 import { Calendar } from 'react-calendar';
 import './CalendarProfile.css';
 
-import {apiClient, getAccessToken } from '../../utils/api.js';
+import {apiClient, getAccessToken } from '../../../utils/api.js';
 
-import ImageUploadProgress from '../ImageUploadProgress.jsx';
+import ImageUploadProgress from '../../../components/ImageUploadProgress.jsx';
 
 const TutorProfileCreation = () => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -280,14 +280,30 @@ const TutorProfileCreation = () => {
   
       if (step === 2) {
         if (!formData.highest_education) newErrors.highest_education = 'Please select your highest education';
-        if (!formData.years_experience) newErrors.years_experience = 'Please enter years of experience';
+        
+        if (!formData.years_experience) { 
+          newErrors.years_experience = 'Please enter years of experience';
+        }        
+        else if (formData.years_experience.length > 2) {
+          newErrors.years_experience = 'Exp can only be 2 digits'
+        }
+
         if (formData.specializations.length < 3) {
           newErrors.specializations = 'Please select at least 3 subjects';
         }
       }
   
       if (step === 3) {
-        if (!formData.hourly_rate) newErrors.hourly_rate = 'Please enter your hourly rate';
+        if (!formData.hourly_rate) {
+           newErrors.hourly_rate = 'Please enter your hourly rate';
+        }
+        else if(formData.hourly_rate.length > 3) {
+          newErrors.hourly_rate = 'Digits must only be 3';
+        }
+        else if(formData.hourly_rate > 150 ){
+          newErrors.hourly_rate = 'Prefer 150 PHP or below';
+        }
+
         if (formData.teaching_styles.length < 2) {
           newErrors.teaching_styles = 'Please select at least 2 teaching styles';
         }
@@ -381,7 +397,7 @@ const TutorProfileCreation = () => {
 
         console.log('Tutor profile created: ', result);
         
-        if (result || (result.success && result.data.profile_id)) {
+        if (result && result.profile_id) {
           setTimeout(() => {
             alert('Tutor profile created successfully! You can now access all features.');
             navigate('/tutor/home');

@@ -582,41 +582,99 @@ class AuthService {
 
         public function changePassword(int $userId, array $input): bool{
             try {
-                // 1. Fetch user from DB
+                // Get user email for rate limiting
                 $db = Database::getInstance()->getConnection();
-                $stmt = $db->prepare("SELECT password FROM users WHERE id = :id LIMIT 1");
+                $stmt = $db->prepare("SELECT email, password_hash FROM users WHERE id = :id LIMIT 1");
                 $stmt->execute([':id' => $userId]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
+        
                 if (!$user) {
                     throw new AuthenticationException("User not found");
                 }
-
-                // 2. Verify old password
-                if (!password_verify($input['old_password'], $user['password'])) {
-                    throw new AuthenticationException("Old password is incorrect");
+        
+                $email = $user['email'];
+                $actionType = 'password_change';
+        
+                // Check rate limiting BEFORE any password verification
+                if ($this->rateLimitingService->isRateLimited($email, $actionType, 3, 15)) {
+                    $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, $actionType);
+                    $lockoutMinutes = ceil($lockoutTime / 60);
+                    
+                    throw new AuthenticationException(
+                        "Too many failed password change attempts. Please wait {$lockoutMinutes} minutes or use 'Forgot Password' to reset your password.",
+                        429,
+                        'RATE_LIMITED',
+                        [
+                            'lockout_time_remaining' => $lockoutTime,
+                            'lockout_minutes' => $lockoutMinutes,
+                            'action' => 'use_forgot_password'
+                        ]
+                    );
                 }
-
-                // 3. Hash new password (Argon2ID preferred)
+        
+                // Verify old password
+                if (!password_verify($input['current_password'] ?? $input['old_password'] ?? '', $user['password_hash'])) {
+                    // Record failed attempt
+                    $this->rateLimitingService->recordFailedAttempt($email, $actionType);
+                    
+                    // Check how many attempts remaining
+                    $remainingAttempts = $this->rateLimitingService->getRemainingAttempts($email, $actionType, 3);
+                    
+                    if ($remainingAttempts <= 0) {
+                        // Lock the account
+                        $lockoutTime = $this->rateLimitingService->getLockoutTimeRemaining($email, $actionType);
+                        $lockoutMinutes = ceil($lockoutTime / 60);
+                        
+                        throw new AuthenticationException(
+                            "Account locked for {$lockoutMinutes} minutes due to too many failed attempts. Please use 'Forgot Password' to reset your password or wait for the lockout to expire.",
+                            429,
+                            'RATE_LIMITED',
+                            [
+                                'lockout_time_remaining' => $lockoutTime,
+                                'lockout_minutes' => $lockoutMinutes,
+                                'action' => 'use_forgot_password'
+                            ]
+                        );
+                    }
+                    
+                    throw new AuthenticationException(
+                        "Incorrect current password. {$remainingAttempts} attempt(s) remaining.",
+                        401,
+                        'INCORRECT_PASSWORD',
+                        ['remaining_attempts' => $remainingAttempts]
+                    );
+                }
+        
+                // Hash new password
                 $newPasswordHash = password_hash($input['new_password'], PASSWORD_ARGON2ID);
-
-                // 4. Update DB with new password
-                $updateStmt = $db->prepare("UPDATE users SET password = :password WHERE id = :id");
+        
+                // Update password in DB
+                $updateStmt = $db->prepare("UPDATE users SET password_hash = :password WHERE id = :id");
                 $success = $updateStmt->execute([
                     ':password' => $newPasswordHash,
                     ':id' => $userId
                 ]);
-
+        
                 if (!$success) {
                     throw new AuthenticationException("Failed to update password");
                 }
-
+        
+                // Record successful attempt (reset rate limiting)
+                $this->rateLimitingService->recordSuccessfulAttempt($email, $actionType);
+        
                 Logger::info("Password updated successfully", ['user_id' => $userId]);
-
+        
                 return true;
-
+        
+            } catch (AuthenticationException $e) {
+                Logger::warning("Password change failed", [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage(),
+                    'code' => $e->getCode() ?? 401
+                ]);
+                throw $e;
             } catch (\Exception $e) {
-                Logger::error("Password change failed", [
+                Logger::error("Password change error", [
                     'user_id' => $userId,
                     'error' => $e->getMessage()
                 ]);

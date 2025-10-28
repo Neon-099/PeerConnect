@@ -355,30 +355,69 @@ class StudentController {
         }
     }
 
-    private function deleteCloudinaryImage($imageUrl): bool {
+    public function deleteProfilePicture(): void {
         try {
-            if (empty($imageUrl) || !str_contains($imageUrl, 'cloudinary.com')) {
-                return true; // Not a Cloudinary image or empty URL
+            $user = $this->authMiddleware->requireAuth();
+            if (!RoleMiddleware::studentOnly($user)) {
+                return;
             }
-    
+
+            // Get current profile
+            $profile = $this->studentProfileModel->findByUserId($user['user_id']);
+            
+            if (!$profile) {
+                Response::error('Profile not found', 404);
+                return;
+            }
+
+            $oldImageUrl = $profile['profile_picture'] ?? null;
+
+            // Delete from Cloudinary if it exists
+            if ($oldImageUrl) {
+                try {
+                    $this->deleteCloudinaryImage($oldImageUrl);
+                } catch (\Exception $e) {
+                    Logger::error('Failed to delete image from Cloudinary', [
+                        'error' => $e->getMessage(),
+                        'user_id' => $user['user_id']
+                    ]);
+                    // Continue even if Cloudinary deletion fails
+                }
+            }
+
+            // Update profile to remove picture
+            $updated = $this->studentProfileModel->update($user['user_id'], ['profile_picture' => null]);
+            
+            if (!$updated) {
+                Response::error('Failed to delete profile picture', 500);
+                return;
+            }
+
+            Logger::info('Student profile picture deleted', [
+                'user_id' => $user['user_id']
+            ]);
+
+            Response::success(['profile_picture' => null], 'Profile picture deleted successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e) {
+            Logger::error('Delete profile picture error', [
+                'error' => $e->getMessage(),
+                'user_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to delete profile picture');
+        }
+    }
+
+    // Helper method to delete image from Cloudinary
+    private function deleteCloudinaryImage(string $imageUrl): void {
+        try {
             // Load environment variables
             $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
             $dotenv->load();
-    
-            // Extract public_id from URL
-            $urlParts = parse_url($imageUrl);
-            $pathParts = explode('/', trim($urlParts['path'], '/'));
-            
-            // Find the public_id (usually the last part before the file extension)
-            $filename = end($pathParts);
-            $publicId = pathinfo($filename, PATHINFO_FILENAME);
-            
-            // Remove folder prefix if present
-            if (count($pathParts) > 1) {
-                $folder = $pathParts[count($pathParts) - 2];
-                $publicId = $folder . '/' . $publicId;
-            }
-    
+
             $cloudinary = new Cloudinary([
                 'cloud' => [
                     'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
@@ -386,23 +425,45 @@ class StudentController {
                     'api_secret' => $_ENV['CLOUDINARY_API_SECRET'],
                 ]
             ]);
-    
-            $result = $cloudinary->uploadApi()->destroy($publicId);
-    
-            Logger::info('Cloudinary image deleted', [
-                'public_id' => $publicId,
-                'result' => $result['result']
-            ]);
-    
-            return $result['result'] === 'ok';
-    
+
+            // Extract public ID from URL
+            $publicId = $this->extractPublicIdFromUrl($imageUrl);
+
+            if ($publicId) {
+                $cloudinary->uploadApi()->destroy($publicId);
+                Logger::info('Image deleted from Cloudinary', [
+                    'public_id' => $publicId
+                ]);
+            } else {
+                Logger::warning('Could not extract public ID from URL', [
+                    'url' => $imageUrl
+                ]);
+            }
         } catch (\Exception $e) {
-            Logger::error('Failed to delete Cloudinary image', [
+            Logger::error('Cloudinary delete error', [
                 'error' => $e->getMessage(),
                 'url' => $imageUrl
             ]);
-            return false;
+            throw $e;
         }
+    }
+
+    // Extract public ID from Cloudinary URL
+    private function extractPublicIdFromUrl(string $url): ?string {
+        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{ext}
+        // We need to extract the public_id part
+        
+        // Try to match the pattern
+        if (preg_match('#image/upload/v\d+/(.+)\.(jpg|jpeg|png|gif|webp)#', $url, $matches)) {
+            return $matches[1];
+        }
+
+        //FALLBACK: try without version number
+        if (preg_match('#/image/upload/(.+)\.(jpg|jpeg|png|gif|webp)$#i', $url, $matches)) {
+            return str_replace(['/', '_'], '', $matches[1]);
+        }
+    
+        return null;
     }
 
     //FIND AVAILABLE TUTORS

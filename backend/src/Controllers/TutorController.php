@@ -12,6 +12,8 @@ use App\Exceptions\AuthenticationException;
 use App\Exceptions\ValidationException;
 use App\Services\NotificationService;
 use App\Services\SessionService;
+use Dotenv\Dotenv;
+use Cloudinary\Cloudinary;  
 
 use Config\Database;
 use PDO;
@@ -137,39 +139,78 @@ class TutorController {
     // Handle profile picture upload
     private function handleProfilePictureUpload(array $file): ?string {
         try {
+            // Load environment variables
+            $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+            $dotenv->load();
+    
+            // Configure Cloudinary using the working constructor method
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
+                    'api_key'    => $_ENV['CLOUDINARY_API_KEY'],
+                    'api_secret' => $_ENV['CLOUDINARY_API_SECRET'],
+                ]
+            ]);
+    
             // Validate file
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $maxSize = 6 * 1024 * 1024; // 6MB
+            
             if (!in_array($file['type'], $allowedTypes)) {
-                throw new \Exception('Invalid file type');
+                throw new \Exception('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
             }
             
-            if ($file['size'] > 6 * 1024 * 1024) { // 6MB limit
-                throw new \Exception('File too large');
+            if ($file['size'] > $maxSize) {
+                throw new \Exception('File too large. Maximum size is 6MB.');
             }
-            
-            // Generate unique filename
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $filename = 'tutor_' . uniqid() . '_' . time() . '.' . $extension;
-            $uploadPath = __DIR__ . '/../../storage/uploads/profiles/' . $filename;
-            
-            // Create directory if it doesn't exist
-            $uploadDir = dirname($uploadPath);
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            
-            // Move uploaded file
-            if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-                return 'storage/uploads/profiles/' . $filename;
-            }
-            
-            throw new \Exception('Failed to save file');
-        } catch (\Exception $e) {
-            Logger::error('Profile picture upload error', [
-                'error' => $e->getMessage(),
-                'file' => $file['name'] ?? 'unknown'
+    
+            // Generate unique public ID
+            $publicId = 'peerconnect/tutor_' . uniqid() . '_' . time();
+    
+            // Upload with transformations
+            $result = $cloudinary->uploadApi()->upload(
+                $file['tmp_name'],
+                [
+                    'public_id' => $publicId,
+                    'folder' => $_ENV['CLOUDINARY_FOLDER'] ?? 'peerconnect/profiles',
+                    'transformation' => [
+                        [
+                            'width' => 300,
+                            'height' => 300,
+                            'crop' => 'fill',
+                            'gravity' => 'face',
+                            'quality' => 'auto',
+                            'format' => 'auto'
+                        ]
+                    ],
+                    'tags' => ['profile', 'peerconnect', 'tutor'],
+                    'resource_type' => 'image'
+                ]
+            );
+    
+            Logger::info('Tutor image uploaded to Cloudinary', [
+                'public_id' => $result['public_id'],
+                'url' => $result['secure_url'],
+                'size' => $result['bytes'],
+                'format' => $result['format']
             ]);
-            return null;
+    
+            // Return the secure URL
+            return $result['secure_url'];
+    
+        } catch (\Cloudinary\Api\Exception\ApiError $e) {
+            Logger::error('Cloudinary API error', [
+                'error' => $e->getMessage(),
+                'code' => $e->getCode()
+            ]);
+            throw new \Exception('Failed to upload image to cloud storage: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Logger::error('Tutor image upload error', [
+                'error' => $e->getMessage(),
+                'file_type' => $file['type'] ?? 'unknown',
+                'file_size' => $file['size'] ?? 'unknown'
+            ]);
+            throw $e;
         }
     }
         
@@ -209,24 +250,28 @@ class TutorController {
             if (!RoleMiddleware::tutorOnly($user)) {
                 return;
             }
-    
+        
             $input = $this->getJsonInput();
             if (!$input) {
                 Response::error('No data provided', 400);
                 return;
             }
-    
-            // Validate profile data
-            $this->validateProfileData($input, false);
-    
-            Logger::info('Tutor profile update', [
+        
+            Logger::info('Tutor profile update - received data', [
                 'user_id' => $user['user_id'],
-                'fields' => array_keys($input)
+                'input_keys' => array_keys($input)
             ]);
-    
+        
+            // Validate profile data
+            try {
+                $this->validateProfileData($input, false);
+            } catch (ValidationException $e) {
+                Response::error($e->getMessage(), 400);
+                return;
+            }
+        
             // Check if this is an availability-only update
             if (count($input) === 1 && isset($input['availability'])) {
-                // Use availability-only update method
                 $updatedProfile = $this->tutorProfileModel->updateAvailabilityOnly($user['user_id'], $input['availability']);
             } else {
                 // Use full profile update method
@@ -234,15 +279,30 @@ class TutorController {
             }
             
             if (!$updatedProfile) {
-                Response::error('Failed to update profile', 500);
+                Logger::error('Profile update returned false', [
+                    'user_id' => $user['user_id']
+                ]);
+                Response::error('Failed to update profile. Please check the logs for details.', 500);
                 return;
             }
-    
+        
             // Update user table fields if provided
-            $this->updateUserFields($user['user_id'], $input);
-    
+            try {
+                $this->updateUserFields($user['user_id'], $input);
+            } catch (\Exception $e) {
+                Logger::error('Failed to update user fields', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $user['user_id']
+                ]);
+            }
+        
             // Get updated profile
             $profile = $this->tutorProfileModel->findByUserId($user['user_id']);
+            
+            Logger::info('Tutor profile updated successfully', [
+                'user_id' => $user['user_id']
+            ]);
+            
             Response::success($profile, 'Profile updated successfully');
         }
         catch (AuthenticationException $e) {
@@ -254,10 +314,184 @@ class TutorController {
         catch (\Exception $e) {
             Logger::error('Update tutor profile error', [
                 'error' => $e->getMessage(),
-                'user_id' => $user['user_id'] ?? 'unknown'
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $user['user_id'] ?? 'unknown',
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
             Response::serverError('Failed to update profile');
         }
+    }
+    public function uploadProfilePicture(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            if (!RoleMiddleware::tutorOnly($user)) {
+                return;
+            }
+
+            if (!isset($_FILES['profile_picture']) || $_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+                Response::error('No profile picture provided', 400);
+                return;
+            }
+
+            // Get current profile to get old picture URL
+            $profile = $this->tutorProfileModel->findByUserId($user['user_id']);
+            $oldImageUrl = $profile['profile_picture'] ?? null;
+
+            // Upload new image to Cloudinary
+            $newImageUrl = $this->handleProfilePictureUpload($_FILES['profile_picture']);
+
+            // Update profile with new image URL
+            $updated = $this->tutorProfileModel->update($user['user_id'], ['profile_picture' => $newImageUrl]);
+            
+            if (!$updated) {
+                Response::error('Failed to update profile picture', 500);
+                return;
+            }
+
+            // Delete old image from Cloudinary (if it exists)
+            if ($oldImageUrl) {
+                try {
+                    $this->deleteCloudinaryImage($oldImageUrl);
+                } catch (\Exception $e) {
+                    Logger::error('Failed to delete old image from Cloudinary', [
+                        'error' => $e->getMessage(),
+                        'user_id' => $user['user_id']
+                    ]);
+                    // Continue even if old image deletion fails
+                }
+            }
+
+            Logger::info('Tutor profile picture uploaded', [
+                'user_id' => $user['user_id']
+            ]);
+
+            Response::success([
+                'profile_picture' => $newImageUrl
+            ], 'Profile picture uploaded successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e) {
+            Logger::error('Upload profile picture error', [
+                'error' => $e->getMessage(),
+                'user_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to upload profile picture: ' . $e->getMessage());
+        }
+    }
+    // DELETE PROFILE PICTURE
+    // DELETE /api/tutor/profilePicture
+    public function deleteProfilePicture(): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            if (!RoleMiddleware::tutorOnly($user)) {
+                return;
+            }
+
+            // Get current profile
+            $profile = $this->tutorProfileModel->findByUserId($user['user_id']);
+            
+            if (!$profile) {
+                Response::error('Profile not found', 404);
+                return;
+            }
+
+            $oldImageUrl = $profile['profile_picture'] ?? null;
+
+            // Delete from Cloudinary if it exists
+            if ($oldImageUrl) {
+                try {
+                    $this->deleteCloudinaryImage($oldImageUrl);
+                } catch (\Exception $e) {
+                    Logger::error('Failed to delete image from Cloudinary', [
+                        'error' => $e->getMessage(),
+                        'user_id' => $user['user_id']
+                    ]);
+                    // Continue even if Cloudinary deletion fails
+                }
+            }
+
+            // Update profile to remove picture
+            $updated = $this->tutorProfileModel->update($user['user_id'], ['profile_picture' => null]);
+            
+            if (!$updated) {
+                Response::error('Failed to delete profile picture', 500);
+                return;
+            }
+
+            Logger::info('Tutor profile picture deleted', [
+                'user_id' => $user['user_id']
+            ]);
+
+            Response::success(['profile_picture' => null], 'Profile picture deleted successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e) {
+            Logger::error('Delete profile picture error', [
+                'error' => $e->getMessage(),
+                'user_id' => $user['user_id'] ?? 'unknown'
+            ]);
+            Response::serverError('Failed to delete profile picture');
+        }
+    }
+
+    // Helper method to delete image from Cloudinary
+    private function deleteCloudinaryImage(string $imageUrl): void {
+        try {
+            // Load environment variables
+            $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+            $dotenv->load();
+
+            $cloudinary = new Cloudinary([
+                'cloud' => [
+                    'cloud_name' => $_ENV['CLOUDINARY_CLOUD_NAME'],
+                    'api_key'    => $_ENV['CLOUDINARY_API_KEY'],
+                    'api_secret' => $_ENV['CLOUDINARY_API_SECRET'],
+                ]
+            ]);
+
+            // Extract public ID from URL
+            $publicId = $this->extractPublicIdFromUrl($imageUrl);
+
+            if ($publicId) {
+                $cloudinary->uploadApi()->destroy($publicId);
+                Logger::info('Image deleted from Cloudinary', [
+                    'public_id' => $publicId
+                ]);
+            } else {
+                Logger::warning('Could not extract public ID from URL', [
+                    'url' => $imageUrl
+                ]);
+            }
+        } catch (\Exception $e) {
+            Logger::error('Cloudinary delete error', [
+                'error' => $e->getMessage(),
+                'url' => $imageUrl
+            ]);
+            throw $e;
+        }
+    }
+
+    // Extract public ID from Cloudinary URL
+    private function extractPublicIdFromUrl(string $url): ?string {
+        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{ext}
+        // We need to extract the public_id part
+        
+        // Try to match the pattern
+        if (preg_match('#image/upload/v\d+/(.+)\.(jpg|jpeg|png|gif|webp)#', $url, $matches)) {
+            return $matches[1];
+        }
+
+        //FALLBACK: try without version number
+        if (preg_match('#/image/upload/(.+)\.(jpg|jpeg|png|gif|webp)$#i', $url, $matches)) {
+            return str_replace(['/', '_'], '', $matches[1]);
+        }
+    
+        return null;
     }
 
     // VALIDATE PROFILE DATA
@@ -292,50 +526,65 @@ class TutorController {
         }
 
         // Validate hourly rate
-        if (isset($data['hourly_rate']) && $data['hourly_rate'] < 0) {
-            throw new ValidationException('Hourly rate must be positive');
+        if (isset($data['hourly_rate']) && ($data['hourly_rate'] < 0 || $data['hourly_rate'] > 150)) {
+            throw new ValidationException('Hourly rate must be positive and less than 150');
         }
 
         // Validate years experience
         if (isset($data['years_experience']) && $data['years_experience'] < 0) {
             throw new ValidationException('Years of experience must be positive');
         }
+
+        //VALIDATE PREFERRED STUDENT LEVEL 
+        if (isset($data['preferred_student_level'])) {
+            $validLevels = ['shs', 'college'];
+            if (!in_array($data['preferred_student_level'], $validLevels)) {
+                throw new ValidationException('Invalid preferred student level');
+            }
+        }
     }
 
     //UPDATE USER TABLE FIELDS
     private function updateUserFields(int $userId, array $data): void {
-        $db = \Config\Database::getInstance()->getConnection();
-        $fields = [];
-        $params = [':user_id' => $userId];
+        try {
+            $db = Database::getInstance()->getConnection();
+            $fields = [];
+            $params = [':user_id' => $userId];
 
-        // Handle all user table fields that might be sent from frontend
-        $userFields = ['first_name', 'last_name', 'email', 'gender', 'campus_location'];
-        
-        foreach ($userFields as $field) {
-            if (isset($data[$field])) {
-                $fields[] = "{$field} = :{$field}";
-                $params[":{$field}"] = $data[$field];
-            }
-        }
-
-        if (!empty($fields)) {
-            $query = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :user_id";
-            $stmt = $db->prepare($query);
-            $result = $stmt->execute($params);
+            // Handle all user table fields that might be sent from frontend
+            $userFields = ['first_name', 'last_name', 'email']; // REMOVED: 'gender', 'campus_location'
             
-            if (!$result) {
-                Logger::error('Failed to update user fields', [
+            foreach ($userFields as $field) {
+                if (isset($data[$field])) {
+                    $fields[] = "{$field} = :{$field}";
+                    $params[":{$field}"] = $data[$field];
+                }
+            }
+
+            if (!empty($fields)) {
+                $query = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :user_id";
+                $stmt = $db->prepare($query);
+                $result = $stmt->execute($params);
+                
+                if (!$result) {
+                    Logger::error('Failed to update user fields', [
+                        'user_id' => $userId,
+                        'fields' => $fields,
+                        'error' => $stmt->errorInfo()
+                    ]);
+                }
+                
+                Logger::info('Successfully updated user fields', [
                     'user_id' => $userId,
-                    'fields' => $fields,
-                    'error' => $stmt->errorInfo()
+                    'fields' => $fields
                 ]);
-                throw new \Exception('Failed to update user information');
             }
-            
-            Logger::info('Successfully updated user fields', [
+        } catch (\Exception $e) {
+            Logger::error('Error in updateUserFields', [
                 'user_id' => $userId,
-                'fields' => $fields
+                'error' => $e->getMessage()
             ]);
+            throw $e;
         }
     }
 

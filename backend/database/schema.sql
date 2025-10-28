@@ -51,7 +51,7 @@ CREATE TABLE password_resets (
 CREATE TABLE rate_limiting (
     id INT AUTO_INCREMENT PRIMARY KEY,
     identifier VARCHAR(255) NOT NULL, -- email or IP address
-    action_type ENUM('login', 'password_reset', 'email_verification', 'signup') NOT NULL,
+    action_type ENUM('login', 'password_reset', 'email_verification', 'signup', 'password_change') NOT NULL,
     attempts INT DEFAULT 1,
     last_attempt_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     locked_until DATETIME NULL,
@@ -123,7 +123,7 @@ CREATE TABLE tutor_profiles (
   gender ENUM('male', 'female', 'prefer_not_to_say') NULL,
   campus_location ENUM('main_campus', 'pucu') NULL,
   bio TEXT,
-  highest_education ENUM('high_school', 'associates', 'bachelors', 'masters', 'phd', 'other') NULL,
+  highest_education ENUM('high_school', 'associates', 'bachelors', 'masters', 'phd') NULL,
   years_experience INT DEFAULT 0,
   hourly_rate DECIMAL(8,2) DEFAULT 0.00,
   teaching_styles JSON NULL,
@@ -174,17 +174,17 @@ CREATE TABLE learning_subjects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO learning_subjects (name, description, category) VALUES
-('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
-('Physics', 'Mechanics, Thermodynamics, Electromagnetism, and other physics topics', 'STEM'),
-('Chemistry', 'Organic, Inorganic, Physical Chemistry and Laboratory work', 'STEM'),
-('Biology', 'Cell Biology, Genetics, Ecology, and Human Anatomy', 'STEM'),
-('Computer Science', 'Programming, Data Structures, Algorithms, and Software Engineering', 'STEM'),
-('English', 'Literature, Grammar, Writing, and Communication Skills', 'Language'),
-('History', 'World History, American History, and Historical Analysis', 'Social Sciences'),
-('Psychology', 'Cognitive Psychology, Behavioral Studies, and Mental Health', 'Social Sciences'),
-('Economics', 'Microeconomics, Macroeconomics, and Economic Theory', 'Social Sciences'),
-('Philosophy', 'Ethics, Logic, and Critical Thinking', 'Humanities');
+-- INSERT INTO learning_subjects (name, description, category) VALUES
+-- ('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
+-- ('Physics', 'Mechanics, Thermodynamics, Electromagnetism, and other physics topics', 'STEM'),
+-- ('Chemistry', 'Organic, Inorganic, Physical Chemistry and Laboratory work', 'STEM'),
+-- ('Biology', 'Cell Biology, Genetics, Ecology, and Human Anatomy', 'STEM'),
+-- ('Computer Science', 'Programming, Data Structures, Algorithms, and Software Engineering', 'STEM'),
+-- ('English', 'Literature, Grammar, Writing, and Communication Skills', 'Language'),
+-- ('History', 'World History, American History, and Historical Analysis', 'Social Sciences'),
+-- ('Psychology', 'Cognitive Psychology, Behavioral Studies, and Mental Health', 'Social Sciences'),
+-- ('Economics', 'Microeconomics, Macroeconomics, and Economic Theory', 'Social Sciences'),
+-- ('Philosophy', 'Ethics, Logic, and Critical Thinking', 'Humanities');
 
 CREATE TABLE tutor_teaching_styles (
     id INT AUTO_INCREMENT PRIMARY KEY,

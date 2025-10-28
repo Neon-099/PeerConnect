@@ -115,6 +115,10 @@ switch(true) {
         error_log("DEBUG: Matched user profile GET route");
         $auth->me();
         break;
+    case $uri === '/api/user/changePassword' && $method === 'PUT':
+        error_log("DEBUG: Matched user change password PUT route");
+        $auth->changePassword();
+        break;
         
     //STUDENT
     case $uri === '/api/student/profileCreation' && $method === 'POST':
@@ -132,6 +136,10 @@ switch(true) {
     case $uri === '/api/student/profilePicture' && $method === 'POST':
         error_log("DEBUG: Matched student profile picture POST route");
         $student->updateProfilePicture();
+        break;
+    case $uri === '/api/student/profilePictureDelete' && $method === 'DELETE':
+        error_log("DEBUG: Matched student profile picture DELETE route");
+        $student->deleteProfilePicture();
         break;
 
     //STUDENT FINDING MATCH 
@@ -198,6 +206,16 @@ switch(true) {
         error_log("DEBUG: Matched tutor profile update PUT route");
         $tutor->updateProfile();
         break;
+    case $uri === '/api/tutor/profilePictureUpload' && $method === 'POST':
+        error_log("DEBUG: Matched tutor profile picture upload POST route");
+        $tutor->uploadProfilePicture();
+        break;
+
+    case $uri === '/api/tutor/profilePictureDelete' && $method === 'DELETE':
+        error_log("DEBUG: Matched tutor profile picture delete route");
+        $tutor->deleteProfilePicture();
+        break;
+
 
     //TUTOR SESSIONS
     case $uri === '/api/tutor/sessions' && $method === 'GET':

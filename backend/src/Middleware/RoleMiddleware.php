@@ -49,7 +49,15 @@ class RoleMiddleware
             'moderate_content'
         ],
         'super_admin' => [
-            'full_access'
+            'full_access',
+            'manage_all_users',
+            'edit_all_profiles',
+            'manage_all_sessions',
+            'modify_any_user',
+            'delete_any_user',
+            'change_user_roles',
+            'view_all_data',
+            'manage_system_settings'
         ]
     ];
 
@@ -319,6 +327,15 @@ class RoleMiddleware
         $userRole = $user['role'] ?? '';
         $userId = $user['user_id'] ?? 0;
 
+        //DEFINE THAT THE SUPERADMIN CAN PERFORM ALL ACTIONS
+        if($userRole === 'super_admin'){
+            Logger::info('Action allowed -- super admin privileges', [
+                'action' => $action,
+                'user_id' => $userId,
+            ]);
+            return true;
+        }
+
         // Define action-specific rules
         switch ($action) {
             case 'edit_profile':
@@ -346,14 +363,21 @@ class RoleMiddleware
         }
     }
 
+
+    public static function isSuperAdmin(array $user){
+        return $user['role'] === 'super_admin';
+    }
     /**
      * Middleware for student-only routes
      * 
      * @param array $user Current user data
      * @return bool True if authorized
      */
-    public static function studentOnly(array $user): bool
-    {
+    public static function studentOnly(array $user): bool {
+        if(!self::isSuperAdmin($user)){   //BYPASS THE MIDDLEWARE FOR SUPER ADMIN
+            return true;
+        }
+        
         return self::requireRole($user, 'student');
     }
 
@@ -363,8 +387,10 @@ class RoleMiddleware
      * @param array $user Current user data
      * @return bool True if authorized
      */
-    public static function tutorOnly(array $user): bool
-    {
+    public static function tutorOnly(array $user): bool{
+        if(!self::isSuperAdmin($user)){
+            return true;
+        }
         return self::requireRole($user, 'tutor');
     }
 

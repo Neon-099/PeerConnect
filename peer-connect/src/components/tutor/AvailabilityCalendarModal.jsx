@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar } from 'react-calendar';
 import { X, Check, XCircle, Calendar as CalendarIcon } from 'lucide-react';
 import 'react-calendar/dist/Calendar.css';
-import './CalendarProfile.css';
+import '../../pages/student/tutor/CalendarProfile.css';
 
 // Helper function to get local date string without timezone conversion
 const getLocalDateString = (date) => {
@@ -49,7 +49,7 @@ const AvailabilityCalendarModal = ({ isOpen, onClose, onSave, initialAvailabilit
         }
     }, [initialAvailability]);
 
-    const getTileClassName = ({ date, view }) => {
+    const getTileClassName = ({ date}) => {
         const dateStr = getLocalDateString(date); // Use local date instead of UTC
         const dayAvailability = availability[dateStr];
         const today = new Date();

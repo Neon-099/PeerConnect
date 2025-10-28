@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Upload, Trash2, Calendar, MessageSquare, Key, LogOut, ArrowLeft } from 'lucide-react';
+import { X, Upload, Trash2, Calendar, MessageSquare} from 'lucide-react';
 import {apiClient } from './../utils/api';
 
 
@@ -19,6 +19,7 @@ const [formData, setFormData] = useState({
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
+  const [deleteProfilePicture, setDeleteProfilePicture] = useState(false);
 
 
   const campusOptions = [
@@ -76,8 +77,10 @@ const [formData, setFormData] = useState({
             setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profileData.profile_picture}`);
           }
         }
-      }
-      catch (error) {
+
+        setDeleteProfilePicture(false);
+        setProfilePicture(null);
+      } catch (error) {
         console.error(`Error fetching profile data: `, error);
         // Set default values if profile doesn't exist
         setFormData({
@@ -201,6 +204,19 @@ const [formData, setFormData] = useState({
     const updatedProfile = await apiClient.put('/api/student/updateProfile', updateData);
     console.log('Profile updated successfully:', updatedProfile);
 
+
+    //HANDLE PROFILE DELETION
+    if(deleteProfilePicture){
+      try {
+        console.log('Delete profile picture');
+        await apiClient.delete('/api/student/profilePictureDelete');
+        setProfilePicturePreview('');
+      } catch (err){
+        console.error('Profile picture deletion failed', err);
+        alert('Failed to delete profile picture');
+      }
+    }
+
     // Handle profile picture upload if selected
     if(profilePicture) {
       try {
@@ -286,6 +302,7 @@ const [formData, setFormData] = useState({
                       onClick={() => {
                         setProfilePicture(null);
                         setProfilePicturePreview('');
+                        setDeleteProfilePicture(true);  
                       }}
                       className="flex items-center gap-2 px-4 py-2 border border-teal-200 text-teal-700 rounded-lg hover:bg-teal-50 transition-colors"
                     >

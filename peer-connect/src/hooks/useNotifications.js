@@ -1,12 +1,12 @@
-// peer-connect/src/hooks/useNotifications.js (Updated)
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../utils/api';
 
 export const useNotifications = (userRole) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [floatingNotification, setFloatingNotification] = useState(null);
-  const [previousNotificationIds, setPreviousNotificationIds] = useState(new Set());
+  const previousNotificationIdsRef = useRef(new Set());
+  const shownNotificationIdsRef = useRef(new Set()); // Track which ones we've already shown
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -22,17 +22,18 @@ export const useNotifications = (userRole) => {
       
       // Check for new notifications to show floating notification
       const currentIds = new Set(parsedNotifications.map(n => n.id));
-      const newNotificationIds = [...currentIds].filter(id => !previousNotificationIds.has(id));
+      const newNotificationIds = [...currentIds].filter(id => !previousNotificationIdsRef.current.has(id));
       
-      console.log('Previous IDs:', Array.from(previousNotificationIds));
+      console.log('Previous IDs:', Array.from(previousNotificationIdsRef.current));
       console.log('Current IDs:', Array.from(currentIds));
       console.log('New notification IDs:', newNotificationIds);
       
       if (newNotificationIds.length > 0) {
-        // Find the most recent new notification
+        // Find the most recent new notification that we haven't shown yet
         const latestNewNotification = parsedNotifications.find(n => 
-          newNotificationIds.includes(n.id) && 
+          newNotificationIds.includes(n.id) &&
           !n.is_read &&
+          !shownNotificationIdsRef.current.has(n.id) && // Don't show if already shown
           ['session_booked', 'session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received', 'tutor_match', 'student_match'].includes(n.type)
         );
         
@@ -40,15 +41,17 @@ export const useNotifications = (userRole) => {
         
         if (latestNewNotification) {
           setFloatingNotification(latestNewNotification);
+          // Mark this notification as shown so we don't show it again
+          shownNotificationIdsRef.current.add(latestNewNotification.id);
         }
       }
       
       setNotifications(parsedNotifications);
-      setPreviousNotificationIds(currentIds);
+      previousNotificationIdsRef.current = currentIds; // Update ref
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  }, [userRole, previousNotificationIds]);
+  }, [userRole]); // Only depend on userRole
 
   const fetchUnreadCount = useCallback(async () => {
     try {

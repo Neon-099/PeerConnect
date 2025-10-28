@@ -42,7 +42,7 @@
         
         'database' => [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
-            'name' => $_ENV['DB_NAME'] ?? 'peerconnect',
+            'name' => $_ENV['DB_NAME'] ?? 'peerconnect_db',
             'username' => $_ENV['DB_USER'] ?? 'root',
             'password' => $_ENV['DB_PASS'] ?? '',
             'charset' => $_ENV['DB_CHARSET'] ?? 'utf8mb4',

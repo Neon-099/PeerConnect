@@ -4,13 +4,13 @@ import { Home, User, Users, Search, Calendar, Bell, Star, Target} from 'lucide-r
 import {apiClient} from '../../utils/api.js';
 import { useNotifications } from '../../hooks/useNotifications.js';
 
-import Header from './Header.jsx';
-import Footer from './Footer.jsx';
+import Header from '../Student/Header.jsx';
+import Footer from '../Student/Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import FindTutorModal from '../../components/FindTutorModal.jsx';
 import StudentFloatingNotification from '../../components/notification/StudentFloatingNotification.jsx';
 
-import ProfileSection from './ProfileSection.jsx';
+import ProfileSection from '../Student/ProfileSection.jsx';
 import StudentMatchingSection from './StudentMatchingSection.jsx';
 import SessionSection from './SessionSection.jsx';
 import NotificationSection from './NotificationSection.jsx';
@@ -184,7 +184,7 @@ const Homes = () =>  {
   return (
     <div className="flex h-screen bg-gray-50" style={{ minWidth: '1400px' }}>
       {/* Sidebar */}
-      <div className="w-60 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-60 bg-[#E6F0F2] border-r border-gray-200 flex flex-col">
         {/* Logo */}
         <div className="p-6 flex items-center gap-2">
           <div className="w-6 h-6 text-gray-800">
@@ -259,28 +259,7 @@ const Homes = () =>  {
             <span className="font-medium">Notifications</span>
           </button>
         </nav>
-        <button 
-  onClick={() => {
-    const testNotification = {
-      id: Date.now(),
-      type: 'session_confirmed',
-      title: 'Test Session Confirmed',
-      message: 'This is a test notification to verify the floating notification system.',
-      data: {
-        tutor_name: 'John Doe',
-        subject: 'Mathematics',
-        session_date: '2025-01-25',
-        start_time: '10:00:00'
-      },
-      is_read: false,
-      created_at: new Date().toISOString()
-    };
-    showFloatingNotification(testNotification);
-  }}
-  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
->
-  Test Floating Notification
-</button>
+        
         {/* Footer */}
         <div className="p-4 text-xs text-gray-500 border-t border-gray-200">
           © 2025 PeerConnect

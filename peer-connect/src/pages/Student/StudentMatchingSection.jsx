@@ -4,9 +4,8 @@ import { apiClient } from '../../utils/api';
 import MatchingResults from '../../components/MatchingResults';
 import Header from './Header.jsx';
 import Footer from './Footer.jsx';
+import TutorProfileViewPage from './tutor/TutorProfileViewPage.jsx';
 
-
-import FloatingMatchingNotification from '../../components/notification/FloatingMatchingNotification.jsx';
 
 const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [isSearching, setIsSearching] = useState(false);
@@ -16,6 +15,8 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   const [searchComplete, setSearchComplete] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [selectedTutorForView, setSelectedTutorForView] = useState(null);
+  const [showTutorProfileViewModal, setShowTutorProfileViewModal] = useState(false);
 
   // Match phases and durations (consistent with tutor side)
   const searchPhases = [
@@ -88,6 +89,10 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
     startSearch();
   };  
  
+  const handleViewProfile = (tutor) => {
+    setSelectedTutorForView(tutor);
+    setShowTutorProfileViewModal(true);
+  }
 
   return (
     <div className='flex-1 flex flex-col'>
@@ -196,7 +201,11 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
           </div>
 
           {matches.length > 0 ? (
-            <MatchingResults matches={matches} type="tutors" />
+            <MatchingResults 
+              matches={matches} 
+              type="tutors" 
+              onViewProfile={handleViewProfile}
+            />
           ) : (
             <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -221,7 +230,17 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
       <div className="h-[49px] mt-auto bg-white border-t border-gray-200 flex items-center justify-end px-8">
         <Footer/>
       </div>
-
+      {showTutorProfileViewModal && selectedTutorForView && (
+        <div className="fixed inset-0 z-50 bg-white overflow-auto">
+          <TutorProfileViewPage
+            tutor={selectedTutorForView}
+            onClose={() => {
+              setShowTutorProfileViewModal(false);
+              setSelectedTutorForView(null);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

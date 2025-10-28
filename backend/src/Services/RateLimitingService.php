@@ -120,8 +120,7 @@ class RateLimitingService {
      * @param string $identifier Email or IP address
      * @param string $actionType Type of action
      */
-    public function recordSuccessfulAttempt(string $identifier, string $actionType): void
-    {
+    public function recordSuccessfulAttempt(string $identifier, string $actionType): void{
         try {
             $stmt = $this->db->prepare("
                 DELETE FROM rate_limiting 
@@ -288,4 +287,6 @@ class RateLimitingService {
             return 0;
         }
     }
+
+    
 }

@@ -23,11 +23,11 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     preferred_student_level: ''
   });
 
-  const [newSpecialization, setNewSpecialization] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState('');
+  const [deleteProfilePicture, setDeleteProfilePicture] = useState(false);
   // Options for dropdowns
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -107,6 +107,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         }
       }
 
+      setDeleteProfilePicture(false);
+      setProfilePicture(null);
       
     } catch (error) {
       console.error('Error fetching tutor profile data:', error);
@@ -254,6 +256,16 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     try {
       setIsLoading(true);
 
+      if(!formData.specializations || formData.specializations.length < 3){
+        alert('At least 3 specializations are required');
+        return;
+      }
+
+      if(!formData.teaching_styles || formData.teaching_styles.length < 2){
+        alert('At least 2 teaching styles are required');
+        return;
+      }
+
       // Prepare data for API
       const updateData = {
         first_name: formData.firstName,
@@ -264,31 +276,53 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         bio: formData.bio,
         highest_education: formData.highest_education,
         years_experience: parseInt(formData.years_experience),
-        specializations: formData.specializations,
+        specializations: Array.isArray(formData.specializations) ? formData.specializations : [],
         hourly_rate: parseFloat(formData.hourly_rate),
-        teaching_styles: formData.teaching_styles,
+        teaching_styles: Array.isArray(formData.teaching_styles) ? formData.teaching_styles : [],
         preferred_student_level: formData.preferred_student_level,
       };
 
       // Update profile
       const updatedProfile = await apiClient.put('/api/tutor/profile', updateData);
 
-      // Handle profile picture upload if selected
+
+      console.log('Tutor profile updated:', updatedProfile);
+      //CHECK IF UPDATE WAS SUCCESSFUL
+      if(!updatedProfile || typeof updatedProfile !== 'object'){
+        throw new Error('No response from server');
+      }
+
+      //HANDLE PROFILE DELETION 
+      if(deleteProfilePicture){
+        try{
+          console.log('Deleting profile picture');
+          await apiClient.delete('/api/tutor/profilePictureDelete');
+          setProfilePicturePreview('');
+        }
+        catch (err){
+          console.error("Profile picture deletion failed:", err);
+          alert('Failed to delete profile picture. Please try again.');
+        }
+      }
+
+      // Handle profile picture upload 
       if (profilePicture) {
         try {
           const formDataForUpload = new FormData();
           formDataForUpload.append('profile_picture', profilePicture);
           console.log('Uploading profile picture...', profilePicture);
 
-          const result = await apiClient.post('/api/tutor/profilePicture', formDataForUpload, { isFormData: true });
+          const result = await apiClient.post('/api/tutor/profilePictureUpload', formDataForUpload, { isFormData: true });
           console.log('Profile picture uploaded successfully', result);
 
-          if (result.profile_picture) {
-            setProfilePicturePreview(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${result.profile_picture}`);
+          if (result && result.profile_picture) {
+            setProfilePicturePreview(result.profile_picture.startsWith('http') 
+              ? result.profile_picture 
+              : `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${result.profile_picture}`);
           }
         } catch (err) {
           console.error('Profile picture upload failed:', err);
-          alert('Failed to upload profile picture. Please try again');
+          alert('Profile updated but picture upload failed. Please try uploading the picture again.');
         }
       }
 
@@ -315,7 +349,7 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     <div className="fixed inset-0 backdrop-blur-sm bg-black/25 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center sticky top-0 justify-between p-6 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
@@ -377,6 +411,7 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
                         onClick={() => {
                           setProfilePicture(null);
                           setProfilePicturePreview('');
+                          setDeleteProfilePicture(true);
                         }}
                         className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
                       >

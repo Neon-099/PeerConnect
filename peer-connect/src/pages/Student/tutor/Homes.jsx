@@ -299,7 +299,7 @@ const Homes = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-slate-100 border-r border-slate-200 flex flex-col">
+      <div className="fixed left-0 top-0 h-full w-64 bg-slate-200 border-r border-slate-200 flex flex-col">
         {/* Profile Section */}
         <div className="p-6  flex items-center gap-3">
            <span className="text-xl font-semibold text-slate-800 ">PeerConnect</span>

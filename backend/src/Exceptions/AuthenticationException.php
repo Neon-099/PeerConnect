@@ -202,6 +202,7 @@ class AuthenticationException extends Exception {
             return config('app.debug', false) && !empty($this->context);
          }
 
+        public function getData(): array {
+            return $this->context;
+        }
     }
-
-?>

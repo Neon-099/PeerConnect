@@ -420,6 +420,14 @@ class AuthController {
             Response::validationError($e->getErrors(), $e->getMessage());
         }
         catch (AuthenticationException $e) {
+            //HANDLE RATE LIMITING SPECIALLY
+            if($e->getCode() === 429){
+                $data = $e->getData() ?? [];
+                Response::error($e->getMessage(), $e->getCode(), $data);
+            }
+            else {
+                Response::handleException($e);
+            }
             Response::handleException($e);
         }
         catch (\Exception $e) {

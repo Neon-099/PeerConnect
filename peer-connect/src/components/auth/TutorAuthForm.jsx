@@ -1,7 +1,6 @@
 import { auth, storeSession, } from '../../utils/auth.js';
 import {apiClient} from '../../utils/api.js'
 import {useNavigate, Link} from 'react-router-dom';
-import {GoogleLogin} from '@react-oauth/google';
 import { useState } from 'react';
 import { User, GraduationCapIcon, AlertTriangle, Eye, EyeOff, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -164,38 +163,38 @@ const TutorAuthForm = () => {
         }
     };
 
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault();
-    console.log('Signup form submitted with data:', formData);
-    try {
-        console.log('Entering...')
-        const tutorPayload = {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            password: formData.password,
-            role: 'tutor',
-            providers: 'local'
-        };
-        console.log('Calling auth.register with payload:', tutorPayload);
-        const res = await auth.register(tutorPayload);
-        console.log('Register response:', res);
+    const handleSignupSubmit = async (e) => {
+        e.preventDefault();
+        console.log('Signup form submitted with data:', formData);
+        try {
+            console.log('Entering...')
+            const tutorPayload = {
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                email: formData.email,
+                password: formData.password,
+                role: 'tutor',
+                providers: 'local'
+            };
+            console.log('Calling auth.register with payload:', tutorPayload);
+            const res = await auth.register(tutorPayload);
+            console.log('Register response:', res);
 
-        //CHECK TOKENS IF SUCCESSFULLY STORED
-        const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
-        if(!hasTokens){
-            throw new Error('Failed to store tokens');
+            //CHECK TOKENS IF SUCCESSFULLY STORED
+            const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
+            if(!hasTokens){
+                throw new Error('Failed to store tokens');
+            }
+
+            // Simple success handling - let auth.register handle token storage
+            navigate('/tutor/profileCreation');
+            toast.success('Account created successfully!');
         }
-
-        // Simple success handling - let auth.register handle token storage
-        navigate('/tutor/profileCreation');
-        toast.success('Account created successfully!');
+        catch(err){
+            console.error('Signup error:', err);
+            alert(err.message || 'Signup failed');
+        }
     }
-    catch(err){
-        console.error('Signup error:', err);
-        alert(err.message || 'Signup failed');
-    }
-  }
 
     const startLockoutCountdown = (seconds) => {
         setLockoutTime(seconds);

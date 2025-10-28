@@ -12,7 +12,7 @@ import Homes from './pages/student/HomesSection.jsx';
 
 import TutorLanding from './pages/student/tutor/TutorLanding.jsx';
 import TutorAuthForm from './components/auth/TutorAuthForm.jsx';
-import TutorProfileCreation from './components/tutor/TutorProfileCreation.jsx';
+import TutorProfileCreation from './pages/student/tutor/TutorProfileCreation.jsx';
 import TutorHomes from './pages/student/tutor/Homes.jsx';
 
 function App() {
