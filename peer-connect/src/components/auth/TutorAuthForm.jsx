@@ -33,6 +33,16 @@ const TutorAuthForm = () => {
   const [showForgotPasswordSuggestion, setShowForgotPasswordSuggestion] = useState(false);
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
 
+  // ADD THIS: Add form validation errors state
+  const [signupErrors, setSignupErrors] = useState({});
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    minLength: false,
+    hasLowercase: false,
+    hasUppercase: false,
+    hasNumber: false,
+    hasSpecial: false
+  });
+
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -117,9 +127,9 @@ const TutorAuthForm = () => {
 
             // Add this function before handleLoginSubmit:
             const parseAttemptsFromError = (errorMessage) => {
-            // Look for patterns like "X attempts remaining" or similar
-            const match = errorMessage.match(/(\d+)\s+attempts?\s+remaining/i);
-            return match ? parseInt(match[1]) : null;
+                // Look for patterns like "X attempts remaining" or similar
+                const match = errorMessage.match(/(\d+)\s+attempts?\s+remaining/i);
+                return match ? parseInt(match[1]) : null;
             };
 
             // To:
@@ -142,7 +152,7 @@ const TutorAuthForm = () => {
                 setLoginError(`Invalid email or password. ${attemptsLeft} attempts remaining.`);
 
                 //SHOW IF FORGOT PASSWORD SUGGESTIONS AFTER 2 FAILED ATTEMPTS
-                if(!attemptsLeft <= 3){
+                if(attemptsLeft <= 3){
                     setShowForgotPasswordSuggestion(true);
                 }
             }
@@ -163,38 +173,103 @@ const TutorAuthForm = () => {
         }
     };
 
-    const handleSignupSubmit = async (e) => {
-        e.preventDefault();
-        console.log('Signup form submitted with data:', formData);
-        try {
-            console.log('Entering...')
-            const tutorPayload = {
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                email: formData.email,
-                password: formData.password,
-                role: 'tutor',
-                providers: 'local'
-            };
-            console.log('Calling auth.register with payload:', tutorPayload);
-            const res = await auth.register(tutorPayload);
-            console.log('Register response:', res);
+  // ADD THIS: Client-side password validation
+  const validatePassword = (password) => {
+    setPasswordRequirements({
+      minLength: password.length >= 8,
+      hasLowercase: /[a-z]/.test(password),
+      hasUppercase: /[A-Z]/.test(password),
+      hasNumber: /\d/.test(password),
+      hasSpecial: /[^a-zA-Z\d]/.test(password)
+    });
+  };
 
-            //CHECK TOKENS IF SUCCESSFULLY STORED
-            const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
-            if(!hasTokens){
-                throw new Error('Failed to store tokens');
-            }
-
-            // Simple success handling - let auth.register handle token storage
-            navigate('/tutor/profileCreation');
-            toast.success('Account created successfully!');
-        }
-        catch(err){
-            console.error('Signup error:', err);
-            alert(err.message || 'Signup failed');
-        }
+  // ADD THIS: Check password match
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (name === 'password') {
+      validatePassword(value);
     }
+    
+    // Clear errors when user types
+    if (signupErrors[name]) {
+      setSignupErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSignupSubmit = async (e) => {
+    e.preventDefault();
+    console.log('Signup form submitted with data:', formData);
+    
+    // Client-side validation before submission
+    setSignupErrors({});
+    
+    // Check password match
+    if (formData.password !== formData.confirmPassword) {
+      setSignupErrors({ confirmPassword: 'Passwords do not match' });
+      return;
+    }
+    
+    // Check password strength
+    const isPasswordValid = Object.values(passwordRequirements).every(req => req === true);
+    if (!isPasswordValid) {
+      setSignupErrors({ password: 'Password does not meet all requirements' });
+      return;
+    }
+    
+    try {
+      console.log('Entering...')
+      const tutorPayload = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: 'tutor',
+        providers: 'local'
+      };
+      console.log('Calling auth.register with payload:', tutorPayload);
+      const res = await auth.register(tutorPayload);
+      console.log('Register response:', res);
+
+      //CHECK TOKENS IF SUCCESSFULLY STORED
+      const hasTokens = localStorage.getItem('pc_access_token') && localStorage.getItem('pc_user');
+      if(!hasTokens){
+        throw new Error('Failed to store tokens');
+      }
+
+      // Simple success handling - let auth.register handle token storage
+      navigate('/tutor/profileCreation');
+      toast.success('Account created successfully!');
+    }
+    catch(err){
+      console.error('Signup error:', err);
+      
+      // Extract field-specific errors
+      if (err.errors || err.fieldErrors) {
+        const fieldErrors = err.errors || err.fieldErrors || {};
+        setSignupErrors(fieldErrors);
+        
+        // Show first error in alert, but display all in UI
+        const firstError = Object.values(fieldErrors)[0];
+        if (Array.isArray(firstError)) {
+          alert(firstError[0]);
+        } else {
+          alert(firstError || err.message);
+        }
+      } else {
+        alert(err.message || 'Signup failed');
+      }
+    }
+  };
 
     const startLockoutCountdown = (seconds) => {
         setLockoutTime(seconds);
@@ -462,8 +537,10 @@ const TutorAuthForm = () => {
                                                 type={showPassword ? "text" : "password"}
                                                 name="password"
                                                 value={formData.password}
-                                                onChange={handleInputChange}
-                                                className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
+                                                onChange={handlePasswordChange}  {/* UPDATE THIS */}
+                                                className={`w-full px-4 py-4 bg-gray-700 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12 ${
+                                                    signupErrors.password ? 'border-red-500' : 'border-gray-600'
+                                                }`}
                                                 placeholder="Create password"
                                                 required
                                             />
@@ -475,7 +552,57 @@ const TutorAuthForm = () => {
                                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                             </button>
                                         </div>
+                                        
+                                        {/* Password Requirements Display */}
+                                        {formData.password && (
+                                            <div className="mt-2 p-3 bg-gray-700/50 rounded-lg text-xs space-y-1">
+                                                <p className="text-gray-400 font-medium mb-2">Password must contain:</p>
+                                                <div className="space-y-1">
+                                                    <div className={`flex items-center ${passwordRequirements.minLength ? 'text-green-400' : 'text-gray-500'}`}>
+                                                        <span className={passwordRequirements.minLength ? 'text-green-400' : 'text-gray-500'}>
+                                                            {passwordRequirements.minLength ? '✓' : '○'}
+                                                        </span>
+                                                        <span className="ml-2">At least 8 characters</span>
+                                                    </div>
+                                                    <div className={`flex items-center ${passwordRequirements.hasLowercase ? 'text-green-400' : 'text-gray-500'}`}>
+                                                        <span className={passwordRequirements.hasLowercase ? 'text-green-400' : 'text-gray-500'}>
+                                                            {passwordRequirements.hasLowercase ? '✓' : '○'}
+                                                        </span>
+                                                        <span className="ml-2">One lowercase letter</span>
+                                                    </div>
+                                                    <div className={`flex items-center ${passwordRequirements.hasUppercase ? 'text-green-400' : 'text-gray-500'}`}>
+                                                        <span className={passwordRequirements.hasUppercase ? 'text-green-400' : 'text-gray-500'}>
+                                                            {passwordRequirements.hasUppercase ? '✓' : '○'}
+                                                        </span>
+                                                        <span className="ml-2">One uppercase letter</span>
+                                                    </div>
+                                                    <div className={`flex items-center ${passwordRequirements.hasNumber ? 'text-green-400' : 'text-gray-500'}`}>
+                                                        <span className={passwordRequirements.hasNumber ? 'text-green-400' : 'text-gray-500'}>
+                                                            {passwordRequirements.hasNumber ? '✓' : '○'}
+                                                        </span>
+                                                        <span className="ml-2">One number</span>
+                                                    </div>
+                                                    <div className={`flex items-center ${passwordRequirements.hasSpecial ? 'text-green-400' : 'text-gray-500'}`}>
+                                                        <span className={passwordRequirements.hasSpecial ? 'text-green-400' : 'text-gray-500'}>
+                                                            {passwordRequirements.hasSpecial ? '✓' : '○'}
+                                                        </span>
+                                                        <span className="ml-2">One special character</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Field Error Display */}
+                                        {signupErrors.password && (
+                                            <div className="mt-2 text-red-400 text-sm">
+                                                {Array.isArray(signupErrors.password) 
+                                                    ? signupErrors.password.map((err, i) => <div key={i}>{err}</div>)
+                                                    : signupErrors.password
+                                                }
+                                            </div>
+                                        )}
                                     </div>
+                                    
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
                                         <div className="relative">
@@ -483,8 +610,10 @@ const TutorAuthForm = () => {
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 name="confirmPassword"
                                                 value={formData.confirmPassword}
-                                                onChange={handleInputChange}
-                                                className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
+                                                onChange={handlePasswordChange}  {/* UPDATE THIS */}
+                                                className={`w-full px-4 py-4 bg-gray-700 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12 ${
+                                                    signupErrors.confirmPassword ? 'border-red-500' : 'border-gray-600'
+                                                }`}
                                                 placeholder="Confirm password"
                                                 required
                                             />
@@ -496,8 +625,44 @@ const TutorAuthForm = () => {
                                                 {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                             </button>
                                         </div>
+                                        
+                                        {/* Confirm Password Error */}
+                                        {signupErrors.confirmPassword && (
+                                            <div className="mt-2 text-red-400 text-sm">
+                                                {signupErrors.confirmPassword}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Password Match Indicator */}
+                                        {formData.password && formData.confirmPassword && (
+                                            <div className="mt-2 text-sm">
+                                                {formData.password === formData.confirmPassword ? (
+                                                    <span className="text-green-400">✓ Passwords match</span>
+                                                ) : (
+                                                    <span className="text-red-400">✗ Passwords do not match</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* Display other field errors */}
+                                {Object.keys(signupErrors).filter(key => key !== 'password' && key !== 'confirmPassword').length > 0 && (
+                                    <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+                                        <div className="text-red-400 text-sm space-y-1">
+                                            {Object.entries(signupErrors)
+                                                .filter(([key]) => key !== 'password' && key !== 'confirmPassword')
+                                                .map(([key, value]) => (
+                                                    <div key={key}>
+                                                        <strong className="capitalize">{key.replace(/_/g, ' ')}:</strong> {
+                                                            Array.isArray(value) ? value.join(', ') : value
+                                                        }
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="pt-2">
                                     <button

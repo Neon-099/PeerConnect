@@ -102,7 +102,18 @@ export async function api(path, { method = 'GET', body, token, isFormData = fals
 	// Backend Response::success returns { success, message, data }
 	if (!res.ok || json?.success === false) {
 		const msg = json?.message || `Request failed (${res.status})`;
-		throw new Error(msg);
+		const error = new Error(msg);
+		
+		// Preserve detailed field errors if available
+		if (json?.errors) {
+			error.errors = json.errors;
+			error.fieldErrors = json.errors;
+		}
+		
+		// Preserve full response for debugging
+		error.response = json;
+		
+		throw error;
 	}
 
 	//HANDLING BASED ON ENDPOINTS (since theyre both different)

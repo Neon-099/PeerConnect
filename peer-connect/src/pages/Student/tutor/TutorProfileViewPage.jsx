@@ -3,7 +3,6 @@ import { Star, CheckCircle, Calendar, MapPin, Mail, Facebook, Users, GraduationC
 import { apiClient } from '../../../utils/api';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import BookingModal from '../../../components/BookingModal';
-import { useNotifications } from '../../../hooks/useNotifications';
 
 
 // All Reviews Modal Component
@@ -142,10 +141,6 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
   const [details, setDetails] = useState(null);
   const [completedSessions, setCompletedSessions] = useState(0);
 
-
-  // Add notifications hook (consistent with student HomesSection)
-  const { notifications, unreadCount, refreshNotifications } = useNotifications('student');
-
   useEffect(() => {
     if (tutor) {
       fetchDetailsAndReviews();
@@ -219,9 +214,6 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
   const handleBookingSuccess = async (bookingResult) => {
     setShowBookingModal(false);
     console.log('Session booked:', bookingResult);
-    
-    // Refresh notifications to show the new session_booked notification
-    await refreshNotifications();
   };
 
   if (!tutor) {
@@ -246,19 +238,6 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
             className="text-teal-700 hover:text-teal-800 font-medium flex items-center gap-2"
           >
             ← Back to Search
-          </button>
-          
-          {/* Notification Bell Button - Consistent with student HomesSection */}
-          <button
-            onClick={() => setShowNotificationModal(true)}
-            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Bell className="w-5 h-5 text-teal-600" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
           </button>
         </div>
 

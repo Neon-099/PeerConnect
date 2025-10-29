@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, DollarSign, BookOpen, MessageSquare, CheckCircle } from 'lucide-react';
+import {apiClient} from '../utils/api';
 
 const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
   const [formData, setFormData] = useState({
@@ -23,13 +24,26 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [useCustomSubject, setUseCustomSubject] = useState(false);
+  const [details, setDetails] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
+      fetchDetails();
       fetchSubjects();
     }
   }, [isOpen]);
 
+
+  const fetchDetails = async () => {
+    try {
+      const response = await apiClient.get(`/api/student/tutors/${tutor.id || tutor.user_id}`);
+      console.log('Details booking: ', response);
+      setDetails(response);
+    } catch (err){
+      console.error('Error fetching details:', err);
+      setDetails(null);
+    }
+  }
   const fetchSubjects = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/subjects');
@@ -165,7 +179,7 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
             <h3 className="font-semibold mb-2">Tutor Information</h3>
             <div className="flex items-center gap-4">
               <img 
-                src={tutor?.profile_picture || '/default-avatar.png'} 
+                src={details?.profile_picture || '/default-avatar.png'} 
                 alt={tutor?.first_name}
                 className="w-12 h-12 rounded-full object-cover"
               />

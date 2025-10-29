@@ -4,9 +4,27 @@ import BookingModal from './BookingModal.jsx';
 import { useNavigate } from 'react-router-dom';
 
 
-const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
+const MatchingResults = ({ matches, type = 'tutors', onViewProfile, getProfilePictureUrl }) => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTutor, setSelectedTutor] = useState(null);
+
+  // Helper function to get profile picture URL - works for both tutors and students
+  const getImageUrl = (profilePicture) => {
+    if (!profilePicture) {
+      return "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop";
+    }
+    
+    // If it's already a full HTTP URL (from Cloudinary or external), use it directly
+    if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) {
+      return profilePicture;
+    }
+    
+    // If it's a relative path, construct the full URL
+    // For tutor images from Cloudinary, they should already be full URLs
+    // But if they're stored locally, we construct the path
+    const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+    return `${apiBase}/${profilePicture}`;
+  };
 
   const getMatchColor = (percentage) => {
     if (percentage >= 90) return 'text-green-600 bg-green-50';
@@ -34,6 +52,8 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
     setSelectedTutor(null);
   };
 
+  console.log('matches', matches);
+  console.log('getImageUrl', getImageUrl(matches[0].profile_picture));
   return (
     <>
       <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -42,9 +62,12 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4">
                 <img
-                  src={match.profile_picture || '/default-avatar.png'}
+                  src={getImageUrl(match.profile_picture)}
                   alt={`${match.first_name} ${match.last_name}`}
                   className="w-16 h-16 rounded-full object-cover"
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop";
+                  }}
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -97,7 +120,7 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
               <div>
                 <h4 className="font-medium text-gray-700 mb-2">Match Details:</h4>
                 <ul className="space-y-1">
-                  {Object.entries(match.match_details).map(([key, value]) => (
+                  {Object.entries(match.match_details || {}).map(([key, value]) => (
                     <li key={key} className="flex items-center text-gray-600">
                       <CheckCircle className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
                       <span className="truncate">{value}</span>
@@ -111,14 +134,19 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
                   {type === 'tutors' ? 'Specializations:' : 'Subjects of Interest:'}
                 </h4>
                 <div className="flex flex-wrap gap-1">
-                  {(type === 'tutors' ? match.specializations : match.subjects_of_interest)?.slice(0, 3).map((subject, idx) => (
+                  {(type === 'tutors' ? (match.specializations || []) : (match.subjects_of_interest || []))?.slice(0, 3).map((subject, idx) => (
                     <span key={idx} className="px-2 py-1 bg-teal-50 text-teal-700 rounded text-xs">
                       {subject}
                     </span>
                   ))}
-                  {(type === 'tutors' ? match.specializations : match.subjects_of_interest)?.length > 3 && (
+                  {(type === 'tutors' ? (match.specializations || []) : (match.subjects_of_interest || []))?.length > 3 && (
                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                      +{(type === 'tutors' ? match.specializations : match.subjects_of_interest).length - 3} more
+                      +{(type === 'tutors' ? (match.specializations || []) : (match.subjects_of_interest || [])).length - 3} more
+                    </span>
+                  )}
+                  {(type === 'tutors' && (!match.specializations || match.specializations.length === 0)) && (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs italic">
+                      No specializations listed
                     </span>
                   )}
                 </div>
@@ -128,7 +156,7 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
             
             <div className="mt-4 flex justify-end space-x-2">
               <button 
-                onClick={() => onViewProfile(match)}
+                onClick={() => onViewProfile && onViewProfile(match)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 View Profile
@@ -143,8 +171,6 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile }) => {
                 </button>
               ) : (
                 <button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Send Message
                 </button>
               )}
             </div>

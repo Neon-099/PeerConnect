@@ -225,10 +225,10 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">New Session Cost</h3>
                 <div className="text-lg font-semibold text-blue-900">
-                  ${newTotalCost}
+                  Php: {newTotalCost}
                 </div>
                 <div className="text-xs text-blue-600 mt-1">
-                  Based on ${session?.hourly_rate}/hour rate
+                  Based on php: {session?.hourly_rate}/hour rate
                 </div>
               </div>
             )}

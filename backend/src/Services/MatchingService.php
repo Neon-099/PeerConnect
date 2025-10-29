@@ -7,6 +7,7 @@ use App\Models\TutorProfile;
 use Config\Database;
 use PDO;
 use Exception;
+use App\Utils\Logger;
 
 class MatchingService {
     private $db;
@@ -92,7 +93,7 @@ class MatchingService {
                 u.first_name, 
                 u.last_name, 
                 u.email, 
-                u.profile_picture,
+                COALESCE(tp.profile_picture, u.profile_picture) as profile_picture,
                 (
                     SELECT COUNT(*) 
                     FROM student_subjects_of_interest ssoi 
@@ -184,7 +185,10 @@ class MatchingService {
             $subjectScore = (int)$tutor['subject_matches'] * 50;
             $score += $subjectScore;
             $matchDetails['subjects'] = "{$tutor['subject_matches']} matching subjects";
-            
+
+            //FETCH SPECIALIZATIONS FOR Tutor
+            $tutor['specializations'] = $this->getTutorSpecializations($tutor['user_id']);
+
             $tutor['match_score'] = $score;
             $tutor['match_details'] = $matchDetails;
             $tutor['match_percentage'] = min(100, round(($score / 250) * 100)); // Max score 250 (100+100+50)
@@ -200,6 +204,21 @@ class MatchingService {
         return $matches;
     }
 
+    private function getTutorSpecializations(int $userId): array {
+        try {
+            $query = "SELECT subject FROM tutor_specializations WHERE tutor_id = :tutor_id";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':tutor_id' => $userId]);
+            $results = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return $results ?: [];
+        } catch (Exception $e) {
+            Logger::error('Error fetching tutor specializations', [
+                'tutor_id' => $userId,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
     /**
      * Calculate match scores for students
      * ONLY based on 3 core criteria: Location, Academic Level, Subjects

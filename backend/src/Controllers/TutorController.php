@@ -72,7 +72,9 @@ class TutorController {
                 'teaching_styles' => $input['teaching_styles'] ?? [],
                 'preferred_student_level' => $input['preferred_student_level'] ?? null,
                 'specializations' => $input['specializations'] ?? [],
-                'availability' => $input['availability'] ?? []
+                'availability' => $input['availability'] ?? [],
+                'cp_number' => $input['cp_number'] ?? null,
+                'fb_url' => $input['fb_url'] ?? null
             ];
     
             // Handle profile picture upload if provided
@@ -501,7 +503,8 @@ class TutorController {
         if ($isCreate) {
             $requiredFields = ['gender', 'campus_location', 'bio', 'highest_education', 
                               'years_experience', 'hourly_rate', 'teaching_styles', 
-                              'preferred_student_level', 'specializations'];
+                              'preferred_student_level', 'specializations', 
+                              'cp_number', 'fb_url'];
         }
 
         foreach ($requiredFields as $field) {
@@ -509,10 +512,24 @@ class TutorController {
                 throw new ValidationException("Field '{$field}' is required");
             }
         }
-
+        
         // Validate bio length
         if (isset($data['bio']) && strlen($data['bio']) < 10) {
             throw new ValidationException('Bio must be at least 10 characters long');
+        }   
+
+        // Validate CP number
+        if(isset($data['cp_number'])) {
+            $cpNumber = preg_replace('/\s+/', '', $data['cp_number']); // Remove spaces
+            if (!preg_match('/^(\+63|0)?9\d{9}$/', $cpNumber)) {
+                throw new ValidationException('Contact number must be a valid Philippine mobile number (09XX XXX XXXX)');
+            }
+        }
+        // Validate Facebook URL
+        if(isset($data['fb_url'])) {
+            if (!preg_match('/^(https?:\/\/)?(www\.)?facebook\.com\/.+$/i', $data['fb_url'])) {
+                throw new ValidationException('Facebook URL must be a valid Facebook profile URL');
+            }
         }
 
         // Validate specializations count

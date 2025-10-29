@@ -14,12 +14,9 @@ import {apiClient} from '../../../utils/api';
 
 
 import Header from './Header.jsx';
-import Footer from '../Footer.jsx';
+import Footer from '../../Student/Footer.jsx';
 import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
 import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
-import FloatingMatchingNotification from '../../../components/notification/FloatingMatchingNotification.jsx';
-
-import { useNotifications } from '../../../hooks/useNotifications.js';
 
 const Homes = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -30,16 +27,11 @@ const Homes = () => {
   const [tutorProfile, setTutorProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availability, setAvailability] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(new Date());
 
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-
-  const { notifications, unreadCount,
-    floatingNotification, hideFloatingNotification,
-    refreshNotifications, dismissFloatingNotification } = useNotifications('tutor');
 
   const navigate = useNavigate();
 
@@ -80,7 +72,6 @@ const Homes = () => {
   const fetchUnreadNotificationCount = async () => {
     try {
       const response = await apiClient.get('/api/tutor/notifications/unread-count');
-      setUnreadNotificationCount(response.count);
     } catch (error) {
       console.error('Error fetching unread notification count:', error);
     }
@@ -640,20 +631,6 @@ const Homes = () => {
         />
       )}
 
-      {showNotificationModal && (
-        <NotificationPage
-          tutorProfile={tutorProfile}
-          getProfilePictureUrl={getProfilePictureUrl}
-        />
-      )}
-
-      {/* Floating Matching Notification */}
-      {floatingNotification && (
-        <FloatingMatchingNotification
-          notification={floatingNotification}
-          onClose={dismissFloatingNotification} // strict: mark read on close
-        />
-      )}
     </div>
   );
 };

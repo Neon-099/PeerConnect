@@ -158,6 +158,8 @@ CREATE TABLE tutor_profiles (
   gender ENUM('male', 'female', 'prefer_not_to_say') NULL,
   campus_location ENUM('main_campus', 'pucu') NULL,
   bio TEXT,
+  cp_number VARCHAR(15) NULL,
+  fb_url VARCHAR(500) NULL,
   highest_education ENUM('high_school', 'associates', 'bachelors', 'masters', 'phd') NULL,
   years_experience INT DEFAULT 0,
   hourly_rate DECIMAL(8,2) DEFAULT 0.00,

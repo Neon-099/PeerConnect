@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Users, AlertCircle, RotateCcw, Target } from 'lucide-react';
 import { apiClient } from '../../utils/api';
 import MatchingResults from '../../components/MatchingResults';
@@ -209,6 +209,7 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
                     matches={matches} 
                     type="tutors" 
                     onViewProfile={handleViewProfile}
+                    getProfilePictureUrl={getProfilePictureUrl}
                   />
                 </div>
               ) : (

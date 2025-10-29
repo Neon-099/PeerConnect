@@ -20,6 +20,8 @@ const TutorProfileCreation = () => {
       campus_location: '',
       profile_picture: null,
       bio: '',
+      cp_number: '',
+      fb_url: '',
       
       // Academic Qualifications
       highest_education: '',
@@ -275,6 +277,16 @@ const TutorProfileCreation = () => {
         if (!formData.profile_picture) newErrors.profile_picture = 'Profile picture is required';
         if (!formData.bio || formData.bio.length < 10) {
           newErrors.bio = 'Bio must be at least 10 characters long';
+        }
+        if (!formData.cp_number) {
+          newErrors.cp_number = 'Contact number is required';
+        } else if (!/^(\+63|0)?9\d{9}$/.test(formData.cp_number.replace(/\s/g, ''))) {
+          newErrors.cp_number = 'Please enter a valid Philippine mobile number';
+        }
+        if (!formData.fb_url) {
+          newErrors.fb_url = 'Facebook URL is required';
+        } else if (!/^(https?:\/\/)?(www\.)?facebook\.com\/.+/.test(formData.fb_url)) {
+          newErrors.fb_url = 'Please enter a valid Facebook URL';
         }
       }
   
@@ -579,6 +591,36 @@ const TutorProfileCreation = () => {
                     {formData.bio.length}/10 minimum
                   </div>
                   {errors.bio && <p className="text-red-400 text-sm mt-2">{errors.bio}</p>}
+                </div>
+
+                {/* Contact Number */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Contact Number *</label>
+                  <input
+                    type="tel"
+                    name="cp_number"
+                    value={formData.cp_number}
+                    onChange={handleInputChange}
+                    placeholder="09XX XXX XXXX"
+                    className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                  <p className="text-sm text-gray-400 mt-1">Enter your Philippine mobile number</p>
+                  {errors.cp_number && <p className="text-red-400 text-sm mt-2">{errors.cp_number}</p>}
+                </div>
+
+                {/* Facebook URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Facebook Profile URL *</label>
+                  <input
+                    type="url"
+                    name="fb_url"
+                    value={formData.fb_url}
+                    onChange={handleInputChange}
+                    placeholder="https://facebook.com/your.profile"
+                    className="w-full px-4 py-4 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  />
+                  <p className="text-sm text-gray-400 mt-1">Enter your Facebook profile URL</p>
+                  {errors.fb_url && <p className="text-red-400 text-sm mt-2">{errors.fb_url}</p>}
                 </div>
               </div>
             )}

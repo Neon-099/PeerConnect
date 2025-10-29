@@ -25,11 +25,13 @@ class TutorProfile {
         $query = "INSERT INTO {$this->table} (
                 user_id, gender, campus_location, bio, highest_education, 
                 years_experience, hourly_rate, teaching_styles, 
-                preferred_student_level, profile_picture, profile_completed, profile_completed_at
+                preferred_student_level, profile_picture, cp_number, fb_url, 
+                profile_completed, profile_completed_at
             ) VALUES (
                 :user_id, :gender, :campus_location, :bio, :highest_education,
                 :years_experience, :hourly_rate, :teaching_styles,
-                :preferred_student_level, :profile_picture, :profile_completed, :profile_completed_at
+                :preferred_student_level, :profile_picture, :cp_number, :fb_url,
+                :profile_completed, :profile_completed_at
             )";
 
         $stmt = $this->db->prepare($query);
@@ -45,6 +47,8 @@ class TutorProfile {
             ':teaching_styles' => json_encode($data['teaching_styles'] ?? []),
             ':preferred_student_level' => $data['preferred_student_level'] ?? null,
             ':profile_picture' => $data['profile_picture'] ?? null,
+            ':cp_number' => $data['cp_number'] ?? null,  // ADD THIS
+            ':fb_url' => $data['fb_url'] ?? null,        // ADD THIS
             ':profile_completed' => 1,
             ':profile_completed_at' => date('Y-m-d H:i:s')
         ];
@@ -322,7 +326,8 @@ class TutorProfile {
     
         // Handle regular fields
         $allowedFields = ['gender', 'campus_location', 'bio', 'highest_education', 
-                         'years_experience', 'hourly_rate', 'preferred_student_level', 'profile_picture'];
+                         'years_experience', 'hourly_rate', 'preferred_student_level', 
+                         'profile_picture', 'cp_number', 'fb_url'];  // ADD cp_number and fb_url
         
         foreach ($data as $key => $value) {
             if (in_array($key, $allowedFields)) {
