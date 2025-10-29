@@ -7,20 +7,10 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     session_date: '',
     start_time: '',
     end_time: '',
-    subject_id: '',
     custom_subject: '',
     notes: '',
   });
-  const [subjects, setSubjects] = useState([
-    { id: 1, name: 'Mathematics' },
-    { id: 2, name: 'Physics' },
-    { id: 3, name: 'Chemistry' },
-    { id: 4, name: 'Biology' },
-    { id: 5, name: 'English' },
-    { id: 6, name: 'History' },
-    { id: 7, name: 'Geography' },
-    { id: 8, name: 'Computer Science' },
-  ]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [useCustomSubject, setUseCustomSubject] = useState(false);
@@ -29,14 +19,21 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
   useEffect(() => {
     if (isOpen) {
       fetchDetails();
-      fetchSubjects();
     }
   }, [isOpen]);
 
 
   const fetchDetails = async () => {
     try {
-      const response = await apiClient.get(`/api/student/tutors/${tutor.id || tutor.user_id}`);
+      const tutorId = tutor?.user_id || tutor?.id;
+      
+      if(!tutorId){
+        console.error('Tutor ID not found');
+        setDetails(null);
+        return;
+      }
+
+      const response = await apiClient.get(`/api/student/tutors/${tutorId}`);
       console.log('Details booking: ', response);
       setDetails(response);
     } catch (err){
@@ -44,17 +41,7 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
       setDetails(null);
     }
   }
-  const fetchSubjects = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/subjects');
-      const data = await response.json();
-      if (data.success) {
-        setSubjects(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    }
-  };
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -63,10 +50,7 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     if (!formData.start_time) newErrors.start_time = 'Start time is required';
     if (!formData.end_time) newErrors.end_time = 'End time is required';
     
-    if (!useCustomSubject && !formData.subject_id) {
-      newErrors.subject_id = 'Subject is required';
-    }
-    if (useCustomSubject && !formData.custom_subject.trim()) {
+    if (!formData.custom_subject.trim()) {
       newErrors.custom_subject = 'Custom subject is required';
     }
     
@@ -92,21 +76,30 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     setIsLoading(true);
     try {
       const bookingData = {
-        tutor_id: tutor.user_id,
+        tutor_id: tutor.user_id || tutor?.id,  //FALLBACK TO ID IF USER_ID IS NOT AVAILABLE
         session_date: formData.session_date,
         start_time: formData.start_time,
         end_time: formData.end_time,
-        notes: formData.notes,
-        session_type: formData.session_type
+        notes: formData.notes || '', //IF EMPTY MAKE SURE A STRING
+        custom_subject: formData.custom_subject.trim()
       };
 
       // Add subject data based on selection
       if (useCustomSubject) {
-        bookingData.custom_subject = formData.custom_subject;
+        bookingData.custom_subject = formData.custom_subject.trim();
       } else {
-        bookingData.subject_id = parseInt(formData.subject_id);
+        // Ensure subject_id is a valid integer
+        const subjectId = parseInt(formData.subject_id);
+        if (isNaN(subjectId)) {
+          setErrors({ general: 'Please select a valid subject' });
+          setIsLoading(false);
+          return;
+        }
+        bookingData.subject_id = subjectId;
       }
 
+      console.log('Sending booking data:', bookingData); // Debug log
+      console.log('Selected subject_id:', formData.subject_id); // Debug log
 
       const response = await fetch('http://localhost:8000/api/student/book-session', {
         method: 'POST',
@@ -117,20 +110,20 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
         body: JSON.stringify(bookingData)
       });
 
-      console.log('Response:', response.status);
-      console.log('Response:', response.headers);
-
+      console.log('Response status:', response.status);
+      
       const result = await response.json();
-      console.log('Result data:', result)
+      console.log('Result data:', result);
 
       if (result.success) {
         onBookSession(result.data);
         onClose();
       } else {
-        setErrors({ general: result.message });
+        setErrors({ general: result.message || 'Failed to book session' });
       }
     } catch (error) {
-      setErrors({ general: 'Failed to book session' });
+      console.error('Booking error:', error);
+      setErrors({ general: 'Failed to book session. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -242,41 +235,6 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
               </label>
               
               {/* Subject Selection Toggle */}
-              <div className="flex gap-4 mb-3">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    checked={!useCustomSubject}
-                    onChange={() => setUseCustomSubject(false)}
-                    className="mr-2"
-                  />
-                  Select from list
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    checked={useCustomSubject}
-                    onChange={() => setUseCustomSubject(true)}
-                    className="mr-2"
-                  />
-                  Custom subject
-                </label>
-              </div>
-
-              {!useCustomSubject ? (
-                <select
-                  value={formData.subject_id}
-                  onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
-                    errors.subject_id ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select a subject</option>
-                  {subjects.map(subject => (
-                    <option key={subject.id} value={subject.id}>{subject.name}</option>
-                  ))}
-                </select>
-              ) : (
                 <input
                   type="text"
                   value={formData.custom_subject}
@@ -286,7 +244,6 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
                     errors.custom_subject ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
-              )}
               
               {(errors.subject_id || errors.custom_subject) && (
                 <p className="text-red-500 text-sm mt-1">
@@ -353,7 +310,7 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
                     const start = new Date(`2000-01-01T${formData.start_time}`);
                     const end = new Date(`2000-01-01T${formData.end_time}`);
                     const duration = (end - start) / (1000 * 60 * 60);
-                    return `${duration} hour${duration > 1 ? 's' : ''}`;
+                    return `${duration.toFixed(1)} hour${duration !== 1 ? 's' : ''}`;
                   })()}
                 </span>
                 <span className="font-bold text-teal-800">

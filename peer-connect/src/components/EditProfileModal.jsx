@@ -11,6 +11,8 @@ const [formData, setFormData] = useState({
     preferred_learning_style: '',
     academic_level: '',
     bio: '',
+    cp_number: '',
+    fb_url: '',
     subjects_of_interest: []
   });
 
@@ -64,6 +66,8 @@ const [formData, setFormData] = useState({
           preferred_learning_style: profileData.preferred_learning_style || '',
           academic_level: profileData.academic_level || '',
           bio: profileData.bio || '',
+          cp_number: profileData.cp_number || '',
+          fb_url: profileData.fb_url || '',
           subjects_of_interest: profileData.subjects_of_interest || []
         });
 
@@ -91,6 +95,8 @@ const [formData, setFormData] = useState({
           academic_level: '',
           preferred_learning_style: '',
           bio: '',
+          cp_number: '',
+          fb_url: '',
           subjects_of_interest: []
         });
       }
@@ -126,6 +132,18 @@ const [formData, setFormData] = useState({
 
     if(!formData.subjects_of_interest.length) {
       newErrors.subjects_of_interest = 'At least one subject of interest is required';
+    }
+    
+    if(!formData.cp_number.trim()) {
+      newErrors.cp_number = 'Cell phone number is required';
+    } else if (!/^(\+63|0)?9\d{9}$/.test(formData.cp_number.replace(/\s/g, ''))) {
+      newErrors.cp_number = 'Please enter a valid Philippine mobile number';
+    }
+    
+    if(!formData.fb_url.trim()) {
+      newErrors.fb_url = 'Facebook URL is required';
+    } else if (!/^(https?:\/\/)?(www\.)?facebook\.com\/.+/.test(formData.fb_url)) {
+      newErrors.fb_url = 'Please enter a valid Facebook URL';
     }
     
     setErrors(newErrors);
@@ -195,6 +213,8 @@ const [formData, setFormData] = useState({
       academic_level: formData.academic_level,
       preferred_learning_style: formData.preferred_learning_style,
       bio: formData.bio,
+      cp_number: formData.cp_number,
+      fb_url: formData.fb_url,
       subjects_of_interest: formData.subjects_of_interest
     };
 
@@ -492,69 +512,36 @@ const [formData, setFormData] = useState({
                   </button>
                 </div>
               </div>
-
-              {/* Upcoming Sessions */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Upcoming Sessions</label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Calculus with Emma</h4>
-                        <p className="text-sm text-gray-600">Sep 12, 4:00 PM • Room B203 • 60 min</p>
-                      </div>
-                    </div>
-                    <button className="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-sm hover:bg-teal-100 transition-colors">
-                      Reschedule
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Physics with Liam</h4>
-                        <p className="text-sm text-gray-600">Sep 15, 10:00 AM • Library 2F • 45 min</p>
-                      </div>
-                    </div>
-                    <button className="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-sm hover:bg-teal-100 transition-colors">
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cell Phone Number</label>
+                <input
+                  type="tel"
+                  value={formData.cp_number}
+                  onChange={(e) => handleInputChange('cp_number', e.target.value)}
+                  placeholder="09123456789"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.cp_number ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.cp_number && (
+                  <p className="mt-1 text-sm text-red-600">{errors.cp_number}</p>
+                )}
               </div>
-
-              {/* Past Sessions & Feedback */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Past Sessions & Feedback</label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Emma Wilson • Calculus</h4>
-                        <p className="text-sm text-gray-600">"Clear explanations and great examples."</p>
-                      </div>
-                    </div>
-                    <button className="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-sm hover:bg-teal-100 transition-colors">
-                      View
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Liam Chen • Physics</h4>
-                        <p className="text-sm text-gray-600">"Helpful strategies before the quiz."</p>
-                      </div>
-                    </div>
-                    <button className="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-sm hover:bg-teal-100 transition-colors">
-                      View
-                    </button>
-                  </div>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Facebook URL</label>
+                <input
+                  type="url"
+                  value={formData.fb_url}
+                  onChange={(e) => handleInputChange('fb_url', e.target.value)}
+                  placeholder="https://facebook.com/yourprofile"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.fb_url ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.fb_url && (
+                  <p className="mt-1 text-sm text-red-600">{errors.fb_url}</p>
+                )}
               </div>
-
             </div>
           </div>
           )}

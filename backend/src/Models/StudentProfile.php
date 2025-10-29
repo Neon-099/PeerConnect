@@ -18,11 +18,11 @@ class StudentProfile {
     public function create(int $userId, array $data): int {
         $query = "INSERT INTO {$this->table} (
             user_id, bio, academic_level, campus_location,
-            preferred_learning_style, profile_completed,
+            preferred_learning_style, cp_number, fb_url, profile_completed,
             profile_completed_at)
                 VALUES (
                 :user_id, :bio, :academic_level, :campus_location, 
-                :preferred_learning_style, :profile_completed, 
+                :preferred_learning_style, :cp_number, :fb_url, :profile_completed, 
                 :profile_completed_at
             )";
     
@@ -34,6 +34,8 @@ class StudentProfile {
             ':academic_level' => $data['academic_level'] ?? null,
             ':campus_location' => $data['campus_location'] ?? null,
             ':preferred_learning_style' => $data['preferred_learning_style'] ?? null,
+            ':cp_number' => $data['cp_number'] ?? null,
+            ':fb_url' => $data['fb_url'] ?? null,
             ':profile_completed' => true,
             ':profile_completed_at' => date('Y-m-d H:i:s')
         ];

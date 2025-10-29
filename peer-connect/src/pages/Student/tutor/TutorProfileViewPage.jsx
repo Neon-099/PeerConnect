@@ -151,7 +151,7 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
     setIsLoading(true);
     try {
       const tutorId = tutor.user_id || tutor.id;
-
+      
       // Fetch full tutor details (bio, specializations, user_profile_picture, etc.)
       const d = await apiClient.get(`/api/student/tutors/${tutorId}`);
       setDetails(d || null);
@@ -428,11 +428,21 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
                 </div>
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
                   <Phone className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">{details?.cellphone_number || tutor.cellphone_number || 'N/A'}</span>
+                  <span className="text-gray-700">{details?.cp_number || tutor.cp_number || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
                   <Facebook className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">{details?.facebook_url || tutor.facebook_url || 'N/A'}</span>
+                  <div>
+                    <p className="text-xs text-gray-500">Facebook Profile</p>
+                    <a 
+                      href={details?.fb_url || tutor.fb_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-semibold text-teal-600 hover:text-teal-700 hover:underline"
+                    >
+                      View Profile
+                    </a>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
                   <Users className="w-5 h-5 text-gray-400" />

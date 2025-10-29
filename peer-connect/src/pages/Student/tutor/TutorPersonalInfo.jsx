@@ -27,7 +27,11 @@ const TutorPersonalInfo = ({ tutorProfile, userProfile }) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-          <p className="text-slate-800">{userProfile?.phone || '+1 (555) 123-4567'}</p>
+          <p className="text-slate-800">{tutorProfile?.cp_number || '+1 (555) 123-4567'}</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Facebook</label>
+          <p className="text-slate-800">{tutorProfile?.fb_url || 'https://www.facebook.com/sarah.thompson'}</p>
         </div>
       </div>
       <div className="mt-6">

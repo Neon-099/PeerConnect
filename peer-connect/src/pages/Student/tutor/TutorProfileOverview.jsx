@@ -41,29 +41,6 @@ const TutorProfileOverview = ({ tutorProfile, userProfile, getProfilePictureUrl 
           </div>
         </div>
       </div>
-
-      {/* Quick Stats */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 mt-6">
-        <h3 className="font-semibold text-slate-800 mb-4">Quick Stats</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-slate-600">Total Sessions</span>
-            <span className="font-semibold text-slate-800">{tutorProfile?.total_sessions || '247'}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-600">Students Helped</span>
-            <span className="font-semibold text-slate-800">89</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-600">Success Rate</span>
-            <span className="font-semibold text-green-600">96%</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-slate-600">Response Time</span>
-            <span className="font-semibold text-slate-800">2.3 hrs</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

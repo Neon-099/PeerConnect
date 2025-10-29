@@ -15,7 +15,6 @@ This system helps:
 ### 👩‍🎓 Students
 - Signup/Login (manual + Google OAuth)  
 - Browse tutors by subject/availability  
-- Chat with tutors for sessions 
 - Request and book tutoring sessions  
 - Rate and review tutors  
 

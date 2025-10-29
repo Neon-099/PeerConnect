@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Users, Clock, Star, MapPin, BookOpen, CheckCircle, AlertCircle, RotateCcw, GraduationCap, Target } from 'lucide-react';
+import React, { useState,  } from 'react';
+import { Search, Users, AlertCircle, RotateCcw, Target } from 'lucide-react';
 import { apiClient } from '../../../utils/api.js';
 import MatchingResults from '../../../components/MatchingResults.jsx';
+import StudentProfileViewPage from './StudentProfileViewPage.jsx'; // Add this import
 
 
 const TutorMatchingSection = () => {
@@ -13,6 +14,10 @@ const TutorMatchingSection = () => {
   const [searchComplete, setSearchComplete] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  
+  // Add state for student profile view
+  const [showStudentProfileView, setShowStudentProfileView] = useState(false);
+  const [selectedStudentForView, setSelectedStudentForView] = useState(null);
 
   // Search phases with tutor-focused messaging
   const searchPhases = [
@@ -103,6 +108,12 @@ const TutorMatchingSection = () => {
   const retrySearch = () => {
     setError(null);
     startSearch();
+  };
+
+  // Add handler for viewing student profile
+  const handleViewStudentProfile = (student) => {
+    setSelectedStudentForView(student);
+    setShowStudentProfileView(true);
   };
 
   return (
@@ -216,7 +227,11 @@ const TutorMatchingSection = () => {
           </div>
 
           {matches.length > 0 ? (
-            <MatchingResults matches={matches} type="students" />
+            <MatchingResults 
+              matches={matches} 
+              type="students" 
+              onViewProfile={handleViewStudentProfile} 
+            />
           ) : (
             <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -240,7 +255,16 @@ const TutorMatchingSection = () => {
         </div>
       )}
 
-    
+      {/* Student Profile View Modal */}
+      {showStudentProfileView && selectedStudentForView && (
+        <StudentProfileViewPage
+          student={selectedStudentForView}
+          onClose={() => {
+            setShowStudentProfileView(false);
+            setSelectedStudentForView(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -79,6 +79,8 @@ class StudentController {
             $profileData = [
                 'bio' => $input['bio'] ?? null,
                 'campus_location' => $input['campus_location'] ?? null,
+                'cp_number' => $input['cp_number'] ?? null,
+                'fb_url' => $input['fb_url'] ?? null,
                 'subjects_of_interest' => json_decode($input['subjects_of_interest'] ?? '[]', true ),
                 'academic_level' => $input['academic_level'] ?? null,
                 'preferred_learning_style' => $input['preferred_learning_style'] ?? null,
@@ -132,7 +134,7 @@ class StudentController {
             ], 'Profile created successfully');
     
         }
-        catch (\Exception $e){
+        catch (Exception $e){
             Logger::error('Create student profile error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -291,6 +293,7 @@ class StudentController {
             }
 
             unset($input['first_name'], $input['last_name'], $input['email']);
+            // Remove cp_number and fb_url from unset - they should go to student profile
 
             $updated = $this->studentProfileModel->update($user['user_id'], $input); 
             if($updated) {
@@ -1198,4 +1201,26 @@ class StudentController {
             return (json_last_error() === JSON_ERROR_NONE) ? $data: null;
        
     }
+
+    // Add validation method (similar to TutorController)
+    // You can add a validateStudentProfileData method:
+    private function validateStudentProfileData(array $data): void {
+      // Validate CP number
+      if(isset($data['cp_number']) && !empty($data['cp_number'])) {
+        $cpNumber = preg_replace('/\s+/', '', $data['cp_number']); // Remove spaces
+        if (!preg_match('/^(\+63|0)?9\d{9}$/', $cpNumber)) {
+          throw new \Exception('Contact number must be a valid Philippine mobile number (09XX XXX XXXX)');
+        }
+      }
+      
+      // Validate Facebook URL
+      if(isset($data['fb_url']) && !empty($data['fb_url'])) {
+        if (!preg_match('/^(https?:\/\/)?(www\.)?facebook\.com\/.+$/i', $data['fb_url'])) {
+          throw new \Exception('Facebook URL must be a valid Facebook profile URL');
+        }
+      }
+    }
+
+    // Then call it before creating the profile:
+    // $this->validateStudentProfileData($profileData);
 }

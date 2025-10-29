@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Upload, Trash2, User, GraduationCap, DollarSign, Camera, Star, BookOpen, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { X, Upload, Trash2, User, GraduationCap, DollarSign, Camera, Star, BookOpen, Calendar, Clock, CheckCircle, XCircle, Phone, Facebook } from 'lucide-react';
 import { apiClient } from '../utils/api';
 
 const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
@@ -11,6 +11,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     gender: '',
     campus_location: '',
     bio: '',
+    cp_number: '',
+    fb_url: '',
     
     // Academic Qualifications
     highest_education: '',
@@ -90,6 +92,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         gender: profileData.gender || '',
         campus_location: profileData.campus_location || '',
         bio: profileData.bio || '',
+        cp_number: profileData.cp_number || '',
+        fb_url: profileData.fb_url || '',
         highest_education: profileData.highest_education || '',
         years_experience: profileData.years_experience?.toString() || '',
         specializations: profileData.specializations || [],
@@ -120,6 +124,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         gender: '',
         campus_location: '',
         bio: '',
+        cp_number: '',
+        fb_url: '',
         highest_education: '',
         years_experience: '',
         specializations: [],
@@ -179,6 +185,18 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
     
     if (!formData.preferred_student_level) {
       newErrors.preferred_student_level = 'Preferred student level is required';
+    }
+    
+    if(!formData.cp_number.trim()) {
+      newErrors.cp_number = 'Cell phone number is required';
+    } else if (!/^(\+63|0)?9\d{9}$/.test(formData.cp_number.replace(/\s/g, ''))) {
+      newErrors.cp_number = 'Please enter a valid Philippine mobile number';
+    }
+    
+    if(!formData.fb_url.trim()) {
+      newErrors.fb_url = 'Facebook URL is required';
+    } else if (!/^(https?:\/\/)?(www\.)?facebook\.com\/.+/.test(formData.fb_url)) {
+      newErrors.fb_url = 'Please enter a valid Facebook URL';
     }
     
     setErrors(newErrors);
@@ -274,6 +292,8 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
         gender: formData.gender,
         campus_location: formData.campus_location,
         bio: formData.bio,
+        cp_number: formData.cp_number,
+        fb_url: formData.fb_url,
         highest_education: formData.highest_education,
         years_experience: parseInt(formData.years_experience),
         specializations: Array.isArray(formData.specializations) ? formData.specializations : [],
@@ -514,7 +534,7 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
                   </div>
 
                   {/* Bio */}
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
                     <textarea
                       value={formData.bio}
@@ -523,6 +543,46 @@ const TutorEditProfileModal = ({ isOpen, onClose, onProfileUpdate }) => {
                       placeholder="Tell students about yourself and your teaching approach..."
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
+                  </div>
+
+                  {/* CP Number and Facebook URL */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Cell Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.cp_number}
+                        onChange={(e) => handleInputChange('cp_number', e.target.value)}
+                        placeholder="09123456789"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          errors.cp_number ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.cp_number && (
+                        <p className="mt-1 text-sm text-red-600">{errors.cp_number}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Facebook className="w-4 h-4" />
+                        Facebook URL
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.fb_url}
+                        onChange={(e) => handleInputChange('fb_url', e.target.value)}
+                        placeholder="https://facebook.com/yourprofile"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          errors.fb_url ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.fb_url && (
+                        <p className="mt-1 text-sm text-red-600">{errors.fb_url}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

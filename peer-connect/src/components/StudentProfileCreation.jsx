@@ -13,6 +13,8 @@ const StudentProfileCreation = () => {
     // Basic Info
     bio: '',
     campus_location: '',
+    cp_number: '',
+    fb_url: '',
     // Academic Info
     subjects_of_interest: [],
     academic_level: '',
@@ -147,6 +149,20 @@ const StudentProfileCreation = () => {
         if (!formData.campus_location) {
           newErrors.campus_location = 'Campus location is required';
         }
+
+        // Add validation for cp_number
+        if (!formData.cp_number) {
+          newErrors.cp_number = 'Contact number is required';
+        } else if (!/^(\+63|0)?9\d{9}$/.test(formData.cp_number.replace(/\s/g, ''))) {
+          newErrors.cp_number = 'Please enter a valid Philippine mobile number';
+        }
+
+        // Add validation for fb_url
+        if (!formData.fb_url) {
+          newErrors.fb_url = 'Facebook URL is required';
+        } else if (!/^(https?:\/\/)?(www\.)?facebook\.com\/.+/.test(formData.fb_url)) {
+          newErrors.fb_url = 'Please enter a valid Facebook URL';
+        }
         break;
       case 2:
         if (formData.subjects_of_interest.length === 0) {
@@ -195,6 +211,19 @@ const StudentProfileCreation = () => {
             stepErrors.bio = 'Bio must be at least 5 characters';
           } else if (formData.bio.trim().length > 500) {
             stepErrors.bio = 'Bio must be less than 500 characters';
+          }
+          if (!formData.campus_location) {
+            stepErrors.campus_location = 'Campus location is required';
+          }
+          if (!formData.cp_number) {
+            stepErrors.cp_number = 'Contact number is required';
+          } else if (!/^(\+63|0)?9\d{9}$/.test(formData.cp_number.replace(/\s/g, ''))) {
+            stepErrors.cp_number = 'Please enter a valid Philippine mobile number';
+          }
+          if (!formData.fb_url) {
+            stepErrors.fb_url = 'Facebook URL is required';
+          } else if (!/^(https?:\/\/)?(www\.)?facebook\.com\/.+/.test(formData.fb_url)) {
+            stepErrors.fb_url = 'Please enter a valid Facebook URL';
           }
           break;
           
@@ -367,6 +396,38 @@ const StudentProfileCreation = () => {
                 ))}
               </select>
               {errors.campus_location && <p className="mt-1 text-sm text-red-600">{errors.campus_location}</p>}
+            </div>
+
+            {/* Contact Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
+              <input
+                type="tel"
+                value={formData.cp_number}
+                onChange={(e) => handleInputChange('cp_number', e.target.value)}
+                placeholder="09XX XXX XXXX"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.cp_number ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <p className="text-sm text-gray-500 mt-1">Enter your Philippine mobile number</p>
+              {errors.cp_number && <p className="mt-1 text-sm text-red-600">{errors.cp_number}</p>}
+            </div>
+
+            {/* Facebook URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Facebook Profile URL *</label>
+              <input
+                type="url"
+                value={formData.fb_url}
+                onChange={(e) => handleInputChange('fb_url', e.target.value)}
+                placeholder="https://facebook.com/your.profile"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  errors.fb_url ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              <p className="text-sm text-gray-500 mt-1">Enter your Facebook profile URL</p>
+              {errors.fb_url && <p className="mt-1 text-sm text-red-600">{errors.fb_url}</p>}
             </div>
           </div>
         );

@@ -537,10 +537,9 @@ const TutorAuthForm = () => {
                                                 type={showPassword ? "text" : "password"}
                                                 name="password"
                                                 value={formData.password}
-                                                onChange={handlePasswordChange}  {/* UPDATE THIS */}
+                                                onChange={handlePasswordChange}  /* UPDATE THIS */
                                                 className={`w-full px-4 py-4 bg-gray-700 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12 ${
-                                                    signupErrors.password ? 'border-red-500' : 'border-gray-600'
-                                                }`}
+                                                    signupErrors.password ? 'border-red-500' : 'border-gray-600'}`}
                                                 placeholder="Create password"
                                                 required
                                             />
@@ -610,7 +609,7 @@ const TutorAuthForm = () => {
                                                 type={showConfirmPassword ? "text" : "password"}
                                                 name="confirmPassword"
                                                 value={formData.confirmPassword}
-                                                onChange={handlePasswordChange}  {/* UPDATE THIS */}
+                                                onChange={handlePasswordChange}  /* UPDATE THIS */
                                                 className={`w-full px-4 py-4 bg-gray-700 border rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12 ${
                                                     signupErrors.confirmPassword ? 'border-red-500' : 'border-gray-600'
                                                 }`}

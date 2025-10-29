@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Header from './Header.jsx';
-import Footer from './Footer.jsx';
+import Footer from '../Student/Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import EditProfileModal from '../../components/EditProfileModal.jsx';
-import { Edit, Shield, Key, LogOut, MapPin, GraduationCap, BookOpen, User, Mail, Award, Target, CheckCircle } from 'lucide-react';
+import { Edit, Shield, Key, LogOut, MapPin, GraduationCap, BookOpen, User, Mail, Award, Target, CheckCircle, Phone, Facebook } from 'lucide-react';
 import { auth } from '../../utils/auth.js';
 import { useNavigate } from 'react-router-dom';
 import StudentPasswordChangeModal from '../../components/StudentPasswordChangeModal.jsx';
@@ -89,6 +89,37 @@ const ProfileSection = ({ userProfile, studentProfile, onProfileUpdate, getProfi
                           <div>
                             <p className="text-xs text-gray-500">Campus Location</p>
                             <p className="font-semibold">{studentProfile?.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {studentProfile?.cp_number && (
+                        <div className="flex items-center gap-3 text-gray-700">
+                          <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center">
+                            <Phone className="w-5 h-5 text-teal-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Contact Number</p>
+                            <p className="font-semibold">{studentProfile.cp_number}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {studentProfile?.fb_url && (
+                        <div className="flex items-center gap-3 text-gray-700">
+                          <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center">
+                            <Facebook className="w-5 h-5 text-teal-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Facebook Profile</p>
+                            <a 
+                              href={studentProfile.fb_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="font-semibold text-teal-600 hover:text-teal-700 hover:underline"
+                            >
+                              View Profile
+                            </a>
                           </div>
                         </div>
                       )}

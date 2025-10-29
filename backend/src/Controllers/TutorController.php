@@ -6,6 +6,7 @@ use App\Services\AuthService;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 use App\Models\TutorProfile;
+use App\Models\StudentProfile;
 use App\Utils\Response;
 use App\Utils\Logger;
 use App\Exceptions\AuthenticationException;
@@ -25,6 +26,7 @@ class TutorController {
     private $tutorProfileModel;
     private $notificationService;
     private $sessionService;
+    private $studentProfileModel;
     private $db;
     public function __construct() {
         $this->authService = new AuthService();
@@ -32,6 +34,7 @@ class TutorController {
         $this->tutorProfileModel = new TutorProfile();
         $this->notificationService = new NotificationService();
         $this->sessionService = new SessionService();
+        $this->studentProfileModel = new StudentProfile();
         $this->db = Database::getInstance()->getConnection();
     }
 
@@ -748,6 +751,36 @@ class TutorController {
                 'tutor_id' => $tutorId
             ]);
             Response::serverError('Failed to retrieve reviews: ' . $e->getMessage());
+        }
+    }
+        // GET STUDENT DETAILS BY ID (Tutor view)
+    // GET /api/tutor/students/{id}
+    public function getStudentDetails(int $studentId): void {
+        try {
+            $user = $this->authMiddleware->requireAuth();
+            if (!RoleMiddleware::tutorOnly($user)) {
+                return;
+            }
+
+            // Reuse StudentProfile model to fetch student profile + join data
+            $student = $this->studentProfileModel->findByUserId($studentId);
+
+            if (!$student) {
+                Response::notFound('Student not found');
+                return;
+            }
+
+            Response::success($student, 'Student details retrieved successfully');
+        }
+        catch (AuthenticationException $e) {
+            Response::handleException($e);
+        }
+        catch (\Exception $e) {
+            Logger::error('Get student details error', [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId
+            ]);
+            Response::serverError('Failed to retrieve student details');
         }
     }
     // Cancel session - Tutor can cancel confirmed/pending sessions

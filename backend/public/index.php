@@ -141,6 +141,11 @@ switch(true) {
         error_log("DEBUG: Matched student profile picture DELETE route");
         $student->deleteProfilePicture();
         break;
+    // TUTOR view student details
+    case preg_match('#^/api/tutor/students/(\d+)$#', $uri, $m) && $method === 'GET':
+        error_log("DEBUG: Matched tutor student details route");
+        $tutor->getStudentDetails((int)$m[1]);
+        break;
 
     //STUDENT FINDING MATCH 
     case $uri === '/api/student/tutors' && $method === 'GET':

@@ -131,7 +131,7 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile, getProfilePi
               
               <div>
                 <h4 className="font-medium text-gray-700 mb-2">
-                  {type === 'tutors' ? 'Specializations:' : 'Subjects of Interest:'}
+                  {type === 'tutors' ? 'Specializations:' : ''}
                 </h4>
                 <div className="flex flex-wrap gap-1">
                   {(type === 'tutors' ? (match.specializations || []) : (match.subjects_of_interest || []))?.slice(0, 3).map((subject, idx) => (
@@ -155,12 +155,22 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile, getProfilePi
             </div>
             
             <div className="mt-4 flex justify-end space-x-2">
-              <button 
-                onClick={() => onViewProfile && onViewProfile(match)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                View Profile
-              </button>
+              {/* View Profile Button - Show for both tutors and students */}
+              {onViewProfile && (
+                <button 
+                  onClick={() => onViewProfile(match)}
+                  className={`px-4 py-2 border rounded-lg hover:transition-colors flex items-center gap-2 ${
+                    type === 'tutors' 
+                      ? 'border-gray-300 text-gray-700 hover:bg-gray-50' 
+                      : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  View Profile
+                </button>
+              )}
+              
+              {/* Book Session Button - Only for tutors */}
               {type === 'tutors' ? (
                 <button 
                   onClick={() => handleBookSession(match)}
@@ -170,8 +180,8 @@ const MatchingResults = ({ matches, type = 'tutors', onViewProfile, getProfilePi
                   Book Session
                 </button>
               ) : (
-                <button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
-                </button>
+                // For students, show a contact button or leave empty if not needed
+                null
               )}
             </div>
           </div>
