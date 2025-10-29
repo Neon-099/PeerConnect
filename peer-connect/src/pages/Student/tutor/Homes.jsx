@@ -67,8 +67,18 @@ const Homes = () => {
   };
 
   useEffect(() => {
-    fetchProfileData();
-  }, [activeTab]);
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchProfileData(); // refresh tutorProfile.average_rating
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const interval = setInterval(fetchProfileData, 30000); // poll every 30s
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Add useEffect to fetch sessions
   useEffect(() => {

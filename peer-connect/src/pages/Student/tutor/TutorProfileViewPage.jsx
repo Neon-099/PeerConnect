@@ -142,10 +142,10 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
   const [completedSessions, setCompletedSessions] = useState(0);
 
   useEffect(() => {
-    if (tutor) {
-      fetchDetailsAndReviews();
+    if (showAllReviewsModal && tutor) {
+      fetchDetailsAndReviews(); // refetch stats + reviews
     }
-  }, [tutor]);
+  }, [showAllReviewsModal, tutor]);
   console.log(tutor);
   const fetchDetailsAndReviews = async () => {
     setIsLoading(true);
@@ -223,7 +223,7 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
       </div>
     );
   }
-
+  
   // Show only first 3 reviews
   const displayedReviews = reviews.slice(0, 3);
   const hasMoreReviews = reviews.length > 3;

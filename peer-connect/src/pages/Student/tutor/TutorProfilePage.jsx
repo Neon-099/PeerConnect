@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Edit, Shield, Key, LogOut, MapPin, GraduationCap, BookOpen, User, Mail, Award, Target, CheckCircle, Phone, Facebook, DollarSign, Clock, Star } from 'lucide-react';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import TutorEditProfileModal from '../../../components/TutorEditProfileModal';
+import StudentPasswordChangeModal from '../../../components/StudentPasswordChangeModal';
 import Header from './Header.jsx';
 import Footer from '../../Student/Footer.jsx';
 import { auth } from '../../../utils/auth';
@@ -9,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onProfileUpdate }) => {
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [isPasswordChangeModalOpen, setIsPasswordChangeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -138,7 +140,7 @@ const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onP
                   </div>
                   
                   <div className="space-y-3">
-                    <button onClick={() => {/* Add password change modal */}} className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors">
+                    <button onClick={() => setIsPasswordChangeModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-xl font-medium hover:bg-blue-100 transition-colors">
                       <Key className="w-5 h-5" />
                       Change Password
                     </button>
@@ -330,6 +332,10 @@ const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onP
           isOpen={isEditProfileModalOpen}
           onClose={() => setIsEditProfileModalOpen(false)}
           onProfileUpdate={onProfileUpdate}
+        />
+        <StudentPasswordChangeModal 
+          isOpen={isPasswordChangeModalOpen} 
+          onClose={() => setIsPasswordChangeModalOpen(false)} 
         />
     </div>
   );

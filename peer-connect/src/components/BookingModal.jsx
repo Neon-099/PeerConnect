@@ -13,7 +13,6 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [useCustomSubject, setUseCustomSubject] = useState(false);
   const [details, setDetails] = useState(null);
 
   useEffect(() => {
@@ -84,22 +83,16 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
         custom_subject: formData.custom_subject.trim()
       };
 
-      // Add subject data based on selection
-      if (useCustomSubject) {
+      // Only include custom_subject if it's not empty
+      if (formData.custom_subject.trim()) {
         bookingData.custom_subject = formData.custom_subject.trim();
       } else {
-        // Ensure subject_id is a valid integer
-        const subjectId = parseInt(formData.subject_id);
-        if (isNaN(subjectId)) {
-          setErrors({ general: 'Please select a valid subject' });
-          setIsLoading(false);
-          return;
-        }
-        bookingData.subject_id = subjectId;
+        setErrors({ general: 'Subject is required' });
+        setIsLoading(false);
+        return;
       }
 
       console.log('Sending booking data:', bookingData); // Debug log
-      console.log('Selected subject_id:', formData.subject_id); // Debug log
 
       const response = await fetch('http://localhost:8000/api/student/book-session', {
         method: 'POST',
