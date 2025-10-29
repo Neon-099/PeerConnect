@@ -72,7 +72,22 @@ class Notification {
         $stmt = $this->db->prepare($query);
         return $stmt->execute([':user_id' => $userId]);
     }
-
+    public function markRelatedBySessionAsRead(int $sessionId, array $userIds, array $types): int {
+        // Uses JSON_EXTRACT to match on data.session_id
+        $inUsers = implode(',', array_fill(0, count($userIds), '?'));
+        $inTypes = implode(',', array_fill(0, count($types), '?'));
+    
+        $sql = "UPDATE {$this->table}
+                SET is_read = 1
+                WHERE JSON_EXTRACT(data, '$.session_id') = ?
+                  AND user_id IN ($inUsers)
+                  AND type IN ($inTypes)";
+    
+        $stmt = $this->db->prepare($sql);
+        $params = array_merge([$sessionId], $userIds, $types);
+        $stmt->execute($params);
+        return $stmt->rowCount();
+    }
     public function getUnreadCount(int $userId): int {
         $query = "SELECT COUNT(*) as count FROM {$this->table} 
                   WHERE user_id = :user_id AND is_read = 0";

@@ -46,7 +46,7 @@ class SessionService {
         // Calculate session duration and cost
         $startTime = new \DateTime($sessionData['start_time']);
         $endTime = new \DateTime($sessionData['end_time']);
-        $duration = $endTime->diff($startTime)->h + ($endTime->diff($startTime)->i / 60);
+        $duration = $endTime->diff($startTime)->h + $endTime->diff($startTime)->i / 60 + ($endTime->diff($startTime)->s / 3600);
         
         if ($duration < 1) {
             throw new Exception("Minimum session duration is 1 hour");
@@ -112,11 +112,14 @@ class SessionService {
         $success = $this->sessionModel->updateStatus($sessionId, $status, $userId, $userRole);
         
         if ($success && $status === 'confirmed') {
-            // Get session details for notification
+            // STORING IN SESSION BY GETTING THE ID
             $session = $this->sessionModel->findById($sessionId);
             if ($session) {
                 try {
+                    //NOTIFY STUDENT ABOUT CONFIRMATION
                     $this->notificationService->createSessionConfirmedNotification($session['student_id'], $sessionId);
+                    //TUTOR SELF NOTIFICATION 
+                    $this->notificationService->createSessionConfirmedForTutorNotification($session['tutor_id'], $sessionId);
                 } catch (Exception $e) {
                     Logger::error('Failed to create session confirmed notification', [
                         'error' => $e->getMessage(),

@@ -87,11 +87,6 @@ const StudentMatchingSection = () => {
         setIsSearching(false);
       }, 500);
 
-      try {
-        await apiClient.post('/api/tutor/create-student-match-notification');
-      } catch (error) {
-        console.error('Error creating student match notification:', error);
-      }
     } catch (err) {
       console.error('Search error:', err);
       

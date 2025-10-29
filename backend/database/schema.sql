@@ -9,7 +9,7 @@ CREATE TABLE users (
     profile_picture VARCHAR(500) NULL,
     email_verified BOOLEAN DEFAULT FALSE,
     providers ENUM('local', 'google', 'both') DEFAULT 'local',
-    role ENUM('student', 'tutor', 'admin') DEFAULT 'student',
+    role ENUM('student', 'tutor', 'admin', 'super_admin') DEFAULT 'student',
     is_active BOOLEAN DEFAULT TRUE,
     student_id VARCHAR(64) NULL,
     last_login_at DATETIME NULL,
@@ -78,6 +78,38 @@ CREATE TABLE email_verification_codes (
     INDEX idx_expires_at (expires_at)
 );
 
+-- Create admin credentials table for secure admin login tracking
+CREATE TABLE IF NOT EXISTS admin_login_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    ip_address VARCHAR(64) NULL,
+    user_agent VARCHAR(255) NULL,
+    login_successful BOOLEAN DEFAULT TRUE,
+    login_failure_reason VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+);
+
+-- Create admin_actions table to track admin activities
+CREATE TABLE IF NOT EXISTS admin_actions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_user_id INT NOT NULL,
+    action_type ENUM('user_delete', 'user_modify', 'role_change', 'profile_modify', 'session_delete', 'data_export', 'settings_change') NOT NULL,
+    target_id INT NULL,
+    target_type VARCHAR(50) NULL,
+    description TEXT NULL,
+    ip_address VARCHAR(64) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_admin_user (admin_user_id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_action_type (action_type)
+);
+
+
+
 -- student_profiles table
 CREATE TABLE student_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,7 +117,7 @@ CREATE TABLE student_profiles (
     school VARCHAR(255) NULL,
     campus_location ENUM('main_campus', 'pucu') NULL,
     bio TEXT NULL,
-    academic_level ENUM('high_school', 'undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior', 'graduate', 'phd') NULL,
+    academic_level ENUM('high_school', 'shs', 'undergraduate_freshman', 'undergraduate_sophomore', 'undergraduate_junior', 'undergraduate_senior', 'graduate', 'phd') NULL,
     preferred_learning_style ENUM('visual', 'auditory', 'kinesthetic', 'reading_writing', 'mixed') NULL,
     profile_completed BOOLEAN DEFAULT FALSE,
     profile_completed_at DATETIME NULL,
@@ -115,6 +147,9 @@ CREATE TABLE student_availability_preferences (
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_student_date (student_id, preferred_date)
 );
+
+
+
 
 -- tutor_profiles (for tutors)
 CREATE TABLE tutor_profiles (
@@ -163,16 +198,6 @@ CREATE TABLE tutor_subjects (
     FOREIGN KEY (tutor_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (subject_id) REFERENCES learning_subjects(id) ON DELETE CASCADE
 );
---FOR TUTORS SUBJECTS WHEN BOOKING A SESSION
-CREATE TABLE learning_subjects (
-    id INT AUTO_INCREMENT PRIMARY KEY,  
-    name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT,
-    category VARCHAR(100),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
 
 -- INSERT INTO learning_subjects (name, description, category) VALUES
 -- ('Mathematics', 'Algebra, Calculus, Statistics, and other mathematical subjects', 'STEM'),
@@ -204,6 +229,16 @@ CREATE TABLE tutor_specializations (
     INDEX idx_tutor_subject (tutor_id, subject)
 );
 
+--FOR TUTORS SUBJECTS WHEN BOOKING A SESSION
+CREATE TABLE learning_subjects (
+    id INT AUTO_INCREMENT PRIMARY KEY,  
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    category VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 CREATE TABLE tutoring_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tutor_id INT,
@@ -216,8 +251,8 @@ CREATE TABLE tutoring_sessions (
     hourly_rate DECIMAL(8,2) DEFAULT 0.00,
     total_cost DECIMAL(8,2) DEFAULT 0.00,
     notes TEXT,
-    session_type ENUM('virtual', 'in-person') DEFAULT 'virtual',
-    meeting_link VARCHAR(255) NULL,
+    -- session_type ENUM('virtual', 'in-person') DEFAULT 'virtual',
+    -- meeting_link VARCHAR(255) NULL,
     location VARCHAR(255) NULL,
     status ENUM('pending','confirmed','completed','cancelled') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

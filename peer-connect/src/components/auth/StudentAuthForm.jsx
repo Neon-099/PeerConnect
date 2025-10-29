@@ -553,7 +553,7 @@ const StudentAuthForm = () => {
                                 <div className="flex-1 border-t border-gray-600"></div>
                             </div>
 
-                            <div className="flex items-center justify-center">
+                            {/* <div className="flex items-center justify-center">
                                  {googleClientId && googleClientId !== 'your-google-client-id-here' ? (
                                         <GoogleLogin 
                                             clientId={googleClientId}
@@ -573,7 +573,7 @@ const StudentAuthForm = () => {
                                             </p>
                                         </div>
                                     )}
-                            </div>
+                            </div> */}
                            
                             <div className="text-center mt-6">
                                 <span className="text-gray-400">Already have an account? </span>

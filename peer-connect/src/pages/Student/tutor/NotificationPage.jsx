@@ -1,15 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, XCircle, Star,Clock, Calendar, User, BookOpen } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Star, Clock, Calendar, User, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
 import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
+
 const NotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeFilter, setActiveFilter] = useState('ALL');
+  const [showAll, setShowAll] = useState({
+    'ALL': false,
+    'Sessions': false,
+    'Unread Notifications': false,
+    'Recent Notifications': false
+  });
 
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
+    // Refresh notifications every minute to update the 10-minute threshold
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchNotifications = async () => {
@@ -47,18 +61,49 @@ const NotificationPage = () => {
     }
   };
 
+  // Helper function to check if notification is older than 10 minutes
+  const isOlderThan10Minutes = (createdAt) => {
+    const notificationTime = new Date(createdAt).getTime();
+    const now = Date.now();
+    const tenMinutesInMs = 10 * 60 * 1000;
+    return (now - notificationTime) > tenMinutesInMs;
+  };
+
+  // Filter notifications based on active filter
+  const getFilteredNotifications = () => {
+    let filtered = [];
+    
+    switch (activeFilter) {
+      case 'Sessions':
+        filtered = notifications.filter(n => 
+          ['session_request', 'session_confirmed', 'session_cancelled', 'session_rescheduled', 'session_completed'].includes(n.type)
+        );
+        break;
+      case 'Unread Notifications':
+        filtered = notifications.filter(n => {
+          return !n.is_read && isOlderThan10Minutes(n.created_at);
+        });
+        break;
+      case 'Recent Notifications':
+        filtered = notifications.filter(n => {
+          return !n.is_read && !isOlderThan10Minutes(n.created_at);
+        });
+        break;
+      default:
+        filtered = notifications;
+    }
+    
+    return filtered;
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'session_request':
-        return <Calendar className="w-5 h-5 text-blue-500" />;
       case 'session_confirmed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'session_cancelled':
-        return <XCircle className="w-5 h-5 text-red-500" />;
       case 'session_rescheduled':
-        return <Clock className="w-5 h-5 text-orange-500" />;
       case 'session_completed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <Calendar className="w-5 h-5 text-blue-500" />;
       case 'review_received':
         return <Star className="w-5 h-5 text-yellow-500" />;
       case 'student_match':
@@ -78,6 +123,48 @@ const NotificationPage = () => {
     });
   };
 
+  const filteredNotifications = getFilteredNotifications();
+
+  // Get displayed notifications based on "show all" state
+  const getDisplayedNotifications = () => {
+    if (showAll[activeFilter]) {
+      return filteredNotifications;
+    }
+    return filteredNotifications.slice(0, 5);
+  };
+
+  const displayedNotifications = getDisplayedNotifications();
+  const hasMore = filteredNotifications.length > 5;
+
+  // Count notifications by type
+  const getCountByType = (type) => {
+    if (type === 'Sessions') {
+      return notifications.filter(n => 
+        ['session_request', 'session_confirmed', 'session_cancelled', 'session_rescheduled', 'session_completed'].includes(n.type)
+      ).length;
+    } else if (type === 'Unread Notifications') {
+      return notifications.filter(n => !n.is_read && isOlderThan10Minutes(n.created_at)).length;
+    } else if (type === 'Recent Notifications') {
+      return notifications.filter(n => !n.is_read && !isOlderThan10Minutes(n.created_at)).length;
+    }
+    return notifications.length;
+  };
+
+  const handleShowAllToggle = () => {
+    setShowAll(prev => ({
+      ...prev,
+      [activeFilter]: !prev[activeFilter]
+    }));
+  };
+
+  // Reset showAll when filter changes
+  useEffect(() => {
+    setShowAll(prev => ({
+      ...prev,
+      [activeFilter]: false
+    }));
+  }, [activeFilter]);
+
   if (isLoading) {
     return (
       <LoadingSpinner />
@@ -85,153 +172,244 @@ const NotificationPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-500" />
-          <span className="text-sm text-gray-600">
-            {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-          </span>
-        </div>
-      </div>
+    <div className="flex-1 flex flex-col bg-gray-50">
+      {/* Content Area */}
+      <div className="flex-1 overflow-auto p-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Page Title */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-teal-600" />
+              <span className="text-sm text-gray-600">
+                {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
 
-      {notifications.length === 0 ? (
-        <div className="text-center py-12">
-          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-          <p className="text-gray-500">You'll see session requests and updates here.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`bg-white rounded-lg border p-4 ${
-                !notification.is_read ? 'border-l-4 border-l-blue-500 bg-blue-50' : 'border-gray-200'
+          {/* Filter Tabs */}
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={() => setActiveFilter('ALL')}
+              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                activeFilter === 'ALL'
+                  ? 'bg-teal-600 text-white shadow-md'
+                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  {getNotificationIcon(notification.type)}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900">{notification.title}</h3>
-                      {!notification.is_read && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                      )}
-                    </div>
-                    <p className="text-gray-600 mb-2">{notification.message}</p>
-                    
-                    {notification.data && (
-                    <div className="bg-gray-50 rounded-md p-3 text-sm">
-                      {notification.type === 'session_confirmed' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Tutor:</span>
-                            <span className="font-medium">{notification.data.tutor_name}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Subject:</span>
-                            <span className="font-medium">{notification.data.subject}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Date:</span>
-                            <span className="font-medium">{notification.data.session_date}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Time:</span>
-                            <span className="font-medium">
-                              {notification.data.start_time} - {notification.data.end_time}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {notification.type === 'session_rescheduled' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">With:</span>
-                            <span className="font-medium">{notification.data.other_user_name}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Subject:</span>
-                            <span className="font-medium">{notification.data.subject}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">New Date:</span>
-                            <span className="font-medium">{notification.data.session_date}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-600">Rescheduled by:</span>
-                            <span className="font-medium capitalize">{notification.data.rescheduled_by}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {notification.type === 'session_completed' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">With:</span>
-                            <span className="font-medium">{notification.data.tutor_name}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Subject:</span>
-                            <span className="font-medium">{notification.data.subject}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Completed:</span>
-                            <span className="font-medium">{notification.data.session_date}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {notification.type === 'student_match' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Match Type:</span>
-                            <span className="font-medium">Student Match</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">Found:</span>
-                            <span className="font-medium">{new Date(notification.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
+              All ({getCountByType('ALL')})
+            </button>
+            <button
+              onClick={() => setActiveFilter('Unread Notifications')}
+              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                activeFilter === 'Unread Notifications'
+                  ? 'bg-teal-600 text-white shadow-md'
+                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+              }`}
+            >
+              Unread Notifications ({getCountByType('Unread Notifications')})
+            </button>
+            <button
+              onClick={() => setActiveFilter('Recent Notifications')}
+              className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                activeFilter === 'Recent Notifications'
+                  ? 'bg-teal-600 text-white shadow-md'
+                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+              }`}
+            >
+              Recent Notifications ({getCountByType('Recent Notifications')})
+            </button>
+          </div>
+
+          {/* Notification List */}
+          {filteredNotifications.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No {activeFilter === 'ALL' ? '' : activeFilter.toLowerCase()} notifications
+              </h3>
+              <p className="text-gray-500">
+                {activeFilter === 'ALL' 
+                  ? "You'll see notifications here." 
+                  : `You don't have any ${activeFilter.toLowerCase()} notifications yet.`}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayedNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`bg-white rounded-xl border p-5 hover:shadow-md transition-shadow ${
+                    !notification.is_read ? 'border-l-4 border-l-teal-500 bg-teal-50/30' : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                          {!notification.is_read && (
+                            <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
                           )}
                         </div>
-                      )}
+                        <p className="text-gray-600 mb-3">{notification.message}</p>
+                        
+                        {notification.data && (
+                          <div className="bg-gray-50 rounded-lg p-4 text-sm mb-3">
+                            {notification.type === 'session_confirmed' && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Student:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.student_name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Subject:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.subject}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Date:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.session_date}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Time:</span>
+                                  <span className="font-semibold text-gray-900">
+                                    {notification.data.start_time} - {notification.data.end_time}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {notification.type === 'session_rescheduled' && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">With:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.other_user_name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Subject:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.subject}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">New Date:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.session_date}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-600">Rescheduled by:</span>
+                                  <span className="font-semibold text-gray-900 capitalize">{notification.data.rescheduled_by}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {notification.type === 'session_completed' && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">With:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.student_name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Subject:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.subject}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Completed:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.session_date}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {notification.type === 'review_received' && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">From:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.student_name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Star className="w-4 h-4 text-yellow-500" />
+                                  <span className="text-gray-600">Rating:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.rating}/5 stars</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Subject:</span>
+                                  <span className="font-semibold text-gray-900">{notification.data.subject}</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {notification.type === 'student_match' && (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Match Type:</span>
+                                  <span className="font-semibold text-gray-900">Student Match</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span className="text-gray-600">Found:</span>
+                                  <span className="font-semibold text-gray-900">{new Date(notification.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-gray-500">
+                          {formatDate(notification.created_at)}
+                        </p>
+                      </div>
+                    </div>
                     
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formatDate(notification.created_at)}
-                    </p>
+                    {!notification.is_read && (
+                      <button
+                        onClick={() => markAsRead(notification.id)}
+                        className="px-4 py-2 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Mark as read
+                      </button>
+                    )}
                   </div>
                 </div>
-                
-                {!notification.is_read && (
+              ))}
+
+              {/* See All / Show Less Button */}
+              {hasMore && (
+                <div className="flex justify-center mt-6">
                   <button
-                    onClick={() => markAsRead(notification.id)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    onClick={handleShowAllToggle}
+                    className="flex items-center gap-2 px-6 py-3 bg-white text-teal-600 border-2 border-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
                   >
-                    Mark as read
+                    {showAll[activeFilter] ? (
+                      <>
+                        <ChevronUp className="w-5 h-5" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-5 h-5" />
+                        See All ({filteredNotifications.length})
+                      </>
+                    )}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          ))}
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

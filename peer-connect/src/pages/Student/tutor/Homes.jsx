@@ -17,7 +17,6 @@ import Header from './Header.jsx';
 import Footer from '../Footer.jsx';
 import { LoadingSpinner } from '../../../components/tutor/LoadingSpinner.jsx';
 import AvailabilityCalendarModal from '../../../components/tutor/AvailabilityCalendarModal.jsx';
-import NotificationModal from '../../../components/NotificationModal.jsx';
 import FloatingMatchingNotification from '../../../components/notification/FloatingMatchingNotification.jsx';
 
 import { useNotifications } from '../../../hooks/useNotifications.js';
@@ -40,7 +39,7 @@ const Homes = () => {
 
   const { notifications, unreadCount,
     floatingNotification, hideFloatingNotification,
-    refreshNotifications} = useNotifications('tutor');
+    refreshNotifications, dismissFloatingNotification } = useNotifications('tutor');
 
   const navigate = useNavigate();
 
@@ -354,13 +353,7 @@ const Homes = () => {
               userProfilePictureUrl={getProfilePictureUrl(tutorProfile?.profile_picture)}
               userProfile={tutorProfile?.first_name} 
             />
-            <button 
-              onClick={() => setShowNotificationModal(true)}
-              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-            >
-              <Bell className="w-5 h-5 text-blue-600" />
-             
-            </button>
+         
           </div>
         </div>
 
@@ -648,10 +641,9 @@ const Homes = () => {
       )}
 
       {showNotificationModal && (
-        <NotificationModal
-          isOpen={showNotificationModal}
-          onClose={() => setShowNotificationModal(false)}
-          userRole="tutor"
+        <NotificationPage
+          tutorProfile={tutorProfile}
+          getProfilePictureUrl={getProfilePictureUrl}
         />
       )}
 
@@ -659,7 +651,7 @@ const Homes = () => {
       {floatingNotification && (
         <FloatingMatchingNotification
           notification={floatingNotification}
-          onClose={hideFloatingNotification}
+          onClose={dismissFloatingNotification} // strict: mark read on close
         />
       )}
     </div>

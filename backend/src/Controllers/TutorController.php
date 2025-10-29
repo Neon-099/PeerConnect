@@ -655,7 +655,84 @@ class TutorController {
             Response::serverError('Failed to retrieve sessions: ' . $e->getMessage());
         }
     }
+    public function getTutorReviews(int $tutorId): void {
+        try {
+            // No auth required - public endpoint for viewing tutor reviews
+            Logger::info('Fetching reviews for tutor', ['tutor_id' => $tutorId]);
     
+            // Get all reviews with student info and calculate stats
+            $query = "SELECT 
+                        sf.id,
+                        sf.rating,
+                        sf.comment,
+                        sf.created_at,
+                        u.first_name,
+                        u.last_name,
+                        u.profile_picture,
+                        ts.id as session_id,
+                        ts.session_date,
+                        COALESCE(ls.name, ts.custom_subject) as subject_name
+                      FROM session_feedback sf
+                      JOIN tutoring_sessions ts ON sf.session_id = ts.id
+                      JOIN users u ON sf.student_id = u.id
+                      LEFT JOIN learning_subjects ls ON ts.subject_id = ls.id
+                      WHERE ts.tutor_id = :tutor_id
+                      ORDER BY sf.created_at DESC";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([':tutor_id' => $tutorId]);
+            $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+            // Calculate average rating and rating distribution
+            $totalReviews = count($reviews);
+            $averageRating = 0;
+            $ratingDistribution = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
+            
+            if ($totalReviews > 0) {
+                $sum = 0;
+                foreach ($reviews as $review) {
+                    $sum += $review['rating'];
+                    $ratingDistribution[$review['rating']]++;
+                }
+                $averageRating = round($sum / $totalReviews, 1);
+            }
+    
+            // Format reviews response
+            $formattedReviews = array_map(function($review) {
+                return [
+                    'id' => $review['id'],
+                    'rating' => (int)$review['rating'],
+                    'comment' => $review['comment'],
+                    'created_at' => $review['created_at'],
+                    'student_name' => $review['first_name'] . ' ' . $review['last_name'],
+                    'student_profile_picture' => $review['profile_picture'],
+                    'session_date' => $review['session_date'],
+                    'subject' => $review['subject_name']
+                ];
+            }, $reviews);
+    
+            $completedStmt = $this->db->prepare(
+                "SELECT COUNT(*) AS c FROM tutoring_sessions WHERE tutor_id = :tid AND status = 'completed'"
+            );
+            $completedStmt->execute([':tid' => $tutorId]);
+            $completed = (int)($completedStmt->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+
+            Response::success([
+                'reviews' => $formattedReviews,
+                'average_rating' => $averageRating,
+                'total_reviews' => $totalReviews,
+                'rating_distribution' => $ratingDistribution,
+                'completed_sessions' => $completed
+            ], 'Reviews retrieved successfully');
+        }
+        catch (\Exception $e) {
+            Logger::error('Get tutor reviews error', [
+                'error' => $e->getMessage(),
+                'tutor_id' => $tutorId
+            ]);
+            Response::serverError('Failed to retrieve reviews: ' . $e->getMessage());
+        }
+    }
     // Cancel session - Tutor can cancel confirmed/pending sessions
     // POST /api/tutor/sessions/{id}/cancel
     public function cancelSession(int $sessionId): void {
@@ -700,7 +777,7 @@ class TutorController {
                 return;
             }
 
-            // Create notification for student about cancellation
+            // NOTIFICATION FOR STUDENT ABOUT CANCELLATION
             try {
                 $this->notificationService->createSessionCancelledNotification($session['student_id'], $sessionId, 'tutor');
             } catch (\Exception $e) {
@@ -710,7 +787,31 @@ class TutorController {
                     'error' => $e->getMessage()
                 ]);
             }
-            
+
+            //NOTIFY ITSELF ABOUT CANCELLATION
+            try {
+                $this->notificationService->createSessionCancelledNotification($user['user_id'], $sessionId, 'tutor');
+            } catch (\Exception $e){
+                Logger::error('Failed to create cancellation notification for tutor', [
+                    'session_id' => $sessionId,
+                    'tutor_id' => $user['user_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            //CLEANUP NOTIFICATIONS FOR CANCELLED SESSION
+            try {
+                $this->notificationService->cleanupNotificationsForCancelledSession(
+                    $sessionId, $user['user_id'],
+                    $session['student_id']);
+            } catch (\Exception $e){
+                Logger::error('Failed to cleanup notifications for cancelled session', [
+                    'session_id' => $sessionId,
+                    'tutor_id' => $user['user_id'],
+                    'student_id' => $session['student_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
             Response::success([], 'Session cancelled successfully');
         }
         catch (AuthenticationException $e){
@@ -811,6 +912,17 @@ class TutorController {
                 ]);
             }
             
+            //TO NOTIFY ITSELF ABOUT RESCHEDULE
+            try {
+                $this->notificationService->createSessionRescheduledNotification($user['user_id'], $sessionId, 'tutor');
+            } catch (\Exception $e){
+                Logger::error('Failed to create reschedule notification for tutor', [
+                    'session_id' => $sessionId,
+                    'tutor_id' => $user['user_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             Response::success([
                 'new_total_cost' => $newTotalCost,
                 'duration_hours' => $duration

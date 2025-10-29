@@ -35,11 +35,11 @@ const [formData, setFormData] = useState({
   ];
   const academicLevels = [
     { label: 'High School', value: 'high_school' },
+    { label: 'SHS (Senior High School)', value: 'shs'},
     { label: 'Undergraduate (Freshman)', value: 'undergraduate_freshman' },
     { label: 'Undergraduate (Sophomore)', value: 'undergraduate_sophomore' },
     { label: 'Undergraduate (Junior)', value: 'undergraduate_junior' },
     { label: 'Undergraduate (Senior)', value: 'undergraduate_senior' },
-    { label: 'Graduate Student', value: 'graduate' },
   ];
 
   //PROFILE DATA

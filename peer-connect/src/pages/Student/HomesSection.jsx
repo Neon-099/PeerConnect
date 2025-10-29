@@ -16,28 +16,24 @@ import SessionSection from './SessionSection.jsx';
 import NotificationSection from './NotificationSection.jsx';
 import ReviewModal from '../../components/ReviewModal.jsx';
 
+
 const Homes = () =>  {
   const [activeTab, setActiveTab] = useState('home');
-  const [isProfile, setIsProfile] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [sessions, setSessions] = useState([]);
-  const [filterTab, setFilterTab] = useState('all');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('My Sessions');
-  const [selectedTutor, setSelectedTutor] = useState('');
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [feedback, setFeedback] = useState('');
 
   const [userProfile, setUserProfile] = useState(null);
   const [studentProfile, setStudentProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [isFindTutorModalOpen, setIsFindTutorModalOpen] = useState(false);
+  const [isShowNotificationModal, setIsShowNotificationModal] = useState(false);
 
-  const { notifications, unreadCount,
+  const { 
     floatingNotification, hideFloatingNotification, 
-    markAsRead, showFloatingNotification } = useNotifications('student');
+    markAsRead } = useNotifications('student');
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   //PROFILE DATA
@@ -89,10 +85,10 @@ const Homes = () =>  {
   
   const handleFloatingNotificationAction = async (notification, action) => {
     try {
-      // Mark notification as read
-      await markAsRead(notification.id);
-      
       switch (action) {
+        case 'dismiss':
+          await markAsRead(notification.id); // strict rule: mark read on dismiss
+          break;
         case 'view_session':
           setActiveNav('My Sessions');
           setActiveTab('sessions');
@@ -476,6 +472,19 @@ const Homes = () =>  {
         />
       )}
      
+      {isShowNotificationModal && (
+        <TutorNotificationModal
+          isOpen={isShowNotificationModal}
+          onClose={() => setIsShowNotificationModal(false)}
+        />
+      )}
+
+      {isShowNotificationModal && (
+        <StudentNotificationModal
+          isOpen={isShowNotificationModal}
+          onClose={() => setIsShowNotificationModal(false)}
+        />
+      )}
     </div>
   );
 }

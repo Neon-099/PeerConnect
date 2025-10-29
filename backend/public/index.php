@@ -215,6 +215,11 @@ switch(true) {
         error_log("DEBUG: Matched tutor profile picture delete route");
         $tutor->deleteProfilePicture();
         break;
+    //TUTOR REVIEWS AND RATING 
+    case preg_match('#^/api/tutor/(\d+)/reviews$#', $uri, $m) && $method === 'GET':
+        error_log("DEBUG: Matched tutor reviews route");
+        $tutor->getTutorReviews((int)$m[1]);
+        break;
 
 
     //TUTOR SESSIONS
@@ -233,7 +238,7 @@ switch(true) {
     case preg_match('#^/api/tutor/sessions/(\d+)/reschedule$#', $uri, $m) && $method === 'POST':
         error_log("DEBUG: Matched tutor reschedule session POST route");
         $tutor->rescheduleSession((int)$m[1]);
-            break;
+            break;  
 
     //TUTOR NOTIFICATIONS
     case $uri === '/api/tutor/create-student-match-notification' && $method === 'POST':

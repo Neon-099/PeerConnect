@@ -1,57 +1,184 @@
 import React, { useState, useEffect } from 'react';
-import { Star, CheckCircle, Calendar, MapPin, Mail, Globe, Users, GraduationCap } from 'lucide-react';
+import { Star, CheckCircle, Calendar, MapPin, Mail, Facebook, Users, GraduationCap, X, ChevronDown, Phone, Bell } from 'lucide-react';
 import { apiClient } from '../../../utils/api';
 import { LoadingSpinner } from '../../../components/LoadingSpinner';
 import BookingModal from '../../../components/BookingModal';
+import { useNotifications } from '../../../hooks/useNotifications';
+
+
+// All Reviews Modal Component
+const AllReviewsModal = ({ isOpen, onClose, reviews, averageRating, totalReviews, ratingDistribution }) => {
+  if (!isOpen) return null;
+
+  const getRatingPercentage = (rating) => {
+    if (totalReviews === 0) return 0;
+    return (ratingDistribution[rating] / totalReviews) * 100;
+  };
+
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/25 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">All Reviews</h2>
+            <p className="text-sm text-gray-600 mt-1">{totalReviews} total reviews</p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Rating Summary */}
+          <div className="flex items-start gap-8 mb-8 pb-6 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <Star className="w-10 h-10 text-yellow-500 fill-current" />
+              <span className="text-5xl font-bold text-gray-900">
+                {averageRating.toFixed(1)}
+              </span>
+            </div>
+            
+            <div className="flex-1">
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <div key={rating} className="flex items-center gap-3 mb-2">
+                  <span className="text-sm text-gray-600 w-12">{rating} star</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${
+                        getRatingPercentage(rating) > 50 ? 'bg-teal-700' : 'bg-teal-400'
+                      }`}
+                      style={{ width: `${getRatingPercentage(rating)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-gray-500 w-12 text-right">
+                    {Math.round(getRatingPercentage(rating))}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* All Reviews List */}
+          <div className="space-y-6">
+            {reviews.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No reviews yet.</p>
+              </div>
+            ) : (
+              reviews.map((review) => (
+                <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                      {review.student_profile_picture ? (
+                        <img 
+                          src={review.student_profile_picture.startsWith('http') 
+                            ? review.student_profile_picture 
+                            : `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${review.student_profile_picture}`}
+                          alt={review.student_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-500 text-sm font-semibold">
+                          {review.student_name?.charAt(0) || 'S'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-semibold text-gray-900">{review.student_name || 'Student'}</h4>
+                        <span className="text-sm text-gray-500">
+                          {new Date(review.created_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 mb-3">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= review.rating 
+                                ? 'text-yellow-500 fill-current' 
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-gray-700 leading-relaxed">
+                        {review.comment}
+                      </p>
+                      {review.subject && (
+                        <span className="inline-block mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {review.subject}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TutorProfileViewPage = ({ tutor, onClose }) => {
   const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
   const [ratingDistribution, setRatingDistribution] = useState({5: 0, 4: 0, 3: 0, 2: 0, 1: 0});
+  const [showAllReviewsModal, setShowAllReviewsModal] = useState(false);
+  const [details, setDetails] = useState(null);
+  const [completedSessions, setCompletedSessions] = useState(0);
+
+
+  // Add notifications hook (consistent with student HomesSection)
+  const { notifications, unreadCount, refreshNotifications } = useNotifications('student');
 
   useEffect(() => {
     if (tutor) {
-      fetchReviews();
+      fetchDetailsAndReviews();
     }
   }, [tutor]);
-
-  const fetchReviews = async () => {
+  console.log(tutor);
+  const fetchDetailsAndReviews = async () => {
+    setIsLoading(true);
     try {
       const tutorId = tutor.user_id || tutor.id;
-      const response = await apiClient.get(`/api/tutor/${tutorId}/reviews`);
-      setReviews(response.reviews || []);
-      
-      // Calculate rating distribution
-      const distribution = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
-      response.reviews?.forEach(review => {
-        distribution[review.rating]++;
-      });
-      setRatingDistribution(distribution);
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      // Set mock reviews for demo purposes
-      setMockReviews();
-    }
-  };
 
-  const setMockReviews = () => {
-    const mockReviews = [
-      {
-        rating: 5,
-        comment: "Exceptional tutor! Dr. Chen explains complex concepts clearly and makes learning enjoyable. My grades have improved significantly.",
-        student_name: "Ethan Harper",
-        created_at: new Date('2024-06-15').toISOString()
-      },
-      {
-        rating: 5,
-        comment: "Very knowledgeable and supportive. Makes learning fun and helped me understand difficult topics with ease.",
-        student_name: "Sophia Bennett",
-        created_at: new Date('2024-05-22').toISOString()
-      }
-    ];
-    setReviews(mockReviews);
-    setRatingDistribution({5: 2, 4: 0, 3: 0, 2: 0, 1: 0});
+      // Fetch full tutor details (bio, specializations, user_profile_picture, etc.)
+      const d = await apiClient.get(`/api/student/tutors/${tutorId}`);
+      setDetails(d || null);
+
+      // Fetch reviews + stats (includes average, distribution, completed_sessions)
+      const r = await apiClient.get(`/api/tutor/${tutorId}/reviews`);
+      setReviews(r.reviews || []);
+      setAverageRating(r.average_rating || 0);
+      setTotalReviews(r.total_reviews || 0);
+      setRatingDistribution(r.rating_distribution || {5:0,4:0,3:0,2:0,1:0});
+      setCompletedSessions(r.completed_sessions || 0);
+    } catch (e) {
+      console.error('Error fetching tutor profile data:', e);
+      setDetails(null);
+      setReviews([]);
+      setAverageRating(0);
+      setTotalReviews(0);
+      setRatingDistribution({5:0,4:0,3:0,2:0,1:0});
+      setCompletedSessions(0);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getProfilePictureUrl = (profilePicture) => {
@@ -64,20 +191,14 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
     return `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${profilePicture}`;
   };
 
-  const getTotalReviews = () => {
-    return reviews.length;
-  };
-
-  const getAverageRating = () => {
-    if (reviews.length === 0) return tutor?.average_rating || '4.9';
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return (sum / reviews.length).toFixed(1);
-  };
-
+  const profileImg = getProfilePictureUrl(
+    details?.user_profile_picture || details?.profile_picture || tutor.profile_picture
+  );
+  console.log('details', details);
+  console.log('profileImg', profileImg);
   const getRatingPercentage = (rating) => {
-    const total = getTotalReviews();
-    if (total === 0) return 0;
-    return (ratingDistribution[rating] / total) * 100;
+    if (totalReviews === 0) return 0;
+    return (ratingDistribution[rating] / totalReviews) * 100;
   };
 
   const getSubjectColor = (index) => {
@@ -95,9 +216,12 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
     setShowBookingModal(true);
   };
 
-  const handleBookingSuccess = (bookingResult) => {
+  const handleBookingSuccess = async (bookingResult) => {
     setShowBookingModal(false);
     console.log('Session booked:', bookingResult);
+    
+    // Refresh notifications to show the new session_booked notification
+    await refreshNotifications();
   };
 
   if (!tutor) {
@@ -108,15 +232,35 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
     );
   }
 
+  // Show only first 3 reviews
+  const displayedReviews = reviews.slice(0, 3);
+  const hasMoreReviews = reviews.length > 3;
+
   return (
     <div className="min-h-screen bg-[#F0F5FA] p-8">
       <div className="max-w-7xl mx-auto">
-        <button
-          onClick={onClose}
-          className="mb-6 text-teal-700 hover:text-teal-800 font-medium flex items-center gap-2"
-        >
-          ← Back to Search
-        </button>
+        {/* Header with Back button and Notification Bell */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={onClose}
+            className="text-teal-700 hover:text-teal-800 font-medium flex items-center gap-2"
+          >
+            ← Back to Search
+          </button>
+          
+          {/* Notification Bell Button - Consistent with student HomesSection */}
+          <button
+            onClick={() => setShowNotificationModal(true)}
+            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Bell className="w-5 h-5 text-teal-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Main Content */}
@@ -126,11 +270,11 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
               <div className="flex items-start gap-6">
                 <div className="relative">
                   <img
-                    src={getProfilePictureUrl(tutor.profile_picture)}
+                    src={profileImg}
                     alt={`${tutor.first_name} ${tutor.last_name}`}
                     className="w-24 h-24 rounded-xl object-cover border-2 border-gray-100"
                   />
-                  {tutor.is_verified_tutor && (
+                  {details?.is_verified_tutor && (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
                       <CheckCircle className="w-4 h-4 text-white" />
                     </div>
@@ -138,18 +282,8 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
                 </div>
                 <div className="flex-1">
                   <h1 className="text-3xl font-semibold text-gray-900 mb-3">
-                    {tutor.first_name} {tutor.last_name}
+                    {details?.first_name || tutor.first_name} {details?.last_name || tutor.last_name}
                   </h1>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {tutor.specializations?.slice(0, 3).map((subject, index) => (
-                      <span
-                        key={index}
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getSubjectColor(index)}`}
-                      >
-                        {subject}
-                      </span>
-                    ))}
-                  </div>
                 </div>
                 <div>
                   <button
@@ -167,7 +301,7 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">About Me</h2>
               <p className="text-gray-700 leading-relaxed">
-                {tutor.bio || `Seasoned tutor with ${tutor.years_experience || 5} years of experience specializing in ${tutor.specializations?.join(', ') || 'various subjects'}. I have a proven track record of helping students achieve their academic goals through personalized, patient instruction. My teaching approach focuses on building strong foundations, fostering a love for learning, and adapting to each student's unique learning style.`}
+                {details?.bio || tutor.bio || 'No bio provided.'}
               </p>
             </div>
 
@@ -175,75 +309,116 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Ratings & Reviews</h2>
               
-              <div className="flex items-start gap-8 mb-8">
-                <div className="flex items-center gap-2">
-                  <Star className="w-8 h-8 text-yellow-500 fill-current" />
-                  <span className="text-4xl font-bold text-gray-900">
-                    {getAverageRating()}
-                  </span>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <LoadingSpinner />
                 </div>
-                
-                <div className="flex-1">
-                  {/* Rating Distribution Bars */}
-                  {[5, 4, 3, 2, 1].map((rating) => (
-                    <div key={rating} className="flex items-center gap-3 mb-2">
-                      <span className="text-sm text-gray-600 w-8">{rating} star</span>
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${
-                            getRatingPercentage(rating) > 50 ? 'bg-teal-700' : 'bg-teal-400'
-                          }`}
-                          style={{ width: `${getRatingPercentage(rating)}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-500 w-8">
-                        {Math.round(getRatingPercentage(rating))}%
+              ) : (
+                <>
+                  <div className="flex items-start gap-8 mb-8">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-8 h-8 text-yellow-500 fill-current" />
+                      <span className="text-4xl font-bold text-gray-900">
+                        {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Individual Reviews */}
-              <div className="space-y-6">
-                {reviews.slice(0, 5).map((review, index) => (
-                  <div key={index} className={index < reviews.length - 1 ? 'border-b border-gray-200 pb-6' : ''}>
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-gray-900">{review.student_name || 'Student'}</h4>
-                          <span className="text-sm text-gray-500">
-                            {new Date(review.created_at).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric' 
-                            })}
+                    
+                    <div className="flex-1">
+                      {/* Rating Distribution Bars */}
+                      {[5, 4, 3, 2, 1].map((rating) => (
+                        <div key={rating} className="flex items-center gap-3 mb-2">
+                          <span className="text-sm text-gray-600 w-8">{rating} star</span>
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                getRatingPercentage(rating) > 50 ? 'bg-teal-700' : 'bg-teal-400'
+                              }`}
+                              style={{ width: `${getRatingPercentage(rating)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-500 w-8">
+                            {Math.round(getRatingPercentage(rating))}%
                           </span>
                         </div>
-                        <div className="flex gap-1 mb-3">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <= review.rating 
-                                  ? 'text-yellow-500 fill-current' 
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-gray-700 leading-relaxed">
-                          {review.comment || 'Great tutor, very patient and helpful!'}
-                        </p>
-                      </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-                {reviews.length === 0 && (
-                  <p className="text-gray-500">No reviews yet.</p>
-                )}
-              </div>
+
+                  {/* Individual Reviews - Limited to 3 */}
+                  <div className="space-y-6">
+                    {displayedReviews.map((review) => (
+                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                            {review.student_profile_picture ? (
+                              <img 
+                                src={review.student_profile_picture.startsWith('http') 
+                                  ? review.student_profile_picture 
+                                  : `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/${review.student_profile_picture}`}
+                                alt={review.student_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-gray-500 text-sm font-semibold">
+                                {review.student_name?.charAt(0) || 'S'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-gray-900">{review.student_name || 'Student'}</h4>
+                              <span className="text-sm text-gray-500">
+                                {new Date(review.created_at).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  year: 'numeric' 
+                                })}
+                              </span>
+                            </div>
+                            <div className="flex gap-1 mb-3">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= review.rating 
+                                      ? 'text-yellow-500 fill-current' 
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-gray-700 leading-relaxed">
+                              {review.comment}
+                            </p>
+                            {review.subject && (
+                              <span className="inline-block mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                {review.subject}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {reviews.length === 0 && (
+                      <p className="text-gray-500 text-center py-8">No reviews yet.</p>
+                    )}
+
+                    {/* See All Reviews Button */}
+                    {hasMoreReviews && (
+                      <div className="flex justify-center pt-4">
+                        <button
+                          onClick={() => setShowAllReviewsModal(true)}
+                          className="flex items-center gap-2 px-6 py-3 bg-white text-teal-600 border-2 border-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
+                        >
+                          <ChevronDown className="w-5 h-5" />
+                          See All Reviews ({totalReviews})
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -253,7 +428,7 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Subjects Taught</h2>
               <div className="flex flex-wrap gap-2">
-                {tutor.specializations?.map((subject, index) => (
+                {(details?.specializations || tutor.specializations || []).map((subject, index) => (
                   <span
                     key={index}
                     className={`px-3 py-1 rounded-full text-sm font-medium ${getSubjectColor(index)}`}
@@ -270,26 +445,30 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
                   <Mail className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">{tutor.email || 'N/A'}</span>
+                  <span className="text-gray-700">{details?.email || tutor.email || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                  <Globe className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">English, Filipino</span>
+                  <Phone className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-700">{details?.cellphone_number || tutor.cellphone_number || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                  <Facebook className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-700">{details?.facebook_url || tutor.facebook_url || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
                   <Users className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">{tutor.total_sessions || 150}+ Past Sessions</span>
+                  <span className="text-gray-700">{completedSessions} Completed Sessions</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <GraduationCap className="w-5 h-5 text-gray-400" />
                   <span className="text-gray-700">
-                    {tutor.years_experience || 5} years experience
+                    {details?.years_experience || tutor.years_experience || 5} years experience
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="w-5 h-5 text-gray-400" />
                   <span className="text-gray-700">
-                    {tutor.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'}
+                    {details?.campus_location === 'main_campus' ? 'Main Campus' : 'PUCU'}
                   </span>
                 </div>
               </div>
@@ -307,6 +486,18 @@ const TutorProfileViewPage = ({ tutor, onClose }) => {
           onBookSession={handleBookingSuccess}
         />
       )}
+
+      {/* All Reviews Modal */}
+      <AllReviewsModal
+        isOpen={showAllReviewsModal}
+        onClose={() => setShowAllReviewsModal(false)}
+        reviews={reviews}
+        averageRating={averageRating}
+        totalReviews={totalReviews}
+        ratingDistribution={ratingDistribution}
+      />
+
+      
     </div>
   );
 };

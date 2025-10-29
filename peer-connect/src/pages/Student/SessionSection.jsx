@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import Header from './Header.jsx';
-import Footer from './Footer.jsx';
+import Header from '../Student/Header.jsx';
+import Footer from '../Student/Footer.jsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.jsx';
 import BookingModal from '../../components/BookingModal.jsx';
 import ReviewModal from '../../components/ReviewModal.jsx';
@@ -148,13 +148,6 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
                   {session.total_cost}
                 </span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                  session.session_type === 'virtual' 
-                    ? 'bg-purple-100 text-purple-700' 
-                    : 'bg-teal-100 text-teal-700'
-                }`}>
-                  {session.session_type === 'virtual' ? 'Virtual' : 'In-Person'}
-                </span>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                   session.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                   session.status === 'confirmed' ? 'bg-blue-100 text-blue-700' : // Confirmed = waiting for student to complete
                   session.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -279,60 +272,58 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
         {isLoading ? (
           <LoadingSpinner />
         ) : (
-          <div className="max-w-6xl h-129">
+          <div className="max-w-6xl mx-auto">
             {/* Page Title and Actions */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold text-gray-900">My Sessions</h1>
               <button 
                 onClick={() => setShowBookingModal(true)}
-                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium"
+                className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-medium shadow-md hover:shadow-lg transition-all"
               >
                 <span className="text-lg">+</span>
                 New Session
               </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex gap-6">
-                <button
-                  onClick={() => setActiveTab('Upcoming')}
-                  className={`pb-2 font-medium transition-colors ${
-                    activeTab === 'Upcoming'
-                      ? 'text-teal-600 border-b-2 border-teal-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Ready to Complete ({upcomingSessions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('Past')}
-                  className={`pb-2 font-medium transition-colors ${
-                    activeTab === 'Past'
-                      ? 'text-teal-600 border-b-2 border-teal-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Completed ({pastSessions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('Requests')}
-                  className={`pb-2 font-medium transition-colors ${
-                    activeTab === 'Requests'
-                      ? 'text-teal-600 border-b-2 border-teal-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Pending ({requestSessions.length})
-                </button>
-              </div>
+            {/* Filter Pills */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => setActiveTab('Upcoming')}
+                className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                  activeTab === 'Upcoming'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                }`}
+              >
+                Ready to Complete ({upcomingSessions.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('Past')}
+                className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                  activeTab === 'Past'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                }`}
+              >
+                Completed ({pastSessions.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('Requests')}
+                className={`px-6 py-2.5 rounded-full font-semibold text-sm transition-all ${
+                  activeTab === 'Requests'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                }`}
+              >
+                Pending ({requestSessions.length})
+              </button>
             </div>
 
             {/* Session Lists */}
             {activeTab === 'Upcoming' && (
               <div className="space-y-3">
                 {upcomingSessions.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                     <Calendar className="mx-auto text-gray-400 mb-4" size={48} />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions ready to complete</h3>
                     <p className="text-gray-600">Confirmed sessions will appear here for you to complete.</p>
@@ -346,7 +337,7 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
             {activeTab === 'Past' && (
               <div className="space-y-3">
                 {pastSessions.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                     <MessageSquare className="mx-auto text-gray-400 mb-4" size={48} />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No completed sessions</h3>
                     <p className="text-gray-600">Your completed sessions will appear here.</p>
@@ -360,7 +351,7 @@ const SessionSection = ({ sessions, onAction, getProfilePictureUrl, studentProfi
             {activeTab === 'Requests' && (
               <div className="space-y-3">
                 {requestSessions.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                     <Clock className="mx-auto text-gray-400 mb-4" size={48} />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No pending requests</h3>
                     <p className="text-gray-600">Your session requests will appear here.</p>

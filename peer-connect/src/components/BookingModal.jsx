@@ -9,7 +9,6 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     subject_id: '',
     custom_subject: '',
     notes: '',
-    session_type: 'virtual'
   });
   const [subjects, setSubjects] = useState([
     { id: 1, name: 'Mathematics' },
@@ -312,33 +311,6 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
                 }`}
               />
               {errors.end_time && <p className="text-red-500 text-sm mt-1">{errors.end_time}</p>}
-            </div>
-          </div>
-
-          {/* Session Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Session Type</label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="virtual"
-                  checked={formData.session_type === 'virtual'}
-                  onChange={(e) => setFormData({...formData, session_type: e.target.value})}
-                  className="mr-2"
-                />
-                Virtual
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="in_person"
-                  checked={formData.session_type === 'in_person'}
-                  onChange={(e) => setFormData({...formData, session_type: e.target.value})}
-                  className="mr-2"
-                />
-                In-Person
-              </label>
             </div>
           </div>
 

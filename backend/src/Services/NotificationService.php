@@ -352,6 +352,55 @@ class NotificationService {
         }
     }
 
+
+    // SESSION CANCELLED NOTIFICATION FOR TUTOR
+    public function createSessionConfirmedForTutorNotification(int $tutorId, int $sessionId): void {
+        $session = $this->sessionModel->findById($sessionId);
+        if(!$session){
+            throw new Exception ("Session not found");
+        }
+        $this->createNotification(
+            $tutorId,
+            'session_confirmed',
+            'session_confirmed',
+            "Your session with {$session['student_first_name']} {$session['student_last_name']} for {$session['subject_name']} has been confirmed.",
+            [
+                'session_id' => $sessionId,
+                'student_id' => $session['student_id'],
+                'student_name' => "{$session['student_first_name']} {$session['student_last_name']}",
+                'subject' => $session['subject_name'],
+                'session_date' => $session['session_date'],
+                'start_time' => $session['start_time'],
+                'end_time' => $session['end_time']
+            ]
+        );
+    }
+    public function cleanupNotificationsForCancelledSession(int $sessionId, int $studentId, int $tutorId): void {
+        // Types that become obsolete after cancellation
+        $typesToArchive = [
+            'session_request',
+            'session_confirmed',
+            'session_rescheduled',
+            'session_booked'
+        ];
+        try {
+            $this->notificationModel->markRelatedBySessionAsRead(
+                $sessionId,
+                [$studentId, $tutorId],
+                $typesToArchive
+            );
+            Logger::info('Archived notifications for cancelled session', [
+                'session_id' => $sessionId,
+                'student_id' => $studentId,
+                'tutor_id' => $tutorId
+            ]);
+        } catch (Exception $e) {
+            Logger::error('Failed archiving notifications for cancelled session', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
     // Existing methods
     public function getUserNotifications(int $userId, bool $unreadOnly = false): array {
         return $this->notificationModel->findByUserId($userId, $unreadOnly);

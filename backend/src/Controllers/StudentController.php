@@ -109,13 +109,13 @@ class StudentController {
                     Logger::info('Profile picture saved successfully', [
                         'user_id' => $user['user_id']
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Logger::error('Failed to save profile picture', [
                         'user_id' => $user['user_id'],
                         'profile_picture' => $profilePicture,
                         'error' => $e->getMessage()
                     ]);
-                    throw new \Exception('Failed to save profile picture: ' . $e->getMessage());
+                    throw new Exception('Failed to save profile picture: ' . $e->getMessage());
                 }
             }
 
@@ -674,6 +674,17 @@ class StudentController {
                 ]);
             }
             
+            //TO NOTIFY ITSELF ABOUT RESCHEDULE 
+            try {
+                $this->notificationService->createSessionRescheduledNotification($user['user_id'], $sessionId, 'student');
+            } catch (Exception $e){
+                Logger::error('Failed to create reschedule notification for student', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             Response::success([
                 'new_total_cost' => $newTotalCost,
                 'duration_hours' => $duration
@@ -823,7 +834,7 @@ class StudentController {
                 Response::error('Failed to cancel session', 500);
                 return;
             }
-    
+
             Logger::info('Session cancelled successfully', [
                 'session_id' => $sessionId,
                 'student_id' => $user['user_id']
@@ -839,6 +850,31 @@ class StudentController {
                     'error' => $e->getMessage()
                 ]);
                 // Don't fail the cancellation if notification fails
+            }   
+
+            //NOTIFY ITSELF ABOUT CANCELLATION
+            try {
+                $this->notificationService->createSessionCancelledNotification($user['user_id'], $sessionId, 'student');
+            } catch (Exception $e){
+                Logger::error('Failed to create cancellation notification for student', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            try {
+                $this->notificationService->cleanupNotificationsForCancelledSession(
+                    $sessionId, 
+                    $user['user_id'],
+                    $session['tutor_id']);
+            } catch (Exception $e){
+                Logger::error('Failed to cleanup notifications for cancelled session', [
+                    'session_id' => $sessionId,
+                    'student_id' => $user['user_id'],
+                    'tutor_id' => $session['tutor_id'],
+                    'error' => $e->getMessage()
+                ]);
             }
             
             Response::success([], 'Session cancelled successfully');

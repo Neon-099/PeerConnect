@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\middleware\AuthMiddleware;
 use App\Services\MatchingService;
+use App\Services\NotificationService;
 use App\Utils\Response;
 use App\Utils\Logger;
 use Exception;
@@ -11,10 +12,12 @@ use Exception;
 class MatchingController {
     private $matchingService;
     private $authMiddleware;
+    private $notificationService;
 
     public function __construct() {
         $this->matchingService = new MatchingService();
         $this->authMiddleware = new AuthMiddleware();
+        $this->notificationService = new NotificationService();
     }
 
     /**
@@ -40,6 +43,11 @@ class MatchingController {
             
             Logger::info("Found " . count($matches) . " matching tutors for student $userId");
             
+            if(is_array($matches) && count($matches) > 0){
+                //NOTIFY STUDENT ABOUT NEW MATCHES
+                $this->notificationService->createTutorMatchNotification($userId);
+            }
+
             return Response::success([
                 'matches' => $matches,
                 'total' => count($matches)
@@ -68,6 +76,12 @@ class MatchingController {
             $matches = $this->matchingService->findMatchingStudents($userId);
             
             Logger::info("Found " . count($matches) . " matching students for tutor $userId");
+
+
+            if(is_array($matches) && count($matches) > 0){
+                //NOTIFY TUTOR ABOUT NEW MATCHES
+                $this->notificationService->createStudentMatchNotification($userId);
+            }
             
             return Response::success([
                 'matches' => $matches,

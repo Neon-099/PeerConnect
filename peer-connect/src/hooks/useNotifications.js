@@ -1,57 +1,75 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../utils/api';
 
+const storageKeyForRole = (role) => `pc_shown_notif_ids_${role}`;
+
+const loadShownIds = (role) => {
+  try {
+    const raw = localStorage.getItem(storageKeyForRole(role));
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const saveShownIds = (role, setObj) => {
+  try {
+    localStorage.setItem(storageKeyForRole(role), JSON.stringify(Array.from(setObj)));
+  } catch {}
+};
+
 export const useNotifications = (userRole) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [floatingNotification, setFloatingNotification] = useState(null);
+
   const previousNotificationIdsRef = useRef(new Set());
-  const shownNotificationIdsRef = useRef(new Set()); // Track which ones we've already shown
+  const shownNotificationIdsRef = useRef(loadShownIds(userRole)); // persisted across refresh
 
   const fetchNotifications = useCallback(async () => {
     try {
       const endpoint = userRole === 'student' ? '/api/student/notifications' : '/api/tutor/notifications';
       const response = await apiClient.get(endpoint);
       const newNotifications = response || [];
-      
-      // Parse JSON data field for each notification
-      const parsedNotifications = newNotifications.map(notification => ({
-        ...notification,
-        data: typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data
+
+      const parsedNotifications = newNotifications.map(n => ({
+        ...n,
+        data: typeof n.data === 'string' ? JSON.parse(n.data) : (n.data || {})
       }));
-      
-      // Check for new notifications to show floating notification
+
       const currentIds = new Set(parsedNotifications.map(n => n.id));
-      const newNotificationIds = [...currentIds].filter(id => !previousNotificationIdsRef.current.has(id));
-      
-      console.log('Previous IDs:', Array.from(previousNotificationIdsRef.current));
-      console.log('Current IDs:', Array.from(currentIds));
-      console.log('New notification IDs:', newNotificationIds);
-      
-      if (newNotificationIds.length > 0) {
-        // Find the most recent new notification that we haven't shown yet
-        const latestNewNotification = parsedNotifications.find(n => 
-          newNotificationIds.includes(n.id) &&
-          !n.is_read &&
-          !shownNotificationIdsRef.current.has(n.id) && // Don't show if already shown
-          ['session_booked', 'session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received', 'tutor_match', 'student_match'].includes(n.type)
-        );
-        
-        console.log('Latest new notification:', latestNewNotification);
-        
-        if (latestNewNotification) {
-          setFloatingNotification(latestNewNotification);
-          // Mark this notification as shown so we don't show it again
-          shownNotificationIdsRef.current.add(latestNewNotification.id);
-        }
+      const newIds = [...currentIds].filter(id => !previousNotificationIdsRef.current.has(id));
+
+      // Find the latest eligible notification to float:
+      // - must be unread
+      // - must not have been shown before (persisted)
+      // - type is one of the allowed types
+      const allowedTypes = ['session_booked', 'session_confirmed', 'session_request', 'session_cancelled', 'session_rescheduled', 'session_completed', 'review_received', 'tutor_match', 'student_match'];
+
+      const latestNew = parsedNotifications.find(n =>
+        newIds.includes(n.id) &&
+        !n.is_read &&
+        !shownNotificationIdsRef.current.has(n.id) &&
+        allowedTypes.includes(n.type)
+      );
+
+      if (latestNew) {
+        setFloatingNotification(latestNew);
+        shownNotificationIdsRef.current.add(latestNew.id);
+        saveShownIds(userRole, shownNotificationIdsRef.current);
       }
-      
+
       setNotifications(parsedNotifications);
-      previousNotificationIdsRef.current = currentIds; // Update ref
+      previousNotificationIdsRef.current = currentIds;
+
+      // Update unread count
+      setUnreadCount(parsedNotifications.filter(n => !n.is_read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  }, [userRole]); // Only depend on userRole
+  }, [userRole]);
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -64,35 +82,57 @@ export const useNotifications = (userRole) => {
   }, [userRole]);
 
   const showFloatingNotification = useCallback((notification) => {
-    console.log('Manually showing floating notification:', notification);
     setFloatingNotification(notification);
-  }, []);
+    if (notification?.id) {
+      shownNotificationIdsRef.current.add(notification.id);
+      saveShownIds(userRole, shownNotificationIdsRef.current);
+    }
+  }, [userRole]);
 
   const hideFloatingNotification = useCallback(() => {
-    console.log('Hiding floating notification');
     setFloatingNotification(null);
   }, []);
 
+  // Strict rule: when “mark as done” (read), never show it again
   const markAsRead = useCallback(async (notificationId) => {
     try {
-      const endpoint = userRole === 'student' ? 
-        `/api/student/notifications/${notificationId}/read` : 
-        `/api/tutor/notifications/${notificationId}/read`;
-      
+      const endpoint = userRole === 'student'
+        ? `/api/student/notifications/${notificationId}/read`
+        : `/api/tutor/notifications/${notificationId}/read`;
+
       await apiClient.put(endpoint);
-      
-      setNotifications(prev => 
-        prev.map(notif => 
+
+      setNotifications(prev =>
+        prev.map(notif =>
           notif.id === notificationId ? { ...notif, is_read: true } : notif
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
+
+      // Persist as shown so floating will never re-trigger on refresh
+      shownNotificationIdsRef.current.add(notificationId);
+      saveShownIds(userRole, shownNotificationIdsRef.current);
+
+      // If the floating notification is the same, close it
+      setFloatingNotification(curr => (curr?.id === notificationId ? null : curr));
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
   }, [userRole]);
 
-  // Poll for new notifications every 5 seconds for more responsive notifications
+  // Dismiss (used by floating toast close/dismiss button) → strictly mark as read
+  const dismissFloatingNotification = useCallback(async () => {
+    if (!floatingNotification?.id) {
+      setFloatingNotification(null);
+      return;
+    }
+    try {
+      await markAsRead(floatingNotification.id);
+    } finally {
+      setFloatingNotification(null);
+    }
+  }, [floatingNotification, markAsRead]);
+
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
@@ -100,7 +140,7 @@ export const useNotifications = (userRole) => {
     const interval = setInterval(() => {
       fetchNotifications();
       fetchUnreadCount();
-    }, 5000); // Reduced from 15 seconds to 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [fetchNotifications, fetchUnreadCount]);
@@ -111,6 +151,7 @@ export const useNotifications = (userRole) => {
     floatingNotification,
     showFloatingNotification,
     hideFloatingNotification,
+    dismissFloatingNotification, // new: always marks read
     markAsRead,
     refreshNotifications: fetchNotifications
   };

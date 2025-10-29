@@ -17,10 +17,10 @@ class TutoringSession {
     public function create(array $sessionData): int {
         $query = "INSERT INTO {$this->table} (
             tutor_id, student_id, subject_id, custom_subject, session_date, start_time, end_time,
-            hourly_rate, total_cost, notes, session_type, meeting_link, location, status
+            hourly_rate, total_cost, notes, location, status
         ) VALUES (
             :tutor_id, :student_id, :subject_id, :custom_subject, :session_date, :start_time, :end_time,
-            :hourly_rate, :total_cost, :notes, :session_type, :meeting_link, :location, :status
+            :hourly_rate, :total_cost, :notes, :location, :status
         )";
 
         $stmt = $this->db->prepare($query);
@@ -35,8 +35,6 @@ class TutoringSession {
             ':hourly_rate' => $sessionData['hourly_rate'],
             ':total_cost' => $sessionData['total_cost'],
             ':notes' => $sessionData['notes'] ?? null,
-            ':session_type' => $sessionData['session_type'] ?? 'virtual',
-            ':meeting_link' => $sessionData['meeting_link'] ?? null,
             ':location' => $sessionData['location'] ?? null,
             ':status' => 'pending'
         ];

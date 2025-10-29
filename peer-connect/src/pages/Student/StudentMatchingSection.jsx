@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Users, AlertCircle, RotateCcw, Target } from 'lucide-react';
 import { apiClient } from '../../utils/api';
 import MatchingResults from '../../components/MatchingResults';
-import Header from './Header.jsx';
-import Footer from './Footer.jsx';
+import Header from '../Student/Header.jsx';
+import Footer from '../Student/Footer.jsx';
 import TutorProfileViewPage from './tutor/TutorProfileViewPage.jsx';
 
 
@@ -95,7 +95,7 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
   }
 
   return (
-    <div className='flex-1 flex flex-col'>
+    <div className='flex-1 flex flex-col bg-gray-50'>
       {/* Header */}
       <div className="h-23 bg-white border-b border-gray-200 flex items-center justify-between px-8">
         <div></div>
@@ -107,129 +107,137 @@ const StudentMatchingSection = ({getProfilePictureUrl, studentProfile}) => {
         </div>
       </div>
       
-      <div className="flex items-center justify-between mb-8 overflow-auto">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-800">Find Your Tutor</h1>
-          <p className="text-slate-600 mt-1">Tutors who match your profile and subjects</p>
-        </div>
-        {searchComplete && (
-          <button
-            onClick={retrySearch}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-100 text-teal-700 rounded-xl hover:bg-teal-200 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Search Again
-          </button>
-        )}
-      </div>
-
-      {!hasSearched && !isSearching && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-          <div className="w-24 h-24 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Target className="w-12 h-12 text-teal-600" />
-          </div>
-          <h3 className="text-2xl font-semibold text-gray-900 mb-4">Ready to Find Your Perfect Tutor?</h3>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            We’ll analyze your profile, subjects and location to find the best tutors for you.
-          </p>
-          <button
-            onClick={startSearch}
-            className="px-8 py-4 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 mx-auto"
-          >
-            <Search className="w-5 h-5" />
-            Start Matching
-          </button>
-        </div>
-      )}
-
-      {isSearching && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-          <div className="w-24 h-24 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-          </div>
-          <h3 className="text-2xl font-semibold text-gray-900 mb-4">Finding Your Best Matches</h3>
-          <p className="text-gray-600 mb-8">{searchPhase}</p>
-
-          <div className="w-full max-w-md mx-auto mb-6">
-            <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                className="bg-teal-600 h-full rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${searchProgress}%` }}
-              />
+      <div className="flex-1 overflow-auto p-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Page Title */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Find Your Tutor</h1>
+              <p className="text-gray-600 mt-1">Tutors who match your profile and subjects</p>
             </div>
-            <p className="text-sm text-gray-500 mt-2">{Math.round(searchProgress)}% Complete</p>
-          </div>
-
-          <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-blue-900 mb-1">Matching Tips</p>
-                <p className="text-sm text-blue-700">
-                  This usually takes 20–30 seconds while we analyze compatibility and subjects.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-12 h-12 text-red-600" />
-          </div>
-          <h3 className="text-2xl font-semibold text-gray-900 mb-4">Search Failed</h3>
-          <p className="text-gray-600 mb-8">{error}</p>
-          <button
-            onClick={retrySearch}
-            className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors flex items-center gap-2"
-          >
-            <RotateCcw className="w-5 h-5" />
-            Try Again
-          </button>
-        </div>
-      )}
-
-      {searchComplete && (
-        <div>
-          <div className="mb-6">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-2">Your Tutor Matches</h3>
-            <p className="text-gray-600">
-              Found {matches.length} tutor{matches.length !== 1 ? 's' : ''} that match your preferences
-            </p>
-          </div>
-
-          {matches.length > 0 ? (
-            <MatchingResults 
-              matches={matches} 
-              type="tutors" 
-              onViewProfile={handleViewProfile}
-            />
-          ) : (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">No Tutors Found</h3>
-              <p className="text-gray-600 mb-8">
-                We couldn’t find tutors matching your current profile. Try again later.
-              </p>
+            {searchComplete && (
               <button
                 onClick={retrySearch}
-                className="px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors"
+                className="flex items-center gap-2 px-6 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors font-semibold shadow-md hover:shadow-lg"
               >
+                <RotateCcw className="w-4 h-4" />
+                Search Again
+              </button>
+            )}
+          </div>
+
+          {!hasSearched && !isSearching && (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <div className="w-24 h-24 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Target className="w-12 h-12 text-teal-600" />
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Ready to Find Your Perfect Tutor?</h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                We'll analyze your profile, subjects and location to find the best tutors for you.
+              </p>
+              <button
+                onClick={startSearch}
+                className="px-8 py-4 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-all flex items-center gap-2 mx-auto shadow-md hover:shadow-lg"
+              >
+                <Search className="w-5 h-5" />
+                Start Matching
+              </button>
+            </div>
+          )}
+
+          {isSearching && (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <div className="w-24 h-24 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Finding Your Best Matches</h3>
+              <p className="text-gray-600 mb-8">{searchPhase}</p>
+
+              <div className="w-full max-w-md mx-auto mb-6">
+                <div className="bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-teal-600 h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${searchProgress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">{Math.round(searchProgress)}% Complete</p>
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-blue-900 mb-1">Matching Tips</p>
+                    <p className="text-sm text-blue-700">
+                      This usually takes 20–30 seconds while we analyze compatibility and subjects.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+              <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-12 h-12 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Search Failed</h3>
+              <p className="text-gray-600 mb-8">{error}</p>
+              <button
+                onClick={retrySearch}
+                className="px-8 py-4 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-all flex items-center gap-2"
+              >
+                <RotateCcw className="w-5 h-5" />
                 Try Again
               </button>
             </div>
           )}
+
+          {searchComplete && (
+            <div>
+              <div className="mb-6">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-2">Your Tutor Matches</h3>
+                <p className="text-gray-600">
+                  Found {matches.length} tutor{matches.length !== 1 ? 's' : ''} that match your preferences
+                </p>
+              </div>
+
+              {matches.length > 0 ? (
+                <div className="bg-white rounded-xl p-6 border border-gray-200">
+                  <MatchingResults 
+                    matches={matches} 
+                    type="tutors" 
+                    onViewProfile={handleViewProfile}
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Users className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">No Tutors Found</h3>
+                  <p className="text-gray-600 mb-8">
+                    We couldn't find tutors matching your current profile. Try again later.
+                  </p>
+                  <button
+                    onClick={retrySearch}
+                    className="px-6 py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-all"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Footer */}
-      <div className="h-[49px] mt-auto bg-white border-t border-gray-200 flex items-center justify-end px-8">
+      <div className="h-16 bg-white border-t border-gray-200 flex items-center justify-end px-8">
         <Footer/>
       </div>
+      
       {showTutorProfileViewModal && selectedTutorForView && (
         <div className="fixed inset-0 z-50 bg-white overflow-auto">
           <TutorProfileViewPage
