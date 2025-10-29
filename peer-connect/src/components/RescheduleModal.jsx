@@ -12,6 +12,22 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
   const [errors, setErrors] = useState({});
   const [newTotalCost, setNewTotalCost] = useState(null); // Add this state
 
+  // NEW: tutor availability state
+  const [availableDates, setAvailableDates] = useState([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+
+  // Helper: derive tutorId from session
+  const getTutorIdFromSession = () => {
+    return (
+      session?.tutor_id ||
+      session?.tutor_user_id ||
+      session?.tutorId ||
+      session?.tutor?.user_id ||
+      session?.tutor?.id ||
+      null
+    );
+  };
+
   React.useEffect(() => {
     if (isOpen && session) {
       // Pre-fill with current session data
@@ -27,8 +43,49 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
       });
       // Calculate initial cost
       setTimeout(calculateNewTotalCost, 100);
+
+      // NEW: fetch tutor availability for strict date selection
+      const tutorId = getTutorIdFromSession();
+      if (tutorId) {
+        fetchTutorAvailability(tutorId, sessionDate);
+      } else {
+        // No tutor id -> clear availability; validation will block
+        setAvailableDates([]);
+      }
     }
   }, [isOpen, session]);
+
+  const fetchTutorAvailability = async (tutorId, currentSessionDate) => {
+    try {
+      setIsLoadingAvailability(true);
+      // Reuse same endpoint as BookingModal to get tutor details inc. availability
+      const details = await apiClient.get(`/api/student/tutors/${tutorId}`);
+      const slots = Array.isArray(details?.availability) ? details.availability : [];
+
+      // Build a unique set of dates marked available (YYYY-MM-DD)
+      const dateSet = new Set(
+        slots
+          .filter(s => s.is_available && (s.availability_date || s.date))
+          .map(s => (s.availability_date || s.date))
+      );
+
+      const dates = Array.from(dateSet).sort((a, b) => new Date(a) - new Date(b));
+
+      setAvailableDates(dates);
+
+      // If the current prefilled date is not in available dates, clear it to force a valid pick
+      if (currentSessionDate && !dateSet.has(currentSessionDate)) {
+        setFormData(prev => ({ ...prev, new_date: '' }));
+        setErrors(prev => ({ ...prev, new_date: 'Please select an available date for this tutor' }));
+      }
+    } catch (e) {
+      console.error('Failed to load tutor availability:', e);
+      setAvailableDates([]);
+      setErrors(prev => ({ ...prev, new_date: 'Unable to load tutor availability. Please try again.' }));
+    } finally {
+      setIsLoadingAvailability(false);
+    }
+  };
 
   const calculateNewTotalCost = () => {
     if (formData.new_start_time && formData.new_end_time && session?.hourly_rate) {
@@ -49,6 +106,16 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // NEW: If changing the date, strictly enforce allowed dates
+    if (name === 'new_date') {
+      if (value && !availableDates.includes(value)) {
+        setErrors(prev => ({ ...prev, new_date: 'Selected date is not available for this tutor' }));
+        // Keep the previous valid date (do not update)
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -80,6 +147,10 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
       
       if (selectedDate < today) {
         newErrors.new_date = 'Date cannot be in the past';
+      }
+      // NEW: ensure selected date is in allowed availability
+      if (!availableDates.includes(formData.new_date)) {
+        newErrors.new_date = 'Please select a date from the tutor’s available days';
       }
     }
     
@@ -163,20 +234,44 @@ const RescheduleModal = ({ isOpen, onClose, session, userRole, onRescheduleSucce
               </div>
             </div>
 
-            {/* New Date */}
+            {/* New Date - STRICT to available dates */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Date
               </label>
-              <input
-                type="date"
-                name="new_date"
-                value={formData.new_date}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  errors.new_date ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
+
+              {/* If we have availability, show a strict dropdown of only valid dates */}
+              {availableDates.length > 0 ? (
+                <select
+                  name="new_date"
+                  value={formData.new_date}
+                  onChange={handleInputChange}
+                  disabled={isLoadingAvailability}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.new_date ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="" disabled>{isLoadingAvailability ? 'Loading...' : 'Select an available date'}</option>
+                  {availableDates.map(d => (
+                    <option key={d} value={d}>
+                      {new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                // Fallback: if we don't have availability, keep input but validation will block
+                <input
+                  type="date"
+                  name="new_date"
+                  value={formData.new_date}
+                  onChange={handleInputChange}
+                  disabled={isLoadingAvailability}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.new_date ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+              )}
+
               {errors.new_date && (
                 <p className="text-red-500 text-sm mt-1">{errors.new_date}</p>
               )}
