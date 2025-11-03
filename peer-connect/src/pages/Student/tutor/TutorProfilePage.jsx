@@ -106,7 +106,7 @@ const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onP
                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                           <Facebook className="w-5 h-5 text-blue-600" />
                         </div>
-            <div>
+                        <div>
                           <p className="text-xs text-gray-500">Facebook Profile</p>
                           <a 
                             href={tutorProfile.fb_url} 
@@ -117,7 +117,7 @@ const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onP
                             View Profile
                           </a>
                         </div>
-            </div>
+                      </div>
                     )}
                     
                     <div className="pt-4">
@@ -322,12 +322,6 @@ const TutorProfilePage = ({ tutorProfile, userProfile, getProfilePictureUrl, onP
           )}
         </div>
       </div>
-
-      {/* Footer */}
-      <div className="h-[49px] bg-[#E6F0F2] border-t border-gray-200 flex items-center justify-end px-8">
-        <Footer/>
-      </div>
-
         <TutorEditProfileModal
           isOpen={isEditProfileModalOpen}
           onClose={() => setIsEditProfileModalOpen(false)}

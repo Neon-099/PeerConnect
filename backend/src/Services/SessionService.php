@@ -30,6 +30,24 @@ class SessionService {
             throw new Exception("Tutor not found");
         }
 
+        // Validate that the booking date matches tutor's availability
+        $availability = $this->tutorProfileModel->getAvailability($sessionData['tutor_id']);
+        $requestedDate = $sessionData['session_date'];
+        
+        // Check if the requested date is in tutor's available dates
+        $isDateAvailable = false;
+        foreach ($availability as $slot) {
+            if ($slot['availability_date'] === $requestedDate && 
+                ($slot['is_available'] === true || $slot['is_available'] === 1)) {
+                $isDateAvailable = true;
+                break;
+            }
+        }
+        
+        if (!$isDateAvailable) {
+            throw new Exception("The selected date is not available. Please choose from the tutor's available dates.");
+        }
+
         // Validate subject - only if subject_id is provided
         if (isset($sessionData['subject_id']) && $sessionData['subject_id']) {
             $subject = $this->subjectModel->findById($sessionData['subject_id']);

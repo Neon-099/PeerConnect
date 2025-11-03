@@ -41,11 +41,44 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
     }
   }
 
+  // Get available dates from tutor availability
+  const getAvailableDates = () => {
+    if (!details?.availability || !Array.isArray(details.availability)) {
+      return [];
+    }
+    
+    // Filter only available slots and extract dates
+    const availableDates = details.availability
+      .filter(slot => slot.is_available === true || slot.is_available === 1)
+      .map(slot => slot.availability_date)
+      .filter(date => {
+        // Only include future dates or today
+        const dateObj = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dateObj.setHours(0, 0, 0, 0);
+        return dateObj >= today;
+      })
+      .sort(); // Sort dates chronologically
+    
+    return availableDates;
+  };
+
+  // Check if selected date is in tutor's available dates
+  const isDateAvailable = (date) => {
+    const availableDates = getAvailableDates();
+    return availableDates.includes(date);
+  };
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.session_date) newErrors.session_date = 'Date is required';
+    if (!formData.session_date) {
+      newErrors.session_date = 'Date is required';
+    } else if (!isDateAvailable(formData.session_date)) {
+      newErrors.session_date = 'Selected date is not available. Please choose from tutor\'s available dates.';
+    }
+    
     if (!formData.start_time) newErrors.start_time = 'Start time is required';
     if (!formData.end_time) newErrors.end_time = 'End time is required';
     
@@ -143,6 +176,8 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
 
   if (!isOpen) return null;
 
+  const availableDates = getAvailableDates();
+
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/25 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -177,28 +212,31 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
           </div>
 
           {/* Tutor Availability */}
-          {tutor?.availability && tutor?.availability.length > 0 && (
+          {availableDates.length > 0 ? (
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Tutor Availability
+                Available Dates ({availableDates.length})
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {tutor?.availability
-                  .filter(slot => slot.is_available)
-                  .slice(0, 6)
-                  .map((slot, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm text-blue-700">
-                      <CheckCircle className="w-3 h-3" />
-                      <span>{formatAvailabilityDate(slot.availability_date)}</span>
-                    </div>
-                  ))}
-                {tutor?.availability.filter(slot => slot.is_available).length > 6 && (
+                {availableDates.slice(0, 9).map((date, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm text-blue-700">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>{formatAvailabilityDate(date)}</span>
+                  </div>
+                ))}
+                {availableDates.length > 9 && (
                   <div className="text-sm text-blue-600">
-                    +{tutor?.availability.filter(slot => slot.is_available).length - 6} more dates
+                    +{availableDates.length - 9} more dates
                   </div>
                 )}
               </div>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <p className="text-yellow-800 text-sm">
+                ⚠️ This tutor hasn't set their availability yet. Please contact them directly or check back later.
+              </p>
             </div>
           )}
 
@@ -208,17 +246,47 @@ const BookingModal = ({ isOpen, onClose, tutor, onBookSession }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar size={16} className="inline mr-2" />
                 Session Date
+                {availableDates.length > 0 && (
+                  <span className="text-xs text-gray-500 ml-1">(Select from available dates)</span>
+                )}
               </label>
-              <input
-                type="date"
-                value={formData.session_date}
-                onChange={(e) => setFormData({...formData, session_date: e.target.value})}
-                min={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
-                  errors.session_date ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
+              
+              {availableDates.length > 0 ? (
+                // Use select dropdown when dates are limited
+                <select
+                  value={formData.session_date}
+                  onChange={(e) => setFormData({...formData, session_date: e.target.value})}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+                    errors.session_date ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select a date</option>
+                  {availableDates.map((date, index) => (
+                    <option key={index} value={date}>
+                      {formatAvailabilityDate(date)} ({new Date(date).toLocaleDateString('en-US', { weekday: 'long' })})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                // Fallback to date input if no availability (though this should be disabled)
+                <input
+                  type="date"
+                  value={formData.session_date}
+                  onChange={(e) => setFormData({...formData, session_date: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                  disabled={availableDates.length === 0}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+                    errors.session_date ? 'border-red-500' : 'border-gray-300'
+                  } ${availableDates.length === 0 ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                />
+              )}
+              
               {errors.session_date && <p className="text-red-500 text-sm mt-1">{errors.session_date}</p>}
+              {availableDates.length === 0 && (
+                <p className="text-yellow-600 text-sm mt-1">
+                  Cannot book: Tutor hasn't set availability dates
+                </p>
+              )}
             </div>
 
             <div>

@@ -31,6 +31,9 @@ This system helps:
 - Monitor tutoring sessions  
 - Generate reports and analytics  
 
+### Matching
+- Matching based on 1 campus location, 1 learning preferences, and at least 3 subjects 
+
 ### 🔑 Authentication
 - JWT-based secure login  
 - Google OAuth integration  

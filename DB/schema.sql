@@ -1,3 +1,9 @@
+
+
+
+
+
+
 -- users
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -17,6 +23,21 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+
+--SAMPLE USERS
+INSERT INTO users (email, password_hash, first_name, last_name, role, providers, email_verified, is_active, student_id, created_at) VALUES
+('student1@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'John', 'Doe', 'student', 'local', 1, 1, 'STU001', NOW()),
+('student2@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'Jane', 'Smith', 'student', 'local', 1, 1, 'STU002', NOW()),
+('student3@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'Alice', 'Johnson', 'student', 'local', 1, 1, 'STU003', NOW());
+
+-- Sample Tutor Users
+INSERT INTO users (email, password_hash, first_name, last_name, role, providers, email_verified, is_active, created_at) VALUES
+('tutor1@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'Michael', 'Brown', 'tutor', 'local', 1, 1, NOW()),
+('tutor2@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'Sarah', 'Davis', 'tutor', 'local', 1, 1, NOW()),
+('tutor3@peerconnect.com', '$argon2id$v=19$m=65536,t=4,p=1$c2FlMVZYYkhueFprMWJ4Rg$ol8507tEJKozI18Hp4jnpCmZJujteS2CkZlAKDUDVmI', 'Robert', 'Wilson', 'tutor', 'local', 1, 1, NOW());
+
+
 
 -- sessions (refresh tokens)
 CREATE TABLE sessions (
