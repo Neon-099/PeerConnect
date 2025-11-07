@@ -50,29 +50,10 @@ This system helps:
 
 ---
 
-## 📂 Project Folder Structure
-```bash
-peerconnect/
-│── frontend/               # React + Tailwind frontend
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/       # API calls to backend
-│   │   └── App.js
-│   └── package.json
-│
-│── backend/                # PHP backend
-│   ├── config/
-│   │   └── db.php          # DB connection
-│   ├── controllers/        # Business logic
-│   ├── models/             # SQL queries (User, Tutor, Session)
-│   ├── routes/             # API endpoints
-│   ├── auth/               # JWT, OAuth
-│   └── index.php           # Entry point
-│
-│── database/               # SQL scripts
-│   ├── schema.sql
-│   ├── seed.sql
-│
-│── README.md
+
+📬 **Contact**  
+👤 Niño Emman  
+📧 Email: [Emmannatividad099@gmail.com](mailto:Emmannatividad099@gmail.com)  
+🔗 Portfolio: [portfolio.com //soon ](https://neon-port.netlify.app/) 
+<br/>
+🐙 GitHub: [github.com/Neon-099](https://github.com/Neon-099)
