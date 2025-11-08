@@ -42,9 +42,9 @@ This system helps:
 ---
 
 ## 🏗️ Tech Stack
-- **Frontend** → [React.js](https://react.dev/) + [Tailwind CSS](https://tailwindcss.com/)  
-- **Backend** → [PHP](https://www.php.net/) vanilla PHP  
-- **Database** → [MySQL](https://www.mysql.com/)  
+- **Frontend** → React.js + Tailwind CSS  
+- **Backend** → vanilla PHP  
+- **Database** → MySQL  
 - **Authentication** → JSON Web Tokens (JWT), Google OAuth  
 - **Version Control** → Git + GitHub  
 
